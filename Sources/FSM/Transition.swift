@@ -78,15 +78,30 @@ public func==<T: TransitionVertex>(lhs: T, rhs: T) -> Bool {
 public struct Transition: TransitionVertex, Equatable {
     /// Unique ID of this transition
     public var id: TransitionID
-
+    
     /// Expression that labels this transition
-    public var label: Expression
-
+    public var label: Expression = ""
+    
     /// Source state that this transition originates from
     public var source: StateID
-
+    
     /// Target state that this transition originates from
     public var target: StateID
+
+    /// Designated initialiser.
+    ///
+    /// - Parameters:
+    ///   - id: The unique ID of this transition.
+    ///   - label: The expression that labels this transition.
+    ///   - source: The source state that this transition originates from.
+    ///   - target: The target state that this transition leads to.
+    @inlinable
+    public init(id: TransitionID, label: Expression, source: StateID, target: StateID) {
+        self.id = id
+        self.label = label
+        self.source = source
+        self.target = target
+    }
 }
 
 /// Compare two transitions

@@ -163,6 +163,10 @@ public struct ObjCPPBinding: LanguageBinding {
     }
     /// Objective-C++ binding from URL, states to suspend state ID
     public let suspendState: (URL, [State]) -> StateID? = { url, ss in
-            suspendStateOfObjCPPMachine(url, states: ss)
+        suspendStateOfObjCPPMachine(url, states: ss)
     }
+
+    /// Designated initialiser.
+    @inlinable
+    public init() {}
 }

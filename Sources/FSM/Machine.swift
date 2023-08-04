@@ -15,13 +15,29 @@ public typealias StateLayouts = [StateID : StateLayout]
 /// Mapping from state name to state layout
 public typealias StateNameLayouts = [StateName : StateLayout]
 
-/// Read the names of states from the given URL
+/// Read the names of states from the given URL.
+///
+/// This reads the content of the given URL and interprets
+/// each line as a state name.
+///
+/// - Parameter url: URL of the state names file.
+/// - Throws: `NSError` if the file cannot be read.
+/// - Returns: An array of state names.
+@inlinable
 public func stateNames(from url: URL) throws -> StateNames {
     let content = try String(contentsOf: url, encoding: .utf8)
     return content.lines.map(trimmed).filter(nonempty)
 }
 
-/// Read the layout of state names from the given URL
+/// Read the layout of state names from the given URL.
+///
+/// This function reads the state layout from the given URL
+/// (the property list representation of the layout).
+///
+/// - Parameter url: URL of the layout file
+/// - Throws: `NSError` if the file cannot be read.
+/// - Returns: A mapping from state names to state layouts.
+@inlinable
 public func stateNameLayouts(from url: URL) throws -> StateNameLayouts {
     guard let dict = NSDictionary(contentsOf: url) else { return [:] }
     var layouts = StateNameLayouts()
@@ -33,7 +49,18 @@ public func stateNameLayouts(from url: URL) throws -> StateNameLayouts {
     return layouts
 }
 
-/// Return an array of transitions for a given source state
+/// Return an array of transitions for a given source state.
+///
+/// This function returns a function that takes a state and
+/// reads in the transitions for that state from the given machine
+/// file wrapper.
+///
+/// - Parameters:
+///   - url: The URL of the machine FileWrapper.
+///   - states: The array of states.
+///   - language: The language binding to use (defaults to ObjCPPBinding).
+/// - Returns: A function that returns an array of transitions for a given source state.
+@inlinable
 func transitionsFor(machine url: URL, with states: [State], using language: LanguageBinding = ObjCPPBinding()) -> (State) -> [Transition] {
     return { (state: State) -> [Transition] in
         let sourceID = state.id
@@ -60,7 +87,13 @@ public class Machine {
     /// Source code of OnEntry/OnExit/Internal actions of states
     public var activities: StateActivitiesSourceCode
 
-    /// constructor for reading an FSM from a given file URL
+    /// Constructor for reading an FSM from a given URL.
+    ///
+    /// This initialiser will read the states and transitions from
+    /// the FileWrapper at the given URL.
+    ///
+    /// - Note: The URL is expected to point to a directory containing the machine.
+    /// - Parameter url: The URL to read the FSM from.
     public init(from url: URL) throws {
         language = ObjCPPBinding()
         activities = StateActivitiesSourceCode()
