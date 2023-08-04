@@ -96,7 +96,7 @@ public struct Transition: TransitionVertex, Equatable {
     ///   - source: The source state that this transition originates from.
     ///   - target: The target state that this transition leads to.
     @inlinable
-    public init(id: TransitionID, label: Expression, source: StateID, target: StateID) {
+    public init(id: TransitionID = TransitionID(), label: Expression = "", source: StateID, target: StateID = StateID(uuid: UUID_NULL)) {
         self.id = id
         self.label = label
         self.source = source
