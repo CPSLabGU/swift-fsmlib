@@ -5,19 +5,22 @@ import PackageDescription
 
 let package = Package(
     name: "FSM",
+    platforms: [
+        .macOS(.v10_15),
+    ],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
-        .library(
-            name: "FSM",
-            targets: ["FSM"]),
+        .library(name: "FSM", targets: ["FSM"]),
+        .executable(name: "fsmconvert", targets: ["fsmconvert"]),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.0"),
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
-        .target(
-            name: "FSM"),
-        .testTarget(
-            name: "FSMTests",
-            dependencies: ["FSM"]),
+        .target(name: "FSM"),
+        .executableTarget(name: "fsmconvert", dependencies: [
+            .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            "FSM"
+        ]),
+        .testTarget(name: "FSMTests", dependencies: ["FSM"]),
     ]
 )
