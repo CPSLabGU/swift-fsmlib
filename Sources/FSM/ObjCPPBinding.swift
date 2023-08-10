@@ -84,7 +84,7 @@ public func numberOfObjCPPTransitionsFor(machine m: URL, state s: StateName) -> 
 ///   - number: The transition number.
 /// - Returns: The transition expression.
 public func expressionOfObjCPPTransitionFor(machine: URL, state: StateName, transition number: Int) -> String {
-    let file = "State_\(state)_Transition_\(number).expr.h"
+    let file = "State_\(state)_Transition_\(number).expr"
     let url = machine.appendingPathComponent(file)
     do {
         let content = try NSString(contentsOf: url, usedEncoding: nil)

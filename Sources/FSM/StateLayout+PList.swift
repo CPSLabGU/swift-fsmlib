@@ -6,18 +6,10 @@
 //
 import Foundation
 
-fileprivate extension NSDictionary {
-    func value<T>(_ key: StateLayoutKey, default: T) -> T {
-        guard let v = self[key] as? T else { return `default` }
-        return v
-    }
-}
-
-
 /// Reading a state layout from a property list
 public extension StateLayout {
     /// Property list initialiser for a state layout
-    public init(_ propertyList: NSDictionary = [:], index i: Int = 0) {
+    init(_ propertyList: NSDictionary = [:], index i: Int = 0) {
         isOpen = propertyList.value(.expanded, default: false)
         let cw: Double = propertyList.value(.width,          default: 100)
         let ch: Double = propertyList.value(.height,         default: 50)

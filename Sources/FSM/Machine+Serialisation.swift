@@ -32,5 +32,8 @@ extension Filename {
 
 extension URL {
     /// return the URL for a given file inside a FileWrapper
-    func forFile(_ name: Filename) -> URL { return self.appendingPathComponent(name) }
+    /// - Parameter name: The file name to look for.
+    /// - Returns: The URL for the file.
+    @usableFromInline
+    func forFile(_ name: Filename) -> URL { return appendingPathComponent(name) }
 }
