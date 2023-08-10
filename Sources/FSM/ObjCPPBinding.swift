@@ -13,15 +13,8 @@ import Foundation
 ///   - content: The string to examine.
 ///   - expr: The regular expression pattern to match.
 /// - Returns: The substring contained in the first bracketed expression.
-func string(containedIn content: String, matching expr: String) -> String? {
-    let nsContent = NSString(string: content)
-    let regex = try! NSRegularExpression(pattern: expr, options: .anchorsMatchLines)
-    guard let match = regex.firstMatch(in: content, options: [], range: NSRange(location: 0, length: nsContent.length)) else {
-        return nil
-    }
-    let range = match.range(at: 1)
-    let matchedString = nsContent.substring(with: range)
-    return matchedString
+func string(containedIn content: String, matching expr: Regex<(Substring,Substring)>) -> Substring? {
+    try? expr.firstMatch(in: content)?.1
 }
 
 
@@ -29,7 +22,7 @@ func string(containedIn content: String, matching expr: String) -> String? {
 /// - Parameter content: The content of the `State.h` file
 /// - Returns: The number of transitions in the given state.
 public func numberOfObjCPPTransitionsIn(header content: String) -> Int {
-    guard let numString = string(containedIn: content, matching: "numberOfTransitions.*return[^0-9]*([0-9][0-9]*)"),
+    guard let numString = string(containedIn: content, matching: #/numberOfTransitions.*return[^0-9]*([0-9][0-9]*)/#),
           let numberOfTransitions = Int(numString) else { return 0 }
     return numberOfTransitions
 }
@@ -42,7 +35,7 @@ public func numberOfObjCPPTransitionsIn(header content: String) -> Int {
 ///   - content: The content of the `State.h` file.
 /// - Returns:
 public func targetStateIndexOfObjCPPTransition(_ i: Int, inHeader content: String) -> Int? {
-    guard let numString = string(containedIn: content, matching: "Transition_\(i).*int.*toState.*=[^0-9]*([0-9]*)"),
+    guard let numString = string(containedIn: content, matching: try! Regex("Transition_\(i).*int.*toState.*=[^0-9]*([0-9]*)")),
           let targetStateIndex = Int(numString) else { return nil }
     return targetStateIndex
 }
@@ -124,7 +117,7 @@ public func contentOfObjCPPImplementationFor(machine: URL) -> String? {
 /// Return the target state index of the given transition
 /// based on the content of the State.h file
 public func suspendStateIndexOfObjCPPMachine(inImplementation content: String) -> Int? {
-    guard let numString = string(containedIn: content, matching: "setSuspendState[^0-9]*([0-9]*)"),
+    guard let numString = string(containedIn: content, matching: #/setSuspendState[^0-9]*([0-9]*)/#),
         let targetStateIndex = Int(numString) else { return nil }
     return targetStateIndex
 }
