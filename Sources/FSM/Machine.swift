@@ -38,13 +38,13 @@ public class Machine {
     public init(from url: URL) throws {
         language = ObjCPPBinding()
         activities = StateActivitiesSourceCode()
-        let names = try stateNames(from: url.forFile(.states))
+        let names = try stateNames(from: url.fileURL(for: .states))
         let states = names.map { State(id: StateID(), name: $0) }
         let susp = language.suspendState(url, states)
         let transitions = states.flatMap(transitionsFor(machine: url, with: states, using: language))
         llfsm = LLFSM(states: states, transitions: transitions, suspendState: susp)
         
-        let layoutURL = url.forFile(.layout)
+        let layoutURL = url.fileURL(for: .layout)
         let namesLayout: StateNameLayouts
         do {
             try namesLayout = stateNameLayouts(from: layoutURL)

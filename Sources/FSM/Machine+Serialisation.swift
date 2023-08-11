@@ -4,7 +4,6 @@
 //  Created by Rene Hexel on 14/10/16.
 //  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
 //
-
 import Foundation
 
 /// Representation of a file name
@@ -31,9 +30,29 @@ extension Filename {
 }
 
 extension URL {
-    /// return the URL for a given file inside a FileWrapper
+    /// Return the URL for a given file name.
+    ///
+    /// This method returns the URL for a given file inside a FileWrapper
+    ///
     /// - Parameter name: The file name to look for.
     /// - Returns: The URL for the file.
     @usableFromInline
-    func forFile(_ name: Filename) -> URL { return appendingPathComponent(name) }
+    func fileURL(for name: Filename) -> URL { return appendingPathComponent(name) }
+
+    /// Return the content of the given file.
+    ///
+    /// This method reads the content of
+    /// the given file inside a FileWrapper
+    /// into a String.
+    ///
+    /// - Note: If the file does not exist, or cannot be read, an empty string is returned.
+    ///
+    /// - Parameters:
+    ///   - file: The file name to look for.
+    ///   - encoding: The encoding to use (defaults to UTF-8).
+    /// - Returns: The content of the file.
+    @usableFromInline
+    func stringContents(of file: Filename, encoding: String.Encoding = .utf8) -> String {
+        (try? String(contentsOf: fileURL(for: file), encoding: .utf8)) ?? ""
+    }
 }

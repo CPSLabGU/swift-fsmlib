@@ -32,7 +32,7 @@ extension NSDictionary {
     ///   - default: The default value to return if the key is not present.
     /// - Returns: The value for the given key, or the default value.
     @usableFromInline
-    func value<T>(_ key: TransitionLayoutKey, default: T) -> T {
+    func transitionValue<T>(_ key: TransitionLayoutKey, default: T) -> T {
         guard let v = self[key] as? T else { return `default` }
         return v
     }
@@ -59,7 +59,7 @@ extension NSDictionary {
     ///   - value: The value to set.
     ///   - key: The layout key to use.
     @usableFromInline
-    func set<T>(value: T, for key: TransitionLayoutKey) {
+    func set<T>(value: T, forTransition key: TransitionLayoutKey) {
         setValue(value, forKey: key.rawValue)
     }
 }

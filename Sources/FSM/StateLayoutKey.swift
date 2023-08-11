@@ -21,12 +21,20 @@ public enum StateLayoutKey: String, RawRepresentable, CaseIterable {
     case onExitHeight = "onExitHeight"
     /// Key for the unexpanded height of the internal section
     case internalHeight = "internalHeight"
+    /// Key for the unexpanded height of the onSuspend section
+    case onSuspendHeight = "onSuspendHeight"
+    /// Key for the unexpanded height of the onResume section
+    case onResumeHeight = "onResumeHeight"
     /// Key for the zoomed (full screen) height of the onEntry section
     case zoomedOnEntryHeight = "zoomedOnEntryHeight"
     /// Key for zoomed (full screen) height of the onExit section
     case zoomedOnExitHeight = "zoomedOnExitHeight"
     /// Key for zoomed height of internal section
     case zoomedInternalHeight = "zoomedInternalHeight"
+    /// Key for the zoomed (full screen) height of the onSuspend section
+    case zoomedOnSuspendHeight = "zoomedOnSuspendHeight"
+    /// Key for zoomed (full screen) height of the onResume section
+    case zoomedOnResumeHeight = "zoomedOnResumeHeight"
     /// Key for expanded width user defaults
     case expandedWidth = "expandedWidth"
     /// Key for expanded height user defaults

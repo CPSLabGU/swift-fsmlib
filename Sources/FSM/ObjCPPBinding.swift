@@ -29,6 +29,15 @@ public struct ObjCPPBinding: LanguageBinding {
         suspendStateOfObjCPPMachine(url, states: ss)
     }
 
+    /// Objective-C++ binding from URL to machine boilerplate.
+    public let boilerplate: (URL) -> any Boilerplate = { url in
+        boilerplateofCPPMachine(at: url)
+    }
+
+    public var stateBoilerplate: (URL, StateName) -> any Boilerplate = { url, stateName in
+        CBoilerplate()
+    }
+
     /// Designated initialiser.
     @inlinable
     public init() {}
@@ -170,4 +179,17 @@ public func suspendStateOfObjCPPMachine(_ m: URL, states: [State]) -> StateID? {
           i >= 0 && i < states.count else { return nil }
     let suspendState = states[i]
     return suspendState.id
+}
+
+/// Return the boilerplate for a given machine.
+/// - Parameter machine: The machine URL.
+/// - Returns: The boilerplate for the given machine.
+@inlinable
+public func boilerplateofCPPMachine(at machine: URL) -> any Boilerplate {
+    let name = machine.deletingPathExtension().lastPathComponent
+    var boilerplate = CBoilerplate()
+    boilerplate.sections[.includes]  = machine.stringContents(of: "\(name)_Includes.h")
+    boilerplate.sections[.variables] = machine.stringContents(of: "\(name)_Variables.h")
+    boilerplate.sections[.functions] = machine.stringContents(of: "\(name)_Methods.h")    
+    return boilerplate
 }

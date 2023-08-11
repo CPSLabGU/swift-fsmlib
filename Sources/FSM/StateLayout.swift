@@ -44,6 +44,12 @@ public struct StateLayout: StateNodeLayout {
     /// Height of the onExit section
     public var onExitHeight: Double
     
+    /// Height of the onSuspend section
+    public var onSuspendHeight: Double
+
+    /// Height of the onResume section
+    public var onResumeHeight: Double
+
     /// Height of the Internal section
     public var internalHeight: Double
     
@@ -54,6 +60,12 @@ public struct StateLayout: StateNodeLayout {
     public var zoomedOnExitHeight: Double
     
     /// Height of the Internal section when zoomed
-    public var zoomedInternalHeight: Double
+    public var zoomedInternalHeight: Double      
+
+    /// Height of the onSuspend section when zoomed
+    public var zoomedOnSuspendHeight: Double
+
+    /// Height of the onResume section when zoomed
+    public var zoomedOnResumeHeight: Double
 }
 

@@ -16,4 +16,8 @@ public protocol LanguageBinding {
     var targetOfTransition: (URL, [State], StateName) -> (Int) -> StateID? { get }
     /// Binding from URL, states to suspend state ID
     var suspendState: (URL, [State]) -> StateID? { get }
+    /// Binding from URL to machine Boilerplate
+    var boilerplate: (URL) -> any Boilerplate { get }
+    /// Binding from URL and state name to state Boilerplate
+    var stateBoilerplate: (URL, StateName) -> any Boilerplate { get }
 }
