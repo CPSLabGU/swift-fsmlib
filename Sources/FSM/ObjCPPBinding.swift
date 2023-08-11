@@ -6,6 +6,35 @@
 //
 import Foundation
 
+/// Objective-C++ language binding
+public struct ObjCPPBinding: LanguageBinding {
+    /// Objective-C++ binding from URL and state name to number of transitions
+    public let numberOfTransitions: (URL, StateName) -> Int = { url, s in
+        numberOfObjCPPTransitionsFor(machine: url, state: s)
+    }
+    /// Objective-C++ binding from URL, state name, and transition to expression
+    public let expressionOfTransition: (URL, StateName) -> (Int) -> String = {
+        url, s in { number in
+            expressionOfObjCPPTransitionFor(machine: url, state: s, transition: number)
+        }
+    }
+    /// Objective-C++ binding from URL, states, source state name, and transition to target state ID
+    public let targetOfTransition: (URL, [State], StateName) -> (Int) -> StateID? = { url, ss, s in
+        { number in
+            targetOfObjCPPTransitionFor(machine: url, states: ss, state: s, transition: number)
+        }
+    }
+    /// Objective-C++ binding from URL, states to suspend state ID
+    public let suspendState: (URL, [State]) -> StateID? = { url, ss in
+        suspendStateOfObjCPPMachine(url, states: ss)
+    }
+
+    /// Designated initialiser.
+    @inlinable
+    public init() {}
+}
+
+
 /// Return the number of transitions based on the content of the State.h file
 /// - Parameter content: The content of the `State.h` file
 /// - Returns: The number of transitions in the given state.
@@ -119,6 +148,9 @@ public func contentOfObjCPPImplementationFor(machine: URL) -> String? {
 
 /// Return the target state index of the given transition
 /// based on the content of the State.h file
+/// - Parameter content: The content to examine.
+/// - Returns: The target state index.
+@inlinable
 public func suspendStateIndexOfObjCPPMachine(inImplementation content: String) -> Int? {
     guard let numString = string(containedIn: content, matching: #/setSuspendState[^0-9]*([0-9]*)/#),
         let targetStateIndex = Int(numString) else { return nil }
@@ -127,42 +159,15 @@ public func suspendStateIndexOfObjCPPMachine(inImplementation content: String) -
 
 
 /// Return the suspend state ID for a given machine
+/// - Parameters:
+///   - m: The machine URL.
+///   - states: The states the machine is composed of.
+/// - Returns: The suspend state ID, or `nil` if nonexistent.
+@inlinable
 public func suspendStateOfObjCPPMachine(_ m: URL, states: [State]) -> StateID? {
     guard let content = contentOfObjCPPImplementationFor(machine: m),
           let i = suspendStateIndexOfObjCPPMachine(inImplementation: content),
           i >= 0 && i < states.count else { return nil }
     let suspendState = states[i]
     return suspendState.id
-}
-
-
-
-
-
-/// Objective-C++ language binding
-public struct ObjCPPBinding: LanguageBinding {
-    /// Objective-C++ binding from URL and state name to number of transitions
-    public let numberOfTransitions: (URL, StateName) -> Int = { url, s in
-        numberOfObjCPPTransitionsFor(machine: url, state: s)
-    }
-    /// Objective-C++ binding from URL, state name, and transition to expression
-    public let expressionOfTransition: (URL, StateName) -> (Int) -> String = {
-        url, s in { number in
-            expressionOfObjCPPTransitionFor(machine: url, state: s, transition: number)
-        }
-    }
-    /// Objective-C++ binding from URL, states, source state name, and transition to target state ID
-    public let targetOfTransition: (URL, [State], StateName) -> (Int) -> StateID? = { url, ss, s in
-        { number in
-            targetOfObjCPPTransitionFor(machine: url, states: ss, state: s, transition: number)
-        }
-    }
-    /// Objective-C++ binding from URL, states to suspend state ID
-    public let suspendState: (URL, [State]) -> StateID? = { url, ss in
-        suspendStateOfObjCPPMachine(url, states: ss)
-    }
-
-    /// Designated initialiser.
-    @inlinable
-    public init() {}
 }

@@ -15,6 +15,80 @@ public typealias StateLayouts = [StateID : StateLayout]
 /// Mapping from state name to state layout
 public typealias StateNameLayouts = [StateName : StateLayout]
 
+/// A finite-state machine.
+///
+/// This class represents a finite-state machine in a given language.
+public class Machine {
+    /// Programming language binding
+    public var language: LanguageBinding
+    /// The actual finite state machine
+    public var llfsm: LLFSM
+    /// Graphical layout of the states
+    public var layout: StateLayouts
+    /// Source code of OnEntry/OnExit/Internal actions of states
+    public var activities: StateActivitiesSourceCode
+    
+    /// Constructor for reading an FSM from a given URL.
+    ///
+    /// This initialiser will read the states and transitions from
+    /// the FileWrapper at the given URL.
+    ///
+    /// - Note: The URL is expected to point to a directory containing the machine.
+    /// - Parameter url: The URL to read the FSM from.
+    public init(from url: URL) throws {
+        language = ObjCPPBinding()
+        activities = StateActivitiesSourceCode()
+        let names = try stateNames(from: url.forFile(.states))
+        let states = names.map { State(id: StateID(), name: $0) }
+        let susp = language.suspendState(url, states)
+        let transitions = states.flatMap(transitionsFor(machine: url, with: states, using: language))
+        llfsm = LLFSM(states: states, transitions: transitions, suspendState: susp)
+        
+        let layoutURL = url.forFile(.layout)
+        let namesLayout: StateNameLayouts
+        do {
+            try namesLayout = stateNameLayouts(from: layoutURL)
+        } catch {
+            fputs("Cannot open '\(layoutURL.path): \(error.localizedDescription)'\n", stderr)
+            namesLayout = [:]
+        }
+        //
+        // convert mapping from name ot layout to mapping from ID to layout
+        // using default grid layout for states at position (0,0)
+        //
+        layout = states.enumerated().reduce([:]) {
+            var layouts = $0
+            let gridLayout = StateLayout(index: $1.offset)
+            var layout = namesLayout[$1.element.name] ?? gridLayout
+            if layout.closedLayout.x == 0 && layout.closedLayout.y == 0 {
+                layout.closedLayout.x = gridLayout.closedLayout.x
+                layout.closedLayout.y = gridLayout.closedLayout.y
+            }
+            if layout.openLayout.x == 0 && layout.openLayout.y == 0 {
+                layout.openLayout.x = gridLayout.openLayout.x
+                layout.openLayout.y = gridLayout.openLayout.y
+            }
+            layouts[$1.element.id] = layout
+            return layouts
+        }
+    }
+
+    /// Write the FSM to the given URL.
+    /// 
+    /// This method will write the FSM to the
+    /// filesystem location denoted by the given URL.
+    /// Optionally, a language binding can be specified,
+    /// that will write the FSM using the given binding.
+    ///
+    /// - Parameters:
+    ///   - url: The filesystem URL to write the FSM to.
+    ///   - language: The language to use (defaults to the original language).
+    public func write(to url: URL, language targetLanguage: LanguageBinding? = nil) {
+        let destinationLanguage = targetLanguage ?? language
+        
+    }
+}
+
 /// Read the names of states from the given URL.
 ///
 /// This reads the content of the given URL and interprets
@@ -73,63 +147,6 @@ func transitionsFor(machine url: URL, with states: [State], using language: Lang
             return Transition(id: StateID(), label: expression(i), source: sourceID, target: targetID)
         }
         return transitions
-    }
-}
-
-
-public class Machine {
-    /// Programming language binding
-    public var language: LanguageBinding
-    /// The actual finite state machine
-    public var llfsm: LLFSM
-    /// Graphical layout of the states
-    public var layout: StateLayouts
-    /// Source code of OnEntry/OnExit/Internal actions of states
-    public var activities: StateActivitiesSourceCode
-
-    /// Constructor for reading an FSM from a given URL.
-    ///
-    /// This initialiser will read the states and transitions from
-    /// the FileWrapper at the given URL.
-    ///
-    /// - Note: The URL is expected to point to a directory containing the machine.
-    /// - Parameter url: The URL to read the FSM from.
-    public init(from url: URL) throws {
-        language = ObjCPPBinding()
-        activities = StateActivitiesSourceCode()
-        let names = try stateNames(from: url.forFile(.states))
-        let states = names.map { State(id: StateID(), name: $0) }
-        let susp = language.suspendState(url, states)
-        let transitions = states.flatMap(transitionsFor(machine: url, with: states, using: language))
-        llfsm = LLFSM(states: states, transitions: transitions, suspendState: susp)
-
-        let layoutURL = url.forFile(.layout)
-        let namesLayout: StateNameLayouts
-        do {
-            try namesLayout = stateNameLayouts(from: layoutURL)
-        } catch {
-            fputs("Cannot open '\(layoutURL.path): \(error.localizedDescription)'\n", stderr)
-            namesLayout = [:]
-        }
-        //
-        // convert mapping from name ot layout to mapping from ID to layout
-        // using default grid layout for states at position (0,0)
-        //
-        layout = states.enumerated().reduce([:]) {
-            var layouts = $0
-            let gridLayout = StateLayout(index: $1.offset)
-            var layout = namesLayout[$1.element.name] ?? gridLayout
-            if layout.closedLayout.x == 0 && layout.closedLayout.y == 0 {
-                layout.closedLayout.x = gridLayout.closedLayout.x
-                layout.closedLayout.y = gridLayout.closedLayout.y
-            }
-            if layout.openLayout.x == 0 && layout.openLayout.y == 0 {
-                layout.openLayout.x = gridLayout.openLayout.x
-                layout.openLayout.y = gridLayout.openLayout.y
-            }
-            layouts[$1.element.id] = layout
-            return layouts
-        }
     }
 }
 

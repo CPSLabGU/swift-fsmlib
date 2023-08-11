@@ -1,0 +1,28 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "sourceLanguages": [
+                "swift"
+            ],
+            "name": "Debug fsmconvert",
+            "program": "${workspaceFolder:swift-fsmlib}/.build/debug/fsmconvert",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-fsmlib}",
+            "preLaunchTask": "swift: Build Debug fsmconvert"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "sourceLanguages": [
+                "swift"
+            ],
+            "name": "Release fsmconvert",
+            "program": "${workspaceFolder:swift-fsmlib}/.build/release/fsmconvert",
+            "args": [],
+            "cwd": "${workspaceFolder:swift-fsmlib}",
+            "preLaunchTask": "swift: Build Release fsmconvert"
+        }
+    ]
+}

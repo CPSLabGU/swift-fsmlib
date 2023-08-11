@@ -50,6 +50,30 @@ public struct StateActivitiesSourceCode: StateActivities {
     public var actions = StateActionsMapping()
 }
 
+/// Name of a state activity.
+///
+/// This represents the cannonical state activities
+/// in the order in which they are stored in the array.
+public enum StateActivityName: String, RawRepresentable, CaseIterable, Codable {
+    case onEntry
+    case onExit
+    case `internal`
+    case onSuspend
+    case onResume
+}
+
+/// Order of state actions.
+///
+/// This represents the array index of cannonical state activities
+/// in the order in which they are stored in the array.
+public enum StateActionIndex: Int, RawRepresentable, CaseIterable, Codable {
+    case onEntry
+    case onExit
+    case `internal`
+    case onSuspend
+    case onResume
+}
+
 extension Array where Element: StringProtocol {
     /// The `onEntry` action of a state.
     ///
@@ -61,7 +85,7 @@ extension Array where Element: StringProtocol {
             if isEmpty {
                 append(newValue)
             } else {
-                self[0] = newValue
+                self[StateActionIndex.onEntry.rawValue] = newValue
             }
         }
     }
@@ -71,16 +95,16 @@ extension Array where Element: StringProtocol {
     /// This property interprets the second element of the array
     /// as the `onExit` action of a state.
     @inlinable var onExit: Element {
-        get { count >= 2 ? self[1] : "" }
+        get { count > StateActionIndex.onExit.rawValue ? self[StateActionIndex.onExit.rawValue] : "" }
         set {
             switch count {
-            case 0:
+            case StateActionIndex.onEntry.rawValue:
                 append("")
                 fallthrough
-            case 1:
+            case StateActionIndex.onExit.rawValue:
                 append(newValue)
             default:
-                self[1] = newValue
+                self[StateActionIndex.onExit.rawValue] = newValue
             }
         }
     }
@@ -90,19 +114,72 @@ extension Array where Element: StringProtocol {
     /// This property interprets the second element of the array
     /// as the `internal` action of a state.
     @inlinable var `internal`: Element {
-        get { count >= 3 ? self[2] : "" }
+        get { count > StateActionIndex.internal.rawValue ? self[StateActionIndex.internal.rawValue] : "" }
         set {
             switch count {
-            case 0:
+            case StateActionIndex.onEntry.rawValue:
                 append("")
                 fallthrough
-            case 1:
+            case StateActionIndex.onExit.rawValue:
                 append("")
                 fallthrough
-            case 2:
+            case StateActionIndex.internal.rawValue:
                 append(newValue)
             default:
                 self[2] = newValue
+            }
+        }
+    }
+
+    /// The `onSuspend` action of a state.
+    ///
+    /// This property interprets the second element of the array
+    /// as the `onSuspend` action of a state.
+    @inlinable var onSuspend: Element {
+        get { count > StateActionIndex.onSuspend.rawValue ? self[StateActionIndex.onSuspend.rawValue] : "" }
+        set {
+            switch count {
+            case StateActionIndex.onEntry.rawValue:
+                append("")
+                fallthrough
+            case StateActionIndex.onExit.rawValue:
+                append("")
+                fallthrough
+            case StateActionIndex.internal.rawValue:
+                append("")
+                fallthrough
+            case StateActionIndex.onSuspend.rawValue:
+                append(newValue)
+            default:
+                self[StateActionIndex.onSuspend.rawValue] = newValue
+            }
+        }
+    }
+
+    /// The `onResume` action of a state.
+    ///
+    /// This property interprets the second element of the array
+    /// as the `onSuspend` action of a state.
+    @inlinable var onResume: Element {
+        get { count > StateActionIndex.onResume.rawValue ? self[StateActionIndex.onResume.rawValue] : "" }
+        set {
+            switch count {
+            case StateActionIndex.onEntry.rawValue:
+                append("")
+                fallthrough
+            case StateActionIndex.onExit.rawValue:
+                append("")
+                fallthrough
+            case StateActionIndex.internal.rawValue:
+                append("")
+                fallthrough
+            case StateActionIndex.onSuspend.rawValue:
+                append(newValue)
+                fallthrough
+            case StateActionIndex.onResume.rawValue:
+                append(newValue)
+            default:
+                self[StateActionIndex.onResume.rawValue] = newValue
             }
         }
     }

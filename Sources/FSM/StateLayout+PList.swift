@@ -8,6 +8,25 @@ import Foundation
 
 /// Reading a state layout from a property list
 public extension StateLayout {
+    /// Property list representation
+    var propertyList: NSDictionary {
+        var propertyList = NSDictionary()
+        propertyList.set(value: isOpen, for: .expanded)
+        propertyList.set(value: closedLayout.dimensions.w, for: .width)
+        propertyList.set(value: closedLayout.dimensions.h, for: .height)
+        propertyList.set(value: openLayout.dimensions.w, for: .expandedWidth)
+        propertyList.set(value: openLayout.dimensions.h, for: .expandedHeight)
+        propertyList.set(value: closedLayout.x, for: .positionX)
+        propertyList.set(value: closedLayout.y, for: .positionY)
+        propertyList.set(value: onEntryHeight,  for: .onEntryHeight)
+        propertyList.set(value: onExitHeight,   for: .onExitHeight)
+        propertyList.set(value: internalHeight, for: .internalHeight)
+        propertyList.set(value: zoomedOnEntryHeight,  for: .zoomedOnEntryHeight)
+        propertyList.set(value: zoomedOnExitHeight,   for: .zoomedOnExitHeight)
+        propertyList.set(value: zoomedInternalHeight, for: .zoomedInternalHeight)
+        return propertyList
+    }
+
     /// Property list initialiser for a state layout
     init(_ propertyList: NSDictionary = [:], index i: Int = 0) {
         isOpen = propertyList.value(.expanded, default: false)
