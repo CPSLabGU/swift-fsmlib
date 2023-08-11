@@ -25,6 +25,8 @@ public struct CBoilerplate: Boilerplate, Equatable, Codable {
 public extension CBoilerplate {
     /// Boilerplate section names.
     enum SectionName: String, RawRepresentable, Hashable, Equatable, Codable, CaseIterable {
+        /// The include path.
+        case includePath
         /// The code containing `#include` directives.
         case includes
         /// The code containing variable definitions.

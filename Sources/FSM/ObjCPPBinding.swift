@@ -34,8 +34,9 @@ public struct ObjCPPBinding: LanguageBinding {
         boilerplateofCPPMachine(at: url)
     }
 
+    /// Objective-C++ binding from URL and state name to state boilerplate.
     public var stateBoilerplate: (URL, StateName) -> any Boilerplate = { url, stateName in
-        CBoilerplate()
+        boilerplateofCPPState(at: url, state: stateName)
     }
 
     /// Designated initialiser.
@@ -188,8 +189,20 @@ public func suspendStateOfObjCPPMachine(_ m: URL, states: [State]) -> StateID? {
 public func boilerplateofCPPMachine(at machine: URL) -> any Boilerplate {
     let name = machine.deletingPathExtension().lastPathComponent
     var boilerplate = CBoilerplate()
-    boilerplate.sections[.includes]  = machine.stringContents(of: "\(name)_Includes.h")
-    boilerplate.sections[.variables] = machine.stringContents(of: "\(name)_Variables.h")
-    boilerplate.sections[.functions] = machine.stringContents(of: "\(name)_Methods.h")    
+    boilerplate.sections[.includePath] = machine.stringContents(of: "IncludePath")
+    boilerplate.sections[.includes]    = machine.stringContents(of: "\(name)_Includes.h")
+    boilerplate.sections[.variables]   = machine.stringContents(of: "\(name)_Variables.h")
+    boilerplate.sections[.functions]   = machine.stringContents(of: "\(name)_Methods.h")
     return boilerplate
 }
+
+/// Return the boilerplate for a given state.
+public func boilerplateofCPPState(at machine: URL, state: StateName) -> any Boilerplate {
+    let name = machine.deletingPathExtension().lastPathComponent
+    var boilerplate = CBoilerplate()
+    boilerplate.sections[.includes]  = machine.stringContents(of: "State_\(name)_Includes.h")
+    boilerplate.sections[.variables] = machine.stringContents(of: "State_\(name)_Variables.h")
+    boilerplate.sections[.functions] = machine.stringContents(of: "State_\(name)_Methods.h")
+    return boilerplate
+}
+
