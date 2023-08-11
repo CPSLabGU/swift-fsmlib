@@ -6,21 +6,10 @@
 //
 import Foundation
 
-/// Return an substring contained in a matching, bracketed
-/// regular expression pattern.
-///
-/// - Parameters:
-///   - content: The string to examine.
-///   - expr: The regular expression pattern to match.
-/// - Returns: The substring contained in the first bracketed expression.
-func string(containedIn content: String, matching expr: Regex<(Substring,Substring)>) -> Substring? {
-    try? expr.firstMatch(in: content)?.1
-}
-
-
 /// Return the number of transitions based on the content of the State.h file
 /// - Parameter content: The content of the `State.h` file
 /// - Returns: The number of transitions in the given state.
+@inlinable
 public func numberOfObjCPPTransitionsIn(header content: String) -> Int {
     guard let numString = string(containedIn: content, matching: #/numberOfTransitions.*return[^0-9]*([0-9][0-9]*)/#),
           let numberOfTransitions = Int(numString) else { return 0 }
@@ -34,6 +23,7 @@ public func numberOfObjCPPTransitionsIn(header content: String) -> Int {
 ///   - i: The transition number.
 ///   - content: The content of the `State.h` file.
 /// - Returns:
+@inlinable
 public func targetStateIndexOfObjCPPTransition(_ i: Int, inHeader content: String) -> Int? {
     guard let numString = string(containedIn: content, matching: try! Regex("Transition_\(i).*int.*toState.*=[^0-9]*([0-9]*)")),
           let targetStateIndex = Int(numString) else { return nil }
@@ -46,6 +36,7 @@ public func targetStateIndexOfObjCPPTransition(_ i: Int, inHeader content: Strin
 ///   - machine: The machine URL.
 ///   - state: The name of the state to examine.
 /// - Returns: The content of the `State.h` file.
+@inlinable
 public func contentOfObjCPPStateFor(machine: URL, state: StateName) -> String? {
     let file = "State_\(state).h"
     let url = machine.appendingPathComponent(file)
@@ -64,6 +55,7 @@ public func contentOfObjCPPStateFor(machine: URL, state: StateName) -> String? {
 ///   - m: The machine URL.
 ///   - s: The name of the state to examine.
 /// - Returns: The number of transitions leaving the given state.
+@inlinable
 public func numberOfObjCPPTransitionsFor(machine m: URL, state s: StateName) -> Int {
     guard let content = contentOfObjCPPStateFor(machine: m, state: s) else { return 0 }
     return numberOfObjCPPTransitionsIn(header: content)
@@ -76,6 +68,7 @@ public func numberOfObjCPPTransitionsFor(machine m: URL, state s: StateName) -> 
 ///   - state: The name of the state to examine.
 ///   - number: The transition number.
 /// - Returns: The transition expression.
+@inlinable
 public func expressionOfObjCPPTransitionFor(machine: URL, state: StateName, transition number: Int) -> String {
     let file = "State_\(state)_Transition_\(number).expr"
     let url = machine.appendingPathComponent(file)
@@ -90,6 +83,13 @@ public func expressionOfObjCPPTransitionFor(machine: URL, state: StateName, tran
 
 
 /// Return the target state ID for a given transition
+/// - Parameters:
+///   - m: URL for the machine in question.
+///   - states: Array of states to examine.
+///   - name: The name of the state to search for.
+///   - number:The sequence number of the transition to examine.
+/// - Returns: The State ID if found, `nil` otherwise.
+@inlinable
 public func targetOfObjCPPTransitionFor(machine m: URL, states: [State], state name: StateName, transition number: Int) -> StateID? {
     guard let content = contentOfObjCPPStateFor(machine: m, state: name),
           let i = targetStateIndexOfObjCPPTransition(number, inHeader: content),
@@ -100,6 +100,9 @@ public func targetOfObjCPPTransitionFor(machine m: URL, states: [State], state n
 
 
 /// Read the content of the <Machine>.mm file
+/// - Parameter machine: The machine URL.
+/// - Returns: The content of the machine, or `nil` if not found.
+@inlinable
 public func contentOfObjCPPImplementationFor(machine: URL) -> String? {
     let name = machine.deletingPathExtension().lastPathComponent
     let file = "\(name).mm"
