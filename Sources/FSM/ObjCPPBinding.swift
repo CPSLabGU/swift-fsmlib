@@ -197,6 +197,7 @@ public func boilerplateofCPPMachine(at machine: URL) -> any Boilerplate {
 }
 
 /// Return the boilerplate for a given state.
+@inlinable
 public func boilerplateofCPPState(at machine: URL, state: StateName) -> any Boilerplate {
     let name = machine.deletingPathExtension().lastPathComponent
     var boilerplate = CBoilerplate()
