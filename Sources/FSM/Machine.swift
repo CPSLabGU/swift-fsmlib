@@ -12,8 +12,11 @@ public typealias StateNames = [StateName]
 /// Mapping from state ID to state layout
 public typealias StateLayouts = [StateID : StateLayout]
 
-/// Mapping from state name to state layout
-public typealias StateNameLayouts = [StateName : StateLayout]
+/// Mapping from transition ID to transition layout
+public typealias TransitionLayouts = [TransitionID : TransitionLayout]
+
+/// Mapping from state name to state/transitions layout
+public typealias StateNameLayouts = [StateName : (state: StateLayout, transitions: [TransitionLayout])]
 
 /// A finite-state machine.
 ///
@@ -24,7 +27,9 @@ public class Machine {
     /// The actual finite state machine
     public var llfsm: LLFSM
     /// Graphical layout of the states
-    public var layout: StateLayouts
+    public var stateLayout: StateLayouts
+    /// Graphical layout of the transitions
+    public var transitionLayout: TransitionLayouts
     /// Source code of OnEntry/OnExit/Internal actions of states
     public var activities: StateActivitiesSourceCode
     
@@ -41,7 +46,13 @@ public class Machine {
         let names = try stateNames(from: url.fileURL(for: .states))
         let states = names.map { State(id: StateID(), name: $0) }
         let susp = language.suspendState(url, states)
-        let transitions = states.flatMap(transitionsFor(machine: url, with: states, using: language))
+        var transitionMap = [StateID : [TransitionID]]()
+        let transitionsForState = transitionsFor(machine: url, with: states, using: language)
+        let transitions = states.flatMap {
+            let transitions = transitionsForState($0)
+            transitionMap[$0.id] = transitions.map(\.id)
+            return transitions
+        }
         llfsm = LLFSM(states: states, transitions: transitions, suspendState: susp)
         
         let layoutURL = url.fileURL(for: .layout)
@@ -56,10 +67,13 @@ public class Machine {
         // convert mapping from name ot layout to mapping from ID to layout
         // using default grid layout for states at position (0,0)
         //
-        layout = states.enumerated().reduce([:]) {
-            var layouts = $0
-            let gridLayout = StateLayout(index: $1.offset)
-            var layout = namesLayout[$1.element.name] ?? gridLayout
+        transitionLayout = [:]
+        stateLayout = [:]
+        for si in states.enumerated() {
+            let state = si.element
+            let gridLayout = StateLayout(index: si.offset)
+            let layoutsForName = namesLayout[state.name]
+            var layout = layoutsForName?.state ?? gridLayout
             if layout.closedLayout.x == 0 && layout.closedLayout.y == 0 {
                 layout.closedLayout.x = gridLayout.closedLayout.x
                 layout.closedLayout.y = gridLayout.closedLayout.y
@@ -68,8 +82,16 @@ public class Machine {
                 layout.openLayout.x = gridLayout.openLayout.x
                 layout.openLayout.y = gridLayout.openLayout.y
             }
-            layouts[$1.element.id] = layout
-            return layouts
+            stateLayout[state.id] = layout
+            let stateTransitionIDs = transitionMap[state.id] ?? []
+            for te in (layoutsForName?.transitions ?? []).enumerated() {
+                guard stateTransitionIDs.count > te.offset else {
+                    fputs("Layout \(te.offset + 1) ignored: State \(state.name) only has \(stateTransitionIDs.count) transitions\n", stderr)
+                    continue
+                }
+                let transitionID = stateTransitionIDs[te.offset]
+                transitionLayout[transitionID] = te.element
+            }
         }
     }
 
@@ -117,12 +139,27 @@ public func stateNames(from url: URL) throws -> StateNames {
 /// - Returns: A mapping from state names to state layouts.
 @inlinable
 public func stateNameLayouts(from url: URL) throws -> StateNameLayouts {
-    guard let dict = NSDictionary(contentsOf: url) else { return [:] }
+    (NSDictionary(contentsOf: url)?[String.states] as? NSDictionary).flatMap {
+        stateNameLayouts(from: $0)
+    } ?? [:]
+}
+
+/// Read the layout of state names from the given dictionary.
+///
+/// This function reads the state layout from the given dictionary
+/// (the property list representation of the layout).
+///
+/// - Parameter dict: Dictionary containing the layout.
+/// - Returns: A mapping from state names to state layouts.
+@inlinable
+public func stateNameLayouts(from dict: NSDictionary) -> StateNameLayouts {
     var layouts = StateNameLayouts()
     for (state, layoutDict) in dict {
         guard let s = state as? StateName,
               let d = layoutDict as? NSDictionary else { continue }
-        layouts[s] = StateLayout(d)
+        let transitionLayouts = d[TransitionLayoutKey.transitions.rawValue] as? [NSDictionary] ?? []
+        let ts = transitionLayouts.map { TransitionLayout($0) }
+        layouts[s] = (StateLayout(d), ts)
     }
     return layouts
 }
@@ -148,9 +185,8 @@ func transitionsFor(machine url: URL, with states: [State], using language: Lang
         let transitionIndices = (0..<n).enumerated()
         let transitions = transitionIndices.map { i, _ -> Transition in
             let targetID = target(i) ?? StateID(uuid: UUID_NULL)
-            return Transition(id: StateID(), label: expression(i), source: sourceID, target: targetID)
+            return Transition(id: TransitionID(), label: expression(i), source: sourceID, target: targetID)
         }
         return transitions
     }
 }
-

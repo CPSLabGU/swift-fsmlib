@@ -4,7 +4,10 @@
 //  Created by Rene Hexel on 14/10/2016.
 //  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
 //
+/// Keys for transition layout.
 public enum TransitionLayoutKey: String, RawRepresentable, CaseIterable {
+    /// Dictionary key for the array of transition layouts.
+    case transitions = "Transitions"
     /// Full bezier path from source point to destination point
     case bezierPath = "bezierPath"
     /// Key for source point
@@ -32,4 +35,3 @@ public enum TransitionLayoutKey: String, RawRepresentable, CaseIterable {
     /// Key for control point 2 y dimension.
     case ctlPoint2Y = "controlPoint2Y"
 }
-

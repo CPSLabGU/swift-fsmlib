@@ -34,32 +34,33 @@ public extension TransitionLayout {
     }
 
     /// Property list initialiser for a state layout
-    init(_ propertyList: NSDictionary = [:], index i: Int = 0) {
-        if let points = propertyList[TransitionLayoutKey.bezierPath] as? [Point2D] {
+    /// - Parameter propertyList: The property list to initialise from.
+    init(_ propertyList: NSDictionary = [:]) {
+        if let points: [Point2D] = propertyList.transitionValue(.bezierPath) {
             path = Path(points)
             return
         }
-        let src = (propertyList[TransitionLayoutKey.srcPoint] as? Point2D) ??
-            (propertyList[TransitionLayoutKey.srcPointX] as? Double).flatMap { x in
-                (propertyList[TransitionLayoutKey.srcPointY] as? Double).flatMap { y in
+        let src = (propertyList.transitionValue(.srcPoint) as Point2D?) ??
+            (propertyList.transitionValue(.srcPointX) as Double?).flatMap { x in
+                (propertyList.transitionValue(.srcPointY) as Double?).flatMap { y in
                 Point2D(x, y)
             }
         }
-        let dst = (propertyList[TransitionLayoutKey.dstPoint] as? Point2D) ??
-            (propertyList[TransitionLayoutKey.dstPointX] as? Double).flatMap { x in
-                (propertyList[TransitionLayoutKey.dstPointY] as? Double).flatMap { y in
+        let dst = (propertyList.transitionValue(.dstPoint) as Point2D?) ??
+            (propertyList.transitionValue(.dstPointX) as Double?).flatMap { x in
+                (propertyList.transitionValue(.dstPointY) as Double?).flatMap { y in
                 Point2D(x, y)
             }
         }
-        let ctl1 = (propertyList[TransitionLayoutKey.ctlPoint1] as? Point2D) ??
-            (propertyList[TransitionLayoutKey.ctlPoint1X] as? Double).flatMap { x in
-                (propertyList[TransitionLayoutKey.ctlPoint1Y] as? Double).flatMap { y in
+        let ctl1 = (propertyList.transitionValue(.ctlPoint1) as Point2D?) ??
+            (propertyList.transitionValue(.ctlPoint1X) as Double?).flatMap { x in
+                (propertyList.transitionValue(.ctlPoint1Y) as Double?).flatMap { y in
                 Point2D(x, y)
             }
         }
-        let ctl2 = (propertyList[TransitionLayoutKey.ctlPoint2] as? Point2D) ??
-            (propertyList[TransitionLayoutKey.ctlPoint2X] as? Double).flatMap { x in
-                (propertyList[TransitionLayoutKey.ctlPoint2Y] as? Double).flatMap { y in
+        let ctl2 = (propertyList.transitionValue(.ctlPoint2) as Point2D?) ??
+            (propertyList.transitionValue(.ctlPoint2X) as Double?).flatMap { x in
+                (propertyList.transitionValue(.ctlPoint2Y) as Double?).flatMap { y in
                 Point2D(x, y)
             }
         }

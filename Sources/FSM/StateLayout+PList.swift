@@ -32,6 +32,9 @@ public extension StateLayout {
     }
 
     /// Property list initialiser for a state layout
+    /// - Parameters:
+    ///   - propertyList: The property list to read from.
+    ///   - i: The state index (for autolayout).
     init(_ propertyList: NSDictionary = [:], index i: Int = 0) {
         isOpen = propertyList.value(.expanded, default: false)
         let cw: Double = propertyList.value(.width,          default: 100)

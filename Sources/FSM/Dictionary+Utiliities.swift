@@ -18,7 +18,7 @@ extension NSDictionary {
     /// - Returns: The value for the given key, or the default value.
     @usableFromInline
     func value<T>(_ key: StateLayoutKey, default: T) -> T {
-        guard let v = self[key] as? T else { return `default` }
+        guard let v = self[key.rawValue] as? T else { return `default` }
         return v
     }
 
@@ -33,8 +33,20 @@ extension NSDictionary {
     /// - Returns: The value for the given key, or the default value.
     @usableFromInline
     func transitionValue<T>(_ key: TransitionLayoutKey, default: T) -> T {
-        guard let v = self[key] as? T else { return `default` }
-        return v
+        transitionValue(key) ?? `default`
+    }
+
+    /// Typed, optional value for the given transition layout key.
+    ///
+    /// This function returns a value for a given transition layout key,
+    /// or `nil` if the key is not present.
+    ///
+    /// - Parameters:
+    ///   - key: The key to look up.
+    /// - Returns: The value for the given key, or `nil`.
+    @usableFromInline
+    func transitionValue<T>(_ key: TransitionLayoutKey) -> T? {
+        self[key.rawValue] as? T
     }
 
     /// Set the value for the given state layout key.
