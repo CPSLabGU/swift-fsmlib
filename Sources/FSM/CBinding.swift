@@ -1,42 +1,42 @@
 //
-//  ObjCPPBinding.swift
+//  CBinding.swift
 //
-//  Created by Rene Hexel on 19/10/2016.
+//  Created by Rene Hexel on 12/08/2023.
 //  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
 //
 import Foundation
 
-/// Objective-C++ language binding
-public struct ObjCPPBinding: LanguageBinding {
-    /// Objective-C++ binding from URL and state name to number of transitions
+/// Plain C language binding
+public struct CBinding: LanguageBinding {
+    /// C Language binding from URL and state name to number of transitions
     public let numberOfTransitions: (URL, StateName) -> Int = { url, s in
-        numberOfObjCPPTransitionsFor(machine: url, state: s)
+        numberOfCTransitionsFor(machine: url, state: s)
     }
-    /// Objective-C++ binding from URL, state name, and transition to expression
+    /// C Language binding from URL, state name, and transition to expression
     public let expressionOfTransition: (URL, StateName) -> (Int) -> String = {
         url, s in { number in
-            expressionOfObjCPPTransitionFor(machine: url, state: s, transition: number)
+            expressionOfCTransitionFor(machine: url, state: s, transition: number)
         }
     }
-    /// Objective-C++ binding from URL, states, source state name, and transition to target state ID
+    /// C Language binding from URL, states, source state name, and transition to target state ID
     public let targetOfTransition: (URL, [State], StateName) -> (Int) -> StateID? = { url, ss, s in
         { number in
-            targetOfObjCPPTransitionFor(machine: url, states: ss, state: s, transition: number)
+            targetOfCTransitionFor(machine: url, states: ss, state: s, transition: number)
         }
     }
-    /// Objective-C++ binding from URL, states to suspend state ID
+    /// C Language binding from URL, states to suspend state ID
     public let suspendState: (URL, [State]) -> StateID? = { url, ss in
-        suspendStateOfObjCPPMachine(url, states: ss)
+        suspendStateOfCMachine(url, states: ss)
     }
 
-    /// Objective-C++ binding from URL to machine boilerplate.
+    /// C Language binding from URL to machine boilerplate.
     public let boilerplate: (URL) -> any Boilerplate = { url in
-        boilerplateofObjCPPMachine(at: url)
+        boilerplateofCMachine(at: url)
     }
 
-    /// Objective-C++ binding from URL and state name to state boilerplate.
+    /// C Language binding from URL and state name to state boilerplate.
     public var stateBoilerplate: (URL, StateName) -> any Boilerplate = { url, stateName in
-        boilerplateofObjCPPState(at: url, state: stateName)
+        boilerplateofCState(at: url, state: stateName)
     }
 
     /// Designated initialiser.
@@ -49,7 +49,7 @@ public struct ObjCPPBinding: LanguageBinding {
 /// - Parameter content: The content of the `State.h` file
 /// - Returns: The number of transitions in the given state.
 @inlinable
-public func numberOfObjCPPTransitionsIn(header content: String) -> Int {
+public func numberOfCTransitionsIn(header content: String) -> Int {
     guard let numString = string(containedIn: content, matching: #/numberOfTransitions.*return[^0-9]*([0-9][0-9]*)/#),
           let numberOfTransitions = Int(numString) else { return 0 }
     return numberOfTransitions
@@ -63,7 +63,7 @@ public func numberOfObjCPPTransitionsIn(header content: String) -> Int {
 ///   - content: The content of the `State.h` file.
 /// - Returns:
 @inlinable
-public func targetStateIndexOfObjCPPTransition(_ i: Int, inHeader content: String) -> Int? {
+public func targetStateIndexOfCTransition(_ i: Int, inHeader content: String) -> Int? {
     guard let numString = string(containedIn: content, matching: try! Regex("Transition_\(i).*int.*toState.*=[^0-9]*([0-9]*)")),
           let targetStateIndex = Int(numString) else { return nil }
     return targetStateIndex
@@ -76,7 +76,7 @@ public func targetStateIndexOfObjCPPTransition(_ i: Int, inHeader content: Strin
 ///   - state: The name of the state to examine.
 /// - Returns: The content of the `State.h` file.
 @inlinable
-public func contentOfObjCPPStateFor(machine: URL, state: StateName) -> String? {
+public func contentOfCStateFor(machine: URL, state: StateName) -> String? {
     let file = "State_\(state).h"
     let url = machine.appendingPathComponent(file)
     do {
@@ -95,9 +95,9 @@ public func contentOfObjCPPStateFor(machine: URL, state: StateName) -> String? {
 ///   - s: The name of the state to examine.
 /// - Returns: The number of transitions leaving the given state.
 @inlinable
-public func numberOfObjCPPTransitionsFor(machine m: URL, state s: StateName) -> Int {
-    guard let content = contentOfObjCPPStateFor(machine: m, state: s) else { return 0 }
-    return numberOfObjCPPTransitionsIn(header: content)
+public func numberOfCTransitionsFor(machine m: URL, state s: StateName) -> Int {
+    guard let content = contentOfCStateFor(machine: m, state: s) else { return 0 }
+    return numberOfCTransitionsIn(header: content)
 }
 
 
@@ -108,7 +108,7 @@ public func numberOfObjCPPTransitionsFor(machine m: URL, state s: StateName) -> 
 ///   - number: The transition number.
 /// - Returns: The transition expression.
 @inlinable
-public func expressionOfObjCPPTransitionFor(machine: URL, state: StateName, transition number: Int) -> String {
+public func expressionOfCTransitionFor(machine: URL, state: StateName, transition number: Int) -> String {
     let file = "State_\(state)_Transition_\(number).expr"
     let url = machine.appendingPathComponent(file)
     do {
@@ -129,9 +129,9 @@ public func expressionOfObjCPPTransitionFor(machine: URL, state: StateName, tran
 ///   - number:The sequence number of the transition to examine.
 /// - Returns: The State ID if found, `nil` otherwise.
 @inlinable
-public func targetOfObjCPPTransitionFor(machine m: URL, states: [State], state name: StateName, transition number: Int) -> StateID? {
-    guard let content = contentOfObjCPPStateFor(machine: m, state: name),
-          let i = targetStateIndexOfObjCPPTransition(number, inHeader: content),
+public func targetOfCTransitionFor(machine m: URL, states: [State], state name: StateName, transition number: Int) -> StateID? {
+    guard let content = contentOfCStateFor(machine: m, state: name),
+          let i = targetStateIndexOfCTransition(number, inHeader: content),
           i >= 0 && i < states.count else { return nil }
     let targetState = states[i]
     return targetState.id
@@ -142,7 +142,7 @@ public func targetOfObjCPPTransitionFor(machine m: URL, states: [State], state n
 /// - Parameter machine: The machine URL.
 /// - Returns: The content of the machine, or `nil` if not found.
 @inlinable
-public func contentOfObjCPPImplementationFor(machine: URL) -> String? {
+public func contentOfCImplementationFor(machine: URL) -> String? {
     let name = machine.deletingPathExtension().lastPathComponent
     let file = "\(name).mm"
     let url = machine.appendingPathComponent(file)
@@ -161,7 +161,7 @@ public func contentOfObjCPPImplementationFor(machine: URL) -> String? {
 /// - Parameter content: The content to examine.
 /// - Returns: The target state index.
 @inlinable
-public func suspendStateIndexOfObjCPPMachine(inImplementation content: String) -> Int? {
+public func suspendStateIndexOfCMachine(inImplementation content: String) -> Int? {
     guard let numString = string(containedIn: content, matching: #/setSuspendState[^0-9]*([0-9]*)/#),
         let targetStateIndex = Int(numString) else { return nil }
     return targetStateIndex
@@ -174,9 +174,9 @@ public func suspendStateIndexOfObjCPPMachine(inImplementation content: String) -
 ///   - states: The states the machine is composed of.
 /// - Returns: The suspend state ID, or `nil` if nonexistent.
 @inlinable
-public func suspendStateOfObjCPPMachine(_ m: URL, states: [State]) -> StateID? {
-    guard let content = contentOfObjCPPImplementationFor(machine: m),
-          let i = suspendStateIndexOfObjCPPMachine(inImplementation: content),
+public func suspendStateOfCMachine(_ m: URL, states: [State]) -> StateID? {
+    guard let content = contentOfCImplementationFor(machine: m),
+          let i = suspendStateIndexOfCMachine(inImplementation: content),
           i >= 0 && i < states.count else { return nil }
     let suspendState = states[i]
     return suspendState.id
@@ -186,7 +186,7 @@ public func suspendStateOfObjCPPMachine(_ m: URL, states: [State]) -> StateID? {
 /// - Parameter machine: The machine URL.
 /// - Returns: The boilerplate for the given machine.
 @inlinable
-public func boilerplateofObjCPPMachine(at machine: URL) -> any Boilerplate {
+public func boilerplateofCMachine(at machine: URL) -> any Boilerplate {
     let name = machine.deletingPathExtension().lastPathComponent
     var boilerplate = CBoilerplate()
     boilerplate.sections[.includePath] = machine.stringContents(of: "IncludePath")
@@ -203,7 +203,7 @@ public func boilerplateofObjCPPMachine(at machine: URL) -> any Boilerplate {
 ///   - state: The name of the state to examine.
 /// - Returns: The boilerplate for the given state.
 @inlinable
-public func boilerplateofObjCPPState(at machine: URL, state: StateName) -> any Boilerplate {
+public func boilerplateofCState(at machine: URL, state: StateName) -> any Boilerplate {
     let name = machine.deletingPathExtension().lastPathComponent
     var boilerplate = CBoilerplate()
     boilerplate.sections[.includes]  = machine.stringContents(of: "State_\(name)_Includes.h")

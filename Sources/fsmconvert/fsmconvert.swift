@@ -4,6 +4,15 @@ import FSM
 
 @main
 struct FSMConvert: AsyncParsableCommand {
+    @Flag(name: .shortAndLong, help: "Create an arrangement of a single FSM.")
+    var arrangement = false
+
+    @Option(name: .shortAndLong, help: "The output machine format.")
+    var format = ""
+
+    @Option(name: .shortAndLong, help: "The output machine/arrangement.")
+    var output = "fsm.out"
+
     @Flag(name: .shortAndLong, help: "Turn on verbose output.")
     var verbose = false
 
