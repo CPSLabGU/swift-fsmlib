@@ -7,7 +7,13 @@ struct FSMConvert: AsyncParsableCommand {
     @Flag(name: .shortAndLong, help: "Create an arrangement of a single FSM.")
     var arrangement = false
 
-    @Option(name: .shortAndLong, help: "The output machine format.")
+    @Option(name: .shortAndLong, help: "The output machine format.", transform: {
+        if $0.isEmpty { return $0 }
+        guard let format = Format(rawValue: $0.lowercased()) else {
+            throw ValidationError("Unknown format '\($0)'")
+        }
+        return format.rawValue
+    })
     var format = ""
 
     @Option(name: .shortAndLong, help: "The output machine/arrangement.")

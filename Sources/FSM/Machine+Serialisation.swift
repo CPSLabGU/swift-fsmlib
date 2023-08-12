@@ -10,23 +10,29 @@ import Foundation
 public typealias Filename = String
 
 extension Filename {
+    /// Programming language for the given machine.
+    @usableFromInline static let language = "Language"
+
     /// Name of the text file containing state names (one per line).
-    static let states = "States"
+    @usableFromInline static let states = "States"
 
     /// Name of the states layout file
-    static let layout = "Layout.plist"
+    @usableFromInline static let layout = "Layout.plist"
+
+    /// Name of the states layout file
+    @usableFromInline static let includePath = "IncludePath"
 
     /// Key for the file version
-    static let fileVersionKey = "Version"
+    @usableFromInline static let fileVersionKey = "Version"
 
     /// Current file version value
-    static let fileVersion = "1.3"
+    @usableFromInline static let fileVersion = "1.3"
 
     /// key for fsm graph
-    static let graph = "net.mipal.micase.graph"
+    @usableFromInline static let graph = "net.mipal.micase.graph"
 
     /// metadata key
-    static let metaData = "net.mipal.micase.metadata"
+    @usableFromInline static let metaData = "net.mipal.micase.metadata"
 }
 
 extension URL {
@@ -38,7 +44,7 @@ extension URL {
     /// - Returns: The URL for the file.
     @usableFromInline
     func fileURL(for name: Filename) -> URL { return appendingPathComponent(name) }
-
+    
     /// Return the content of the given file.
     ///
     /// This method reads the content of
@@ -54,5 +60,15 @@ extension URL {
     @usableFromInline
     func stringContents(of file: Filename, encoding: String.Encoding = .utf8) -> String {
         (try? String(contentsOf: fileURL(for: file), encoding: .utf8)) ?? ""
+    }
+
+    /// Write the given string to the given file.
+    /// - Parameters:
+    ///   - content: The string to write.
+    ///   - encoding: The encoding to use (defaults to UTF-8).
+    ///   - file: The file name to write to.
+    @usableFromInline
+    func write(content: String, encoding: String.Encoding = .utf8, to file: Filename) throws {
+        try content.write(to: fileURL(for: file), atomically: true, encoding: encoding)
     }
 }

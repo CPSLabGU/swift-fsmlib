@@ -7,7 +7,10 @@
 import Foundation
 
 /// Plain C language binding
-public struct CBinding: LanguageBinding {
+public struct CBinding: OutputLanguage {
+    /// The canonical name of the language binding.
+    public let name = Format.c.rawValue
+
     /// C Language binding from URL and state name to number of transitions
     public let numberOfTransitions: (URL, StateName) -> Int = { url, s in
         numberOfCTransitionsFor(machine: url, state: s)

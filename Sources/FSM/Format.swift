@@ -1,11 +1,9 @@
 //
-//  Formats.swift
+//  Format.swift
 //
 //  Created by Rene Hexel on 12/8/2023.
 //  Copyright © 2015, 2016, 2023 Rene Hexel. All rights reserved.
 //
-import Foundation
-
 /// Known machine formats.
 public enum Format: String, RawRepresentable, Hashable, CaseIterable, Codable {
     /// A plain C FSM
@@ -17,9 +15,11 @@ public enum Format: String, RawRepresentable, Hashable, CaseIterable, Codable {
     /// A C++ FSM
     case cxx
     /// An Objective-C FSM
-    case objC
+    case objC = "objc"
     /// An Objective-C++ FSM
-    case objCPP
+    case objCX = "objc++"
+    /// An Objective-C++ FSM
+    case objCPP = "objcpp"
     /// A Swift FSM
     case swift
     /// A Verilog FSM
@@ -35,9 +35,9 @@ public enum Format: String, RawRepresentable, Hashable, CaseIterable, Codable {
     .cpp: ObjCPPBinding(),
     .cxx: ObjCPPBinding(),
     .objC: ObjCPPBinding(),
+    .objCX: ObjCPPBinding(),
     .objCPP: ObjCPPBinding(),
 //    .swift: SwiftBinding(),
 //    .verilog: VerilogBinding(),
 //    .vhdl: VHDLBinding(),
 ]
-

@@ -36,7 +36,7 @@ public class Machine {
     /// - Note: The URL is expected to point to a directory containing the machine.
     /// - Parameter url: The URL to read the FSM from.
     public init(from url: URL) throws {
-        language = ObjCPPBinding()
+        language = languageBinding(for: url)
         activities = StateActivitiesSourceCode()
         let names = try stateNames(from: url.fileURL(for: .states))
         let states = names.map { State(id: StateID(), name: $0) }
@@ -74,7 +74,7 @@ public class Machine {
     }
 
     /// Write the FSM to the given URL.
-    /// 
+    ///
     /// This method will write the FSM to the
     /// filesystem location denoted by the given URL.
     /// Optionally, a language binding can be specified,
@@ -83,9 +83,13 @@ public class Machine {
     /// - Parameters:
     ///   - url: The filesystem URL to write the FSM to.
     ///   - language: The language to use (defaults to the original language).
-    public func write(to url: URL, language targetLanguage: LanguageBinding? = nil) {
-        let destinationLanguage = targetLanguage ?? language
-        
+    public func write(to url: URL, language targetLanguage: LanguageBinding? = nil) throws {
+        guard let destination = (targetLanguage ?? language) as? OutputLanguage else {
+            throw FSMError.unsupportedOutputFormat
+        }
+        try destination.create(at: url)
+        try destination.writeLanguage(to: url)
+        try destination.write(stateNames: llfsm.states.map { llfsm.stateMap[$0]!.name }, to: url)
     }
 }
 

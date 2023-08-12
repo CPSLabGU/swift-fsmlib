@@ -8,6 +8,9 @@ import Foundation
 
 /// Objective-C++ language binding
 public struct ObjCPPBinding: LanguageBinding {
+    /// The canonical name of the Objective-C++ binding.
+    public let name = Format.objCX.rawValue
+
     /// Objective-C++ binding from URL and state name to number of transitions
     public let numberOfTransitions: (URL, StateName) -> Int = { url, s in
         numberOfObjCPPTransitionsFor(machine: url, state: s)
@@ -189,7 +192,7 @@ public func suspendStateOfObjCPPMachine(_ m: URL, states: [State]) -> StateID? {
 public func boilerplateofObjCPPMachine(at machine: URL) -> any Boilerplate {
     let name = machine.deletingPathExtension().lastPathComponent
     var boilerplate = CBoilerplate()
-    boilerplate.sections[.includePath] = machine.stringContents(of: "IncludePath")
+    boilerplate.sections[.includePath] = machine.stringContents(of: .includePath)
     boilerplate.sections[.includes]    = machine.stringContents(of: "\(name)_Includes.h")
     boilerplate.sections[.variables]   = machine.stringContents(of: "\(name)_Variables.h")
     boilerplate.sections[.functions]   = machine.stringContents(of: "\(name)_Methods.h")
