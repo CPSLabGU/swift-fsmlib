@@ -44,6 +44,13 @@ struct FSMConvert: AsyncParsableCommand {
         if verbose {
             print("\(fsms.count) FSMs with \(fsms.reduce(0) { $0 + $1.llfsm.states.count }) states and \(fsms.reduce(0) { $0 + $1.llfsm.transitions.count }) transitions\n")
         }
+        if arrangement || fsms.count > 1 {
+            print("Arrangements not yet supported.\n")
+        }
+        for fsm in fsms {
+            let url = URL(fileURLWithPath: output)
+            try fsm.write(to: url, format: format.isEmpty ? nil : Format(rawValue: format))
+        }
     }
 }
 

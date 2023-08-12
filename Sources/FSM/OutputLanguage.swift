@@ -16,6 +16,12 @@ public protocol OutputLanguage: LanguageBinding {
     /// Write the language information to the given URL
     /// - Parameter url: The URL to write to.
     func writeLanguage(to url: URL) throws
+    /// Write the window layout.
+    ///
+    /// - Parameters:
+    ///   - windowLayout: The window layout (ignord if `nil`)
+    ///   - url: The machine URL to write to.
+    func write(windowLayout: Data?, to url: URL) throws
     /// Write the state name information to the given URL
     /// - Parameters:
     ///   - stateNames: The names of the states.
@@ -39,6 +45,15 @@ public extension OutputLanguage {
     @inlinable
     func writeLanguage(to url: URL) throws {
         try url.write(content: name, to: .language)
+    }
+    /// Write the window layout to the given URL.
+    ///
+    /// - Parameters:
+    ///   - windowLayout: The FSM window layout data.
+    ///   - url: The URL to write to.
+    @inlinable
+    func write(windowLayout: Data?, to url: URL) throws {
+        try windowLayout.map { try url.write($0, to: .windowLayout) }
     }
     /// Write the state name information to the given URL
     /// - Parameters:

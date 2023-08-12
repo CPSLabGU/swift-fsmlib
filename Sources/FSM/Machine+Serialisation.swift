@@ -16,10 +16,13 @@ extension Filename {
     /// Name of the text file containing state names (one per line).
     @usableFromInline static let states = "States"
 
-    /// Name of the states layout file
+    /// Name of the machine layout file
     @usableFromInline static let layout = "Layout.plist"
 
-    /// Name of the states layout file
+    /// Name of the window layout file
+    @usableFromInline static let windowLayout = "WindowLayout.plist"
+
+    /// Name of the include path file
     @usableFromInline static let includePath = "IncludePath"
 
     /// Key for the file version
@@ -49,6 +52,23 @@ extension URL {
     ///
     /// This method reads the content of
     /// the given file inside a FileWrapper
+    /// into Data.
+    ///
+    /// - Note: If the file does not exist, or cannot be read, `nil` is returned.
+    ///
+    /// - Parameters:
+    ///   - file: The file name to look for.
+    ///   - options: The flags to pass when reading data.
+    /// - Returns: The content of the file.
+    @usableFromInline
+    func contents(of file: Filename, options: Data.ReadingOptions = .mappedIfSafe) -> Data? {
+        try? Data(contentsOf: fileURL(for: file), options: options)
+    }
+
+    /// Return the string content of the given file.
+    ///
+    /// This method reads the content of
+    /// the given file inside a FileWrapper
     /// into a String.
     ///
     /// - Note: If the file does not exist, or cannot be read, an empty string is returned.
@@ -60,6 +80,16 @@ extension URL {
     @usableFromInline
     func stringContents(of file: Filename, encoding: String.Encoding = .utf8) -> String {
         (try? String(contentsOf: fileURL(for: file), encoding: .utf8)) ?? ""
+    }
+
+    /// Write the given data to the given file.
+    /// - Parameters:
+    ///   - data: The data to write.
+    ///   - encoding: The encoding to use (defaults to UTF-8).
+    ///   - file: The file name to write to.
+    @usableFromInline
+    func write(_ data: Data?, options: Data.WritingOptions = .atomic, to file: Filename) throws {
+        try data?.write(to: fileURL(for: file), options: options)
     }
 
     /// Write the given string to the given file.

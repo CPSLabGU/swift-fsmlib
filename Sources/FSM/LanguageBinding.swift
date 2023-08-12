@@ -22,6 +22,19 @@ public protocol LanguageBinding {
     var boilerplate: (URL) -> any Boilerplate { get }
     /// Binding from URL and state name to state Boilerplate
     var stateBoilerplate: (URL, StateName) -> any Boilerplate { get }
+    /// Read the editor window layout from the given URL.
+    func windowLayout(for machine: (URL)) -> Data?
+}
+
+/// Default implementations
+public extension LanguageBinding {
+    /// Return the window layout for the given machine.
+    /// - Parameter machine: The URL of the machine.
+    /// - Returns: The window layout for the given machine (or `nil`).
+    @inlinable
+    func windowLayout(for machine: URL) -> Data? {
+        machine.contents(of: .windowLayout)
+    }
 }
 
 /// Return the language binding for the given URL

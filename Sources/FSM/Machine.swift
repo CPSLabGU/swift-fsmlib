@@ -30,6 +30,8 @@ public class Machine {
     public var stateLayout: StateLayouts
     /// Graphical layout of the transitions
     public var transitionLayout: TransitionLayouts
+    /// Window layout
+    public var windowLayout: Data?
     /// Source code of OnEntry/OnExit/Internal actions of states
     public var activities: StateActivitiesSourceCode
     
@@ -42,6 +44,7 @@ public class Machine {
     /// - Parameter url: The URL to read the FSM from.
     public init(from url: URL) throws {
         language = languageBinding(for: url)
+        windowLayout = language.windowLayout(for: url)
         activities = StateActivitiesSourceCode()
         let names = try stateNames(from: url.fileURL(for: .states))
         let states = names.map { State(id: StateID(), name: $0) }
@@ -111,7 +114,23 @@ public class Machine {
         }
         try destination.create(at: url)
         try destination.writeLanguage(to: url)
+        try destination.write(windowLayout: windowLayout, to: url)
         try destination.write(stateNames: llfsm.states.map { llfsm.stateMap[$0]!.name }, to: url)
+    }
+
+    /// Write the FSM to the given URL in the given format..
+    ///
+    /// This method will write the FSM to the
+    /// filesystem location denoted by the given URL.
+    /// Optionally, an output format can be specified,
+    /// that will write the FSM in the given format.
+    ///
+    /// - Parameters:
+    ///   - url: The filesystem URL to write the FSM to.
+    ///   - format: The format to use (defaults to the original format).
+    @inlinable
+    public func write(to url: URL, format: Format?) throws {
+        try write(to: url, language: format.flatMap { formatToLanguageBinding[$0] })
     }
 }
 
