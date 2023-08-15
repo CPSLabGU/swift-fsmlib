@@ -32,6 +32,8 @@ public class Machine {
     public var transitionLayout: TransitionLayouts
     /// Window layout
     public var windowLayout: Data?
+    /// Machine boilerplate
+    public var boilerplate: any Boilerplate
     /// Source code of OnEntry/OnExit/Internal actions of states
     public var activities: StateActivitiesSourceCode
     
@@ -44,6 +46,7 @@ public class Machine {
     /// - Parameter url: The URL to read the FSM from.
     public init(from url: URL) throws {
         language = languageBinding(for: url)
+        boilerplate = language.boilerplate(url)
         windowLayout = language.windowLayout(for: url)
         activities = StateActivitiesSourceCode()
         let names = try stateNames(from: url.fileURL(for: .states))
@@ -114,6 +117,7 @@ public class Machine {
         }
         try destination.create(at: url)
         try destination.writeLanguage(to: url)
+        try destination.write(boilerplate: boilerplate, to: url)
         try destination.write(windowLayout: windowLayout, to: url)
         try destination.write(stateNames: llfsm.states.map { llfsm.stateMap[$0]!.name }, to: url)
     }

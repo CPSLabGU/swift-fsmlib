@@ -45,6 +45,20 @@ public struct CBinding: OutputLanguage {
     /// Designated initialiser.
     @inlinable
     public init() {}
+
+    /// Write the given boilerplate to the given URL.
+    ///
+    /// This function tries to convert the given boilerplate
+    /// to a C lanaguage boilerplate and then writes it
+    /// to the given URL.
+    ///
+    /// - Parameters:
+    ///   - boilerplate: The boilerplate to write.
+    ///   - url: The machine URL to write to.
+    @inlinable
+    public func write(boilerplate: any Boilerplate, to url: URL) throws {
+        try CBoilerplate(boilerplate).write(to: url)
+    }
 }
 
 
@@ -184,34 +198,3 @@ public func suspendStateOfCMachine(_ m: URL, states: [State]) -> StateID? {
     let suspendState = states[i]
     return suspendState.id
 }
-
-/// Return the boilerplate for a given machine.
-/// - Parameter machine: The machine URL.
-/// - Returns: The boilerplate for the given machine.
-@inlinable
-public func boilerplateofCMachine(at machine: URL) -> any Boilerplate {
-    let name = machine.deletingPathExtension().lastPathComponent
-    var boilerplate = CBoilerplate()
-    boilerplate.sections[.includePath] = machine.stringContents(of: "IncludePath")
-    boilerplate.sections[.includes]    = machine.stringContents(of: "\(name)_Includes.h")
-    boilerplate.sections[.variables]   = machine.stringContents(of: "\(name)_Variables.h")
-    boilerplate.sections[.functions]   = machine.stringContents(of: "\(name)_Methods.h")
-    return boilerplate
-}
-
-/// Return the boilerplate for a given state.
-///
-/// - Parameters:
-///   - machine: The machine URL.
-///   - state: The name of the state to examine.
-/// - Returns: The boilerplate for the given state.
-@inlinable
-public func boilerplateofCState(at machine: URL, state: StateName) -> any Boilerplate {
-    let name = machine.deletingPathExtension().lastPathComponent
-    var boilerplate = CBoilerplate()
-    boilerplate.sections[.includes]  = machine.stringContents(of: "State_\(name)_Includes.h")
-    boilerplate.sections[.variables] = machine.stringContents(of: "State_\(name)_Variables.h")
-    boilerplate.sections[.functions] = machine.stringContents(of: "State_\(name)_Methods.h")
-    return boilerplate
-}
-

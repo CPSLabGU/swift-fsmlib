@@ -27,6 +27,11 @@ public protocol OutputLanguage: LanguageBinding {
     ///   - stateNames: The names of the states.
     ///   - url: The machine URL to write to.
     func write(stateNames: StateNames, to url: URL) throws
+    /// Write the given boilerplate to the given URL
+    /// - Parameters:
+    ///   - boilerplate: The boilerplate to write.
+    ///   - url: The machine URL to write to.
+    func write(boilerplate: any Boilerplate, to url: URL) throws
 }
 
 public extension OutputLanguage {
