@@ -110,8 +110,9 @@ public class Machine {
     ///
     /// - Parameters:
     ///   - url: The filesystem URL to write the FSM to.
-    ///   - language: The language to use (defaults to the original language).
-    public func write(to url: URL, language targetLanguage: LanguageBinding? = nil) throws {
+    ///   - targetLanguage: The language to use (defaults to the original language).
+    ///   - isSuspensible: Whether the FSM code will allow suspension.
+    public func write(to url: URL, language targetLanguage: LanguageBinding? = nil, isSuspensible: Bool) throws {
         guard let destination = (targetLanguage ?? language) as? OutputLanguage else {
             throw FSMError.unsupportedOutputFormat
         }
@@ -120,7 +121,7 @@ public class Machine {
         try destination.write(boilerplate: boilerplate, to: url)
         try destination.write(windowLayout: windowLayout, to: url)
         try destination.write(stateNames: llfsm.states.map { llfsm.stateMap[$0]!.name }, to: url)
-        try destination.writeInterface(for: llfsm, to: url)
+        try destination.writeInterface(for: llfsm, to: url, isSuspensible: isSuspensible)
     }
 
     /// Write the FSM to the given URL in the given format..
@@ -133,9 +134,10 @@ public class Machine {
     /// - Parameters:
     ///   - url: The filesystem URL to write the FSM to.
     ///   - format: The format to use (defaults to the original format).
+    ///   - isSuspensible: Whether the FSM allows suspension.
     @inlinable
-    public func write(to url: URL, format: Format?) throws {
-        try write(to: url, language: format.flatMap { formatToLanguageBinding[$0] })
+    public func write(to url: URL, format: Format?, isSuspensible: Bool = true) throws {
+        try write(to: url, language: format.flatMap { formatToLanguageBinding[$0] }, isSuspensible: isSuspensible)
     }
 }
 

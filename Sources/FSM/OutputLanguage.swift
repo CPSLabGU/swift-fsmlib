@@ -33,14 +33,15 @@ public protocol OutputLanguage: LanguageBinding {
     ///   - url: The machine URL to write to.
     func write(boilerplate: any Boilerplate, to url: URL) throws
     /// Write the interface for the given LLFSM to the given URL.
-    ///
+    /// 
     /// This method writes the language interface (if any)
     /// for the given finite-state machine to the given URL.
-    ///
+    /// 
     /// - Parameters:
     ///   - llfsm: The finite-state machine to write.
     ///   - url: The URL to write to.
-    func writeInterface(for llfsm: LLFSM, to url: URL) throws
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    func writeInterface(for llfsm: LLFSM, to url: URL, isSuspensible: Bool) throws
     /// Write the code for the given LLFSM to the given URL.
     ///
     /// This method writes the implementation code

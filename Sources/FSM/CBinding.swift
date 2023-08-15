@@ -65,11 +65,12 @@ public extension CBinding {
     /// - Parameters:
     ///   - llfsm: The finite-state machine to write.
     ///   - url: The URL to write to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeInterface(for llfsm: LLFSM, to url: URL) throws {
+    func writeInterface(for llfsm: LLFSM, to url: URL, isSuspensible: Bool) throws {
         let name = url.deletingPathExtension().lastPathComponent
-        let code = cMachineInterface(for: llfsm, named: name, numberOfStates: llfsm.states.count)
-        try url.write(content: code, to: "Machine_" + name + ".h")
+        let machineCode = cMachineInterface(for: llfsm, named: name, numberOfStates: llfsm.states.count, isSupensible: isSuspensible)
+        try url.write(content: machineCode, to: "Machine_" + name + ".h")
     }
     /// Write the code for the given LLFSM to the given URL.
     ///
@@ -222,20 +223,39 @@ public func suspendStateOfCMachine(_ m: URL, states: [State]) -> StateID? {
     return suspendState.id
 }
 
-public func cMachineInterface(for llfsm: LLFSM, named name: String, numberOfStates: Int) -> Code {
+/// Create the C include file for an LLFSM.
+///
+/// - Parameters:
+///   - llfsm: The finite-state machine to create code for.
+///   - name: The name of the LLFSM.
+///   - numberOfStates: The number of states the LLFSM contains.
+///   - isSupensible: Set to `true` to create an interface that supports suspension.
+/// - Returns:
+public func cMachineInterface(for llfsm: LLFSM, named name: String, numberOfStates: Int, isSupensible: Bool) -> Code {
     .includeFile(named: "LLFSM_MACHINE_" + name + "_h") {
         "#define MACHINE_\(name.uppercased())_NUMBER_OF_STATES \(numberOfStates)"
         ""
         "#undef IS_SUSPENDED"
-        "#define IS_SUSPENDED(m) ((m)->suspend_state == (m)->current_state)"
+        "#undef IS_SUSPENSIBLE"
+        if isSupensible {
+            "#define IS_SUSPENSIBLE(m) (!!(m)->suspend_state)"
+            "#define IS_SUSPENDED(m) ((m)->suspend_state == (m)->current_state)"
+            "#define MACHINE_\(name.uppercased())_IS_SUSPENSIBLE 1"
+        } else {
+            "#define IS_SUSPENSIBLE(m) 0"
+            "#define IS_SUSPENDED(m)   0"
+            "#define MACHINE_\(name.uppercased())_IS_SUSPENSIBLE 0"
+        }
         ""
         "struct Machine_" + name
         Code.bracedBlock {
             "struct LLFSMState *current_state;"
             "struct LLFSMState *previous_state;"
             "unsigned long      state_time;"
-            "struct LLFSMState *suspend_state;"
-            "struct LLFSMState *resume_state;"
+            if isSupensible {
+                "struct LLFSMState *suspend_state;"
+                "struct LLFSMState *resume_state;"
+            }
             "struct LLFSMState *states[MACHINE_\(name.uppercased())_NUMBER_OF_STATES];"
         } + ";"
     }

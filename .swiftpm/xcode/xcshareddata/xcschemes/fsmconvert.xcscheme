@@ -97,6 +97,10 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "--non-suspensible"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "/Users/rh/Downloads/Counter.machine"
             isEnabled = "YES">
          </CommandLineArgument>

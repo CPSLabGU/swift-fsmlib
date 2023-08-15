@@ -19,6 +19,9 @@ struct FSMConvert: AsyncParsableCommand {
     @Flag(name: .shortAndLong, help: "Make the generated code introspectable.")
     var introspectable = false
 
+    @Flag(name: .shortAndLong, help: "Make the generated machine non-suspensible.")
+    var nonSuspensible = false
+
     @Option(name: .shortAndLong, help: "The output machine/arrangement.")
     var output = "fsm.out"
 
@@ -52,7 +55,7 @@ struct FSMConvert: AsyncParsableCommand {
         }
         for fsm in fsms {
             let url = URL(fileURLWithPath: output)
-            try fsm.write(to: url, format: format.isEmpty ? nil : Format(rawValue: format))
+            try fsm.write(to: url, format: format.isEmpty ? nil : Format(rawValue: format), isSuspensible: !nonSuspensible)
         }
     }
 }
