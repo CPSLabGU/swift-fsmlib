@@ -120,6 +120,7 @@ public class Machine {
         try destination.write(boilerplate: boilerplate, to: url)
         try destination.write(windowLayout: windowLayout, to: url)
         try destination.write(stateNames: llfsm.states.map { llfsm.stateMap[$0]!.name }, to: url)
+        try destination.writeInterface(for: llfsm, to: url)
     }
 
     /// Write the FSM to the given URL in the given format..

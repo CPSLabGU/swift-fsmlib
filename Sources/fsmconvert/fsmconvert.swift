@@ -16,6 +16,9 @@ struct FSMConvert: AsyncParsableCommand {
     })
     var format = ""
 
+    @Flag(name: .shortAndLong, help: "Make the generated code introspectable.")
+    var introspectable = false
+
     @Option(name: .shortAndLong, help: "The output machine/arrangement.")
     var output = "fsm.out"
 

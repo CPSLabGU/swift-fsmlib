@@ -32,6 +32,24 @@ public protocol OutputLanguage: LanguageBinding {
     ///   - boilerplate: The boilerplate to write.
     ///   - url: The machine URL to write to.
     func write(boilerplate: any Boilerplate, to url: URL) throws
+    /// Write the interface for the given LLFSM to the given URL.
+    ///
+    /// This method writes the language interface (if any)
+    /// for the given finite-state machine to the given URL.
+    ///
+    /// - Parameters:
+    ///   - llfsm: The finite-state machine to write.
+    ///   - url: The URL to write to.
+    func writeInterface(for llfsm: LLFSM, to url: URL) throws
+    /// Write the code for the given LLFSM to the given URL.
+    ///
+    /// This method writes the implementation code
+    /// for the given finite-state machine to the given URL.
+    ///
+    /// - Parameters:
+    ///   - llfsm: The finite-state machine to write.
+    ///   - url: The URL to write to.
+    func writeCode(for llfsm: LLFSM, to url: URL) throws
 }
 
 public extension OutputLanguage {

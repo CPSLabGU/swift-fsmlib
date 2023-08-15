@@ -31,21 +31,19 @@ public struct CBinding: OutputLanguage {
     public let suspendState: (URL, [State]) -> StateID? = { url, ss in
         suspendStateOfCMachine(url, states: ss)
     }
-
+    
     /// C Language binding from URL to machine boilerplate.
     public let boilerplate: (URL) -> any Boilerplate = { url in
         boilerplateofCMachine(at: url)
     }
-
+    
     /// C Language binding from URL and state name to state boilerplate.
     public var stateBoilerplate: (URL, StateName) -> any Boilerplate = { url, stateName in
         boilerplateofCState(at: url, state: stateName)
     }
+}
 
-    /// Designated initialiser.
-    @inlinable
-    public init() {}
-
+public extension CBinding {
     /// Write the given boilerplate to the given URL.
     ///
     /// This function tries to convert the given boilerplate
@@ -56,8 +54,33 @@ public struct CBinding: OutputLanguage {
     ///   - boilerplate: The boilerplate to write.
     ///   - url: The machine URL to write to.
     @inlinable
-    public func write(boilerplate: any Boilerplate, to url: URL) throws {
+    func write(boilerplate: any Boilerplate, to url: URL) throws {
         try CBoilerplate(boilerplate).write(to: url)
+    }
+    /// Write the interface for the given LLFSM to the given URL.
+    ///
+    /// This method writes the language interface (if any)
+    /// for the given finite-state machine to the given URL.
+    ///
+    /// - Parameters:
+    ///   - llfsm: The finite-state machine to write.
+    ///   - url: The URL to write to.
+    @inlinable
+    func writeInterface(for llfsm: LLFSM, to url: URL) throws {
+        let name = url.deletingPathExtension().lastPathComponent
+        let code = cMachineInterface(for: llfsm, named: name, numberOfStates: llfsm.states.count)
+        try url.write(content: code, to: "Machine_" + name + ".h")
+    }
+    /// Write the code for the given LLFSM to the given URL.
+    ///
+    /// This method writes the implementation code
+    /// for the given finite-state machine to the given URL.
+    ///
+    /// - Parameters:
+    ///   - llfsm: The finite-state machine to write.
+    ///   - url: The URL to write to.
+    @inlinable
+    func writeCode(for llfsm: LLFSM, to url: URL) throws {
     }
 }
 
@@ -161,7 +184,7 @@ public func targetOfCTransitionFor(machine m: URL, states: [State], state name: 
 @inlinable
 public func contentOfCImplementationFor(machine: URL) -> String? {
     let name = machine.deletingPathExtension().lastPathComponent
-    let file = "\(name).mm"
+    let file = "\(name).c"
     let url = machine.appendingPathComponent(file)
     do {
         let content = try NSString(contentsOf: url, usedEncoding: nil)
@@ -197,4 +220,23 @@ public func suspendStateOfCMachine(_ m: URL, states: [State]) -> StateID? {
           i >= 0 && i < states.count else { return nil }
     let suspendState = states[i]
     return suspendState.id
+}
+
+public func cMachineInterface(for llfsm: LLFSM, named name: String, numberOfStates: Int) -> Code {
+    .includeFile(named: "LLFSM_MACHINE_" + name + "_h") {
+        "#define MACHINE_\(name.uppercased())_NUMBER_OF_STATES \(numberOfStates)"
+        ""
+        "#undef IS_SUSPENDED"
+        "#define IS_SUSPENDED(m) ((m)->suspend_state == (m)->current_state)"
+        ""
+        "struct Machine_" + name
+        Code.bracedBlock {
+            "struct LLFSMState *current_state;"
+            "struct LLFSMState *previous_state;"
+            "unsigned long      state_time;"
+            "struct LLFSMState *suspend_state;"
+            "struct LLFSMState *resume_state;"
+            "struct LLFSMState *states[MACHINE_\(name.uppercased())_NUMBER_OF_STATES];"
+        } + ";"
+    }
 }
