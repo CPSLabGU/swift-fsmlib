@@ -59,14 +59,25 @@ public protocol OutputLanguage: LanguageBinding {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     func writeStateInterface(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws
     /// Write the code for the given LLFSM to the given URL.
-    ///
+    /// 
     /// This method writes the implementation code
+    /// for the given finite-state machine to the given URL.
+    /// 
+    /// - Parameters:
+    ///   - llfsm: The finite-state machine to write.
+    ///   - url: The URL to write to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    func writeCode(for llfsm: LLFSM, to url: URL, isSuspensible: Bool) throws
+    /// Write the state interface for the given LLFSM to the given URL.
+    ///
+    /// This method writes the language interface (if any)
     /// for the given finite-state machine to the given URL.
     ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to write.
     ///   - url: The URL to write to.
-    func writeCode(for llfsm: LLFSM, to url: URL) throws
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    func writeStateCode(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws
 }
 
 public extension OutputLanguage {

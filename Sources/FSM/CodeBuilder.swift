@@ -28,7 +28,7 @@ extension Code {
     ///   - codeBuilder: The original code builder.
     /// - Returns: The indented code.
     static func indentedBlock(with indentation: String = fourSpaces, @CodeBuilder codeBuilder: () -> Code) -> Code {
-        indentation + codeBuilder()
+        codeBuilder()
             .split(separator: "\n")
             .map { indentation + $0 }
             .joined(separator: "\n")
@@ -83,6 +83,26 @@ extension Code {
             ""
             "#endif /* \(defineName) */\n"
         }
+    }
+    /// Create code iterating over the given array.
+    ///
+    /// - Parameters:
+    ///   - array: The array to iterate over.
+    ///   - codeBuilder: The code builder transforming the array into code.
+    /// - Returns: The code resulting from iterating over the array.
+    static func forEach<Element>(_ array: [Element], @CodeBuilder codeBuilder: (Element) -> Code) -> Code {
+        guard !array.isEmpty else { return .ignored }
+        return array.map(codeBuilder).joined(separator: "\n")
+    }
+    /// Create code enumerating the given array.
+    ///
+    /// - Parameters:
+    ///   - array: The array to enumerate.
+    ///   - codeBuilder: The code builder transforming the array into code.
+    /// - Returns: The code resulting from iterating over the array.
+    static func enumerating<Element>(array: [Element], @CodeBuilder codeBuilder: (Int, Element) -> Code) -> Code {
+        guard !array.isEmpty else { return .ignored }
+        return array.enumerated().map(codeBuilder).joined(separator: "\n")
     }
 }
 

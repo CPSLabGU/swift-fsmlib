@@ -127,7 +127,9 @@ public class Machine {
         try destination.write(windowLayout: windowLayout, to: url)
         try destination.write(stateNames: llfsm.states.map { llfsm.stateMap[$0]!.name }, to: url)
         try destination.writeInterface(for: llfsm, to: url, isSuspensible: isSuspensible)
+        try destination.writeCode(for: llfsm, to: url, isSuspensible: isSuspensible)
         try destination.writeStateInterface(for: llfsm, to: url, isSuspensible: isSuspensible)
+        try destination.writeStateCode(for: llfsm, to: url, isSuspensible: isSuspensible)
         for stateID in llfsm.states {
             guard let stateName = llfsm.stateMap[stateID]?.name,
                   let boilerplate = stateBoilerplate[stateID] else {
