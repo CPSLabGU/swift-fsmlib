@@ -383,6 +383,7 @@ public func cMachineCode(for llfsm: LLFSM, named name: String, isSupensible: Boo
 
     """ + .block {
         "#include \"Machine_\(name).h\""
+        "#include \"Machine_\(name)_Includes.h\""
         ""
         "#ifndef NULL"
         "#define NULL ((void*)0)"
@@ -411,7 +412,7 @@ public func cMachineCode(for llfsm: LLFSM, named name: String, isSupensible: Boo
         "bool fsm_" + name + "_validate(struct Machine_" + name + " * const machine)"
         Code.bracedBlock {
             "return machine->current_state != NULL &&"
-            "true // FIXME: check states"
+            "true; // FIXME: check states"
         }
     }
 }
@@ -435,7 +436,16 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
     """ + .includeFile(named: "LLFSM_" + name + "_" + state.name + "_h") {
         "#include <stdbool.h>"
         ""
+        "#ifndef NULL"
+        "#define NULL ((void*)0)"
+        "#endif"
+        ""
         "#define MACHINE_\(upperName)_NUMBER_OF_TRANSITIONS \(llfsm.states.count)"
+        ""
+        "#pragma clang diagnostic push"
+        "#pragma clang diagnostic ignored \"-Wincompatible-function-pointer-types\""
+        "#pragma clang diagnostic ignored \"-Wcompare-distinct-pointer-types\""
+        "#pragma clang diagnostic ignored \"-Wvisibility\""
         ""
         "struct FSM\(name)_State_\(state.name)"
         Code.bracketedBlock(openingBracket: "{\n", closingBracket: "") {
@@ -463,7 +473,7 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
         "/// Check the sequence of transitions for \(state.name)."
         "///"
         "/// - Returns: The state the machine transitions to (`NULL` if no transition fired)."
-        "struct LLFSMState *fsm_" + name + "_" + state.name + "_check_transitions();"
+        "struct LLFSMState *fsm_" + name + "_" + state.name + "_check_transitions(const struct Machine_" + name + " * const machine, const struct FSM\(name)_State_\(state.name) * const state);"
         ""
         "/// The onEntry function for \(state.name)."
         "///"
@@ -520,6 +530,8 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSup
         "//"
         "#include \"Machine_\(name).h\""
         "#include \"State_\(state.name).h\""
+        "#include \"Machine_\(name)_Includes.h\""
+        "#include \"State_\(state.name)_Includes.h\""
         ""
         "/// Initialise the given \(state.name) state."
         "///"
@@ -538,7 +550,7 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSup
         "/// Check the validity of the given \(state.name) state."
         "///"
         "/// - Parameter state: The state to initialise."
-        "bool fsm_" + name + "_" + state.name + "_validate(const struct LLFSMachine * const machine, const struct FSM\(name)_State_\(state.name) * const state)"
+        "bool fsm_" + name + "_" + state.name + "_validate(const struct Machine_" + name + " * const machine, const struct FSM\(name)_State_\(state.name) * const state)"
         Code.bracedBlock {
             "(void)machine;"
             "return state->on_entry   == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_entry &&"
