@@ -338,6 +338,9 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, isSupensible
             "#define MACHINE_\(name.uppercased())_IS_SUSPENSIBLE false"
         }
         ""
+        "#pragma clang diagnostic push"
+        "#pragma clang diagnostic ignored \"-Wpadded\""
+        ""
         "/// A \(name) LLFSM."
         "struct Machine_" + name
         Code.bracketedBlock(openingBracket: "{\n", closingBracket: "") {
@@ -362,6 +365,8 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, isSupensible
         "///"
         "/// - Parameter machine: The LLFSM to initialise."
         "bool fsm_" + name + "_validate(struct Machine_" + name + " *);"
+        ""
+        "#pragma clang diagnostic pop"
     }
 }
 
@@ -414,7 +419,7 @@ public func cMachineCode(for llfsm: LLFSM, named name: String, isSupensible: Boo
             "return machine->current_state != NULL &&"
             "true; // FIXME: check states"
         }
-    }
+    } + "\n"
 }
 
 /// Create the C include file for a State.
@@ -443,8 +448,6 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
         "#define MACHINE_\(upperName)_NUMBER_OF_TRANSITIONS \(llfsm.states.count)"
         ""
         "#pragma clang diagnostic push"
-        "#pragma clang diagnostic ignored \"-Wincompatible-function-pointer-types\""
-        "#pragma clang diagnostic ignored \"-Wcompare-distinct-pointer-types\""
         "#pragma clang diagnostic ignored \"-Wvisibility\""
         ""
         "struct FSM\(name)_State_\(state.name)"
@@ -511,6 +514,8 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
             "///   - state: The state being resumed."
             "void fsm_" + name + "_" + state.name + "_on_resume(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state);"
         }
+        ""
+        "#pragma clang diagnostic pop"
     }
 }
 
@@ -532,6 +537,11 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSup
         "#include \"State_\(state.name).h\""
         "#include \"Machine_\(name)_Includes.h\""
         "#include \"State_\(state.name)_Includes.h\""
+        ""
+        "#pragma clang diagnostic push"
+        "#pragma clang diagnostic ignored \"-Wincompatible-function-pointer-types\""
+        "#pragma clang diagnostic ignored \"-Wcompare-distinct-pointer-types\""
+        "#pragma clang diagnostic ignored \"-Wvisibility\""
         ""
         "/// Initialise the given \(state.name) state."
         "///"
@@ -563,6 +573,8 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSup
                 }
             }
         }
+        "#pragma clang diagnostic push"
+        "#pragma clang diagnostic ignored \"-Wunused-parameter\""
         ""
         "/// The onEntry function for \(state.name)."
         "///"
@@ -636,5 +648,5 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSup
             }
             "return NULL; // None of the transitions fired."
         }
-    }
+    } + "\n"
 }
