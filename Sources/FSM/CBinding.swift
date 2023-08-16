@@ -338,8 +338,14 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, isSupensible
             "#define MACHINE_\(name.uppercased())_IS_SUSPENSIBLE false"
         }
         ""
+        "#pragma GCC diagnostic push"
+        "#pragma GCC diagnostic ignored \"-Wunknown-pragmas\""
+        ""
         "#pragma clang diagnostic push"
         "#pragma clang diagnostic ignored \"-Wpadded\""
+        ""
+        "struct LLFSMachine;"
+        "struct LLFSMState;"
         ""
         "/// A \(name) LLFSM."
         "struct Machine_" + name
@@ -367,6 +373,7 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, isSupensible
         "bool fsm_" + name + "_validate(struct Machine_" + name + " *);"
         ""
         "#pragma clang diagnostic pop"
+        "#pragma GCC diagnostic pop"
     }
 }
 
@@ -447,6 +454,9 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
         ""
         "#define MACHINE_\(upperName)_NUMBER_OF_TRANSITIONS \(llfsm.states.count)"
         ""
+        "#pragma GCC diagnostic push"
+        "#pragma GCC diagnostic ignored \"-Wunknown-pragmas\""
+        ""
         "#pragma clang diagnostic push"
         "#pragma clang diagnostic ignored \"-Wvisibility\""
         ""
@@ -516,6 +526,7 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
         }
         ""
         "#pragma clang diagnostic pop"
+        "#pragma GCC diagnostic pop"
     }
 }
 
@@ -537,6 +548,10 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSup
         "#include \"State_\(state.name).h\""
         "#include \"Machine_\(name)_Includes.h\""
         "#include \"State_\(state.name)_Includes.h\""
+        ""
+        "#pragma GCC diagnostic push"
+        "#pragma GCC diagnostic ignored \"-Wunknown-pragmas\""
+        "#pragma GCC diagnostic ignored \"-Wincompatible-pointer-types\""
         ""
         "#pragma clang diagnostic push"
         "#pragma clang diagnostic ignored \"-Wincompatible-function-pointer-types\""
