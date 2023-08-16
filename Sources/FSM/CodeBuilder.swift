@@ -29,7 +29,7 @@ extension Code {
     /// - Returns: The indented code.
     static func indentedBlock(with indentation: String = fourSpaces, @CodeBuilder codeBuilder: () -> Code) -> Code {
         codeBuilder()
-            .split(separator: "\n")
+            .split(separator: "\n", omittingEmptySubsequences: false)
             .map { indentation + $0 }
             .joined(separator: "\n")
     }
@@ -40,7 +40,7 @@ extension Code {
     /// - Returns: The indented code.
     static func bracedBlock(with indentation: String = fourSpaces, @CodeBuilder codeBuilder: () -> Code) -> Code {
         "{\n" + codeBuilder()
-            .split(separator: "\n")
+            .split(separator: "\n", omittingEmptySubsequences: false)
             .map { indentation + $0 }
             .joined(separator: "\n") +
         "\n}"
@@ -54,7 +54,7 @@ extension Code {
     /// - Returns: The indented code.
     static func bracketedBlock(with indentation: String = fourSpaces, openingBracket: String = "[\n", closingBracket: String = "\n]", @CodeBuilder codeBuilder: () -> Code) -> Code {
         openingBracket + codeBuilder()
-            .split(separator: "\n")
+            .split(separator: "\n", omittingEmptySubsequences: false)
             .map { indentation + $0 }
             .joined(separator: "\n") + "\n" +
         closingBracket

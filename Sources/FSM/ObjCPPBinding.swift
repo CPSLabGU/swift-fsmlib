@@ -207,11 +207,15 @@ public func boilerplateofObjCPPMachine(at machine: URL) -> any Boilerplate {
 /// - Returns: The boilerplate for the given state.
 @inlinable
 public func boilerplateofObjCPPState(at machine: URL, state: StateName) -> any Boilerplate {
-    let name = machine.deletingPathExtension().lastPathComponent
     var boilerplate = CBoilerplate()
-    boilerplate.sections[.includes]  = machine.stringContents(of: "State_\(name)_Includes.h")
-    boilerplate.sections[.variables] = machine.stringContents(of: "State_\(name)_Variables.h")
-    boilerplate.sections[.functions] = machine.stringContents(of: "State_\(name)_Methods.h")
+    boilerplate.sections[.includes]  = machine.stringContents(of: "State_\(state)_Includes.h")
+    boilerplate.sections[.variables] = machine.stringContents(of: "State_\(state)_Variables.h")
+    boilerplate.sections[.functions] = machine.stringContents(of: "State_\(state)_Methods.h")
+    boilerplate.sections[.onEntry]   = machine.stringContents(of: "State_\(state)_OnEntry.mm")
+    boilerplate.sections[.onExit]    = machine.stringContents(of: "State_\(state)_OnExit.mm")
+    boilerplate.sections[.internal]  = machine.stringContents(of: "State_\(state)_Internal.mm")
+    boilerplate.sections[.onSuspend] = machine.stringContents(of: "State_\(state)_OnSuspend.mm")
+    boilerplate.sections[.onResume]  = machine.stringContents(of: "State_\(state)_OnResume.mm")
     return boilerplate
 }
 

@@ -28,6 +28,11 @@ public extension CBoilerplate {
         try url.write(content: sections[.includes]    ?? "", to: "State_\(state)_Includes.h")
         try url.write(content: sections[.variables]   ?? "", to: "State_\(state)_Variables.h")
         try url.write(content: sections[.functions]   ?? "", to: "State_\(state)_Methods.h")
+        try url.write(content: sections[.onEntry]     ?? "", to: "State_\(state)_OnEntry.mm")
+        try url.write(content: sections[.onExit]      ?? "", to: "State_\(state)_OnExit.mm")
+        try url.write(content: sections[.internal]    ?? "", to: "State_\(state)_Internal.mm")
+        try url.write(content: sections[.onSuspend]   ?? "", to: "State_\(state)_OnSuspend.mm")
+        try url.write(content: sections[.onResume]    ?? "", to: "State_\(state)_OnResume.mm")
     }
 }
 
@@ -53,10 +58,14 @@ public func boilerplateofCMachine(at machine: URL) -> any Boilerplate {
 /// - Returns: The boilerplate for the given state.
 @inlinable
 public func boilerplateofCState(at machine: URL, state: StateName) -> any Boilerplate {
-    let name = machine.deletingPathExtension().lastPathComponent
     var boilerplate = CBoilerplate()
-    boilerplate.sections[.includes]  = machine.stringContents(of: "State_\(name)_Includes.h")
-    boilerplate.sections[.variables] = machine.stringContents(of: "State_\(name)_Variables.h")
-    boilerplate.sections[.functions] = machine.stringContents(of: "State_\(name)_Methods.h")
+    boilerplate.sections[.includes]  = machine.stringContents(of: "State_\(state)_Includes.h")
+    boilerplate.sections[.variables] = machine.stringContents(of: "State_\(state)_Variables.h")
+    boilerplate.sections[.functions] = machine.stringContents(of: "State_\(state)_Methods.h")
+    boilerplate.sections[.onEntry]   = machine.stringContents(of: "State_\(state)_OnEntry.mm")
+    boilerplate.sections[.onExit]    = machine.stringContents(of: "State_\(state)_OnExit.mm")
+    boilerplate.sections[.internal]  = machine.stringContents(of: "State_\(state)_Internal.mm")
+    boilerplate.sections[.onSuspend] = machine.stringContents(of: "State_\(state)_OnSuspend.mm")
+    boilerplate.sections[.onResume]  = machine.stringContents(of: "State_\(state)_OnResume.mm")
     return boilerplate
 }
