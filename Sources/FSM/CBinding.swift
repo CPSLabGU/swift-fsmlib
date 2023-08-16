@@ -137,6 +137,34 @@ public extension CBinding {
             try url.write(content: stateCode, to: "State_" + state.name + ".c")
         }
     }
+    /// Write the transition expressions for the given LLFSM to the given URL.
+    ///
+    /// This method writes the transition expressions
+    /// for the given finite-state machine to the given URL.
+    ///
+    /// - Parameters:
+    ///   - llfsm: The finite-state machine to write.
+    ///   - url: The URL to write to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    @inlinable
+    func writeTransitionCode(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws {
+        let name = url.deletingPathExtension().lastPathComponent
+        for (i, stateID) in fsm.states.enumerated() {
+            guard let state = fsm.stateMap[stateID] else {
+                fputs("Warning: orphaned state \(i) ID \(stateID) for \(name)\n", stderr)
+                continue
+            }
+            let transitions = fsm.transitionsFrom(stateID)
+            try transitions.enumerated().forEach { number, transitionID in
+                guard let transition = fsm.transitionMap[transitionID] else {
+                    fputs("Warning: orphaned transition \(number) (\(transitionID)) for \(state.name)\n", stderr)
+                    return
+                }
+                let file = "State_\(state.name)_Transition_\(number).expr"
+                try url.write(content: transition.label + "\n", to: file)
+            }
+        }
+    }
 }
 
 
@@ -403,7 +431,7 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
     //
     // Automatically created using fsmconvert -- do not change manually!
     //
-    
+
     """ + .includeFile(named: "LLFSM_" + name + "_" + state.name + "_h") {
         "#include <stdbool.h>"
         ""

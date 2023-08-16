@@ -130,6 +130,7 @@ public class Machine {
         try destination.writeCode(for: llfsm, to: url, isSuspensible: isSuspensible)
         try destination.writeStateInterface(for: llfsm, to: url, isSuspensible: isSuspensible)
         try destination.writeStateCode(for: llfsm, to: url, isSuspensible: isSuspensible)
+        try destination.writeTransitionCode(for: llfsm, to: url, isSuspensible: isSuspensible)
         for stateID in llfsm.states {
             guard let stateName = llfsm.stateMap[stateID]?.name,
                   let boilerplate = stateBoilerplate[stateID] else {

@@ -78,6 +78,16 @@ public protocol OutputLanguage: LanguageBinding {
     ///   - url: The URL to write to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     func writeStateCode(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws
+    /// Write the transition expressions for the given LLFSM to the given URL.
+    ///
+    /// This method writes the transition expressions
+    /// for the given finite-state machine to the given URL.
+    ///
+    /// - Parameters:
+    ///   - llfsm: The finite-state machine to write.
+    ///   - url: The URL to write to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    func writeTransitionCode(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws
 }
 
 public extension OutputLanguage {
