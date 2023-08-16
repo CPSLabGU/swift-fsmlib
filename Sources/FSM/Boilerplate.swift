@@ -28,6 +28,12 @@ public protocol Boilerplate {
     /// - Parameter url: The URL to write the boilerplate to.
     /// - Throws: Any error thrown by the underlying file system.
     func write(to url: URL) throws
+    /// Write the boilerplate for a given state to the given URL.
+    /// - Throws: Any error thrown by the underlying file system.
+    /// - Parameters:
+    ///   - state: The state to write the boilerplate for.
+    ///   - url: The machine URL to write to.
+    func write(state: String, to url: URL) throws;
 }
 
 public extension Boilerplate {

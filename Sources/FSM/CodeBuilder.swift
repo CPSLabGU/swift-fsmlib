@@ -52,8 +52,8 @@ extension Code {
     ///   - openingBracket: The opening bracket to use.
     ///   - closingBracket: The closing bracket to use.
     /// - Returns: The indented code.
-    static func bracketedBlock(with indentation: String = fourSpaces, openingBracket: String = "[", closingBracket: String = "]", @CodeBuilder codeBuilder: () -> Code) -> Code {
-        openingBracket + "\n" + indentation + codeBuilder()
+    static func bracketedBlock(with indentation: String = fourSpaces, openingBracket: String = "[\n", closingBracket: String = "\n]", @CodeBuilder codeBuilder: () -> Code) -> Code {
+        openingBracket + codeBuilder()
             .split(separator: "\n")
             .map { indentation + $0 }
             .joined(separator: "\n") + "\n" +

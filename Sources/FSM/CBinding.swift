@@ -31,12 +31,12 @@ public struct CBinding: OutputLanguage {
     public let suspendState: (URL, [State]) -> StateID? = { url, ss in
         suspendStateOfCMachine(url, states: ss)
     }
-    
+
     /// C Language binding from URL to machine boilerplate.
     public let boilerplate: (URL) -> any Boilerplate = { url in
         boilerplateofCMachine(at: url)
     }
-    
+
     /// C Language binding from URL and state name to state boilerplate.
     public var stateBoilerplate: (URL, StateName) -> any Boilerplate = { url, stateName in
         boilerplateofCState(at: url, state: stateName)
@@ -56,6 +56,14 @@ public extension CBinding {
     @inlinable
     func write(boilerplate: any Boilerplate, to url: URL) throws {
         try CBoilerplate(boilerplate).write(to: url)
+    }
+    /// Write the given state boilerplate to the given URL
+    /// - Parameters:
+    ///   - stateBoilerplate: The boilerplate to write.
+    ///   - url: The machine URL to write to.
+    ///   - stateName: The name of the state to write the boilerplate for.
+    func write(stateBoilerplate: any Boilerplate, to url: URL, for stateName: String) throws {
+        try CBoilerplate(stateBoilerplate).write(state: stateName, to: url)
     }
     /// Write the interface for the given LLFSM to the given URL.
     ///
@@ -255,7 +263,14 @@ public func suspendStateOfCMachine(_ m: URL, states: [State]) -> StateID? {
 /// - Returns:
 public func cMachineInterface(for llfsm: LLFSM, named name: String, numberOfStates: Int, isSupensible: Bool) -> Code {
     let upperName = name.uppercased()
-    return .includeFile(named: "LLFSM_MACHINE_" + name + "_h") {
+    return """
+    //
+    // Machine_\(name).h
+    //
+    // Automatically created using fsmconvert -- do not change manually!
+    //
+
+    """ + .includeFile(named: "LLFSM_MACHINE_" + name + "_h") {
         "#include <stdbool.h>"
         ""
         "#define MACHINE_\(upperName)_NUMBER_OF_STATES \(numberOfStates)"
@@ -273,7 +288,7 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, numberOfStat
         }
         ""
         "struct Machine_" + name
-        Code.bracedBlock {
+        Code.bracketedBlock(openingBracket: "{\n", closingBracket: "") {
             "struct LLFSMState *current_state;"
             "struct LLFSMState *previous_state;"
             "unsigned long      state_time;"
@@ -282,7 +297,9 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, numberOfStat
                 "struct LLFSMState *resume_state;"
             }
             "struct LLFSMState *states[MACHINE_\(upperName)_NUMBER_OF_STATES];"
-        } + ";"
+        }
+        "#   include \"Machine_\(name)_Variables.h\""
+        "};"
     }
 }
 
@@ -296,7 +313,14 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, numberOfStat
 /// - Returns:
 public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, numberOfTransitions: Int, isSupensible: Bool) -> Code {
     let upperName = name.uppercased()
-    return .includeFile(named: "LLFSM_" + name + "_" + state.name + "_h") {
+    return """
+    //
+    // State_\(state.name).h
+    //
+    // Automatically created using fsmconvert -- do not change manually!
+    //
+    
+    """ + .includeFile(named: "LLFSM_" + name + "_" + state.name + "_h") {
         "#include <stdbool.h>"
         ""
         "#define MACHINE_\(upperName)_NUMBER_OF_TRANSITIONS \(numberOfTransitions)"

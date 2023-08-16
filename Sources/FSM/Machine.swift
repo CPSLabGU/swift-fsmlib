@@ -34,6 +34,8 @@ public class Machine {
     public var windowLayout: Data?
     /// Machine boilerplate
     public var boilerplate: any Boilerplate
+    /// State boilerplate
+    public var stateBoilerplate: [StateID : any Boilerplate]
     /// Source code of OnEntry/OnExit/Internal actions of states
     public var activities: StateActivitiesSourceCode
     
@@ -75,8 +77,11 @@ public class Machine {
         //
         transitionLayout = [:]
         stateLayout = [:]
+        stateBoilerplate = [:]
         for si in states.enumerated() {
             let state = si.element
+            let boilerplate = language.stateBoilerplate(url, state.name)
+            stateBoilerplate[state.id] = boilerplate
             let gridLayout = StateLayout(index: si.offset)
             let layoutsForName = namesLayout[state.name]
             var layout = layoutsForName?.state ?? gridLayout
@@ -123,6 +128,14 @@ public class Machine {
         try destination.write(stateNames: llfsm.states.map { llfsm.stateMap[$0]!.name }, to: url)
         try destination.writeInterface(for: llfsm, to: url, isSuspensible: isSuspensible)
         try destination.writeStateInterface(for: llfsm, to: url, isSuspensible: isSuspensible)
+        for stateID in llfsm.states {
+            guard let stateName = llfsm.stateMap[stateID]?.name,
+                  let boilerplate = stateBoilerplate[stateID] else {
+                fputs("Orphaned state \(stateID) for \(url.lastPathComponent)\n", stderr)
+                continue
+            }
+            try destination.write(stateBoilerplate: boilerplate, to: url, for: stateName)
+        }
     }
 
     /// Write the FSM to the given URL in the given format..

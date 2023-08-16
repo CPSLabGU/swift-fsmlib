@@ -32,6 +32,12 @@ public protocol OutputLanguage: LanguageBinding {
     ///   - boilerplate: The boilerplate to write.
     ///   - url: The machine URL to write to.
     func write(boilerplate: any Boilerplate, to url: URL) throws
+    /// Write the given state boilerplate to the given URL
+    /// - Parameters:
+    ///   - stateBoilerplate: The boilerplate to write.
+    ///   - url: The machine URL to write to.
+    ///   - stateName: The name of the state to write the boilerplate for.
+    func write(stateBoilerplate: any Boilerplate, to url: URL, for stateName: String) throws
     /// Write the interface for the given LLFSM to the given URL.
     /// 
     /// This method writes the language interface (if any)
