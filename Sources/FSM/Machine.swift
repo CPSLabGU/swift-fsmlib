@@ -122,6 +122,7 @@ public class Machine {
         try destination.write(windowLayout: windowLayout, to: url)
         try destination.write(stateNames: llfsm.states.map { llfsm.stateMap[$0]!.name }, to: url)
         try destination.writeInterface(for: llfsm, to: url, isSuspensible: isSuspensible)
+        try destination.writeStateInterface(for: llfsm, to: url, isSuspensible: isSuspensible)
     }
 
     /// Write the FSM to the given URL in the given format..

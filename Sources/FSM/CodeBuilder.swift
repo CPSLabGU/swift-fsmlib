@@ -19,7 +19,6 @@ extension Code {
     /// - Parameters:
     ///   - codeBuilder: The original code builder.
     /// - Returns: The indented code.
-    @usableFromInline
     static func block(@CodeBuilder codeBuilder: () -> Code) -> Code {
         codeBuilder()
     }
@@ -28,7 +27,6 @@ extension Code {
     ///   - indentation: The indentation to use.
     ///   - codeBuilder: The original code builder.
     /// - Returns: The indented code.
-    @usableFromInline
     static func indentedBlock(with indentation: String = fourSpaces, @CodeBuilder codeBuilder: () -> Code) -> Code {
         indentation + codeBuilder()
             .split(separator: "\n")
@@ -40,7 +38,6 @@ extension Code {
     ///   - indentation: The indentation to use.
     ///   - codeBuilder: The original code builder.
     /// - Returns: The indented code.
-    @usableFromInline
     static func bracedBlock(with indentation: String = fourSpaces, @CodeBuilder codeBuilder: () -> Code) -> Code {
         "{\n" + codeBuilder()
             .split(separator: "\n")

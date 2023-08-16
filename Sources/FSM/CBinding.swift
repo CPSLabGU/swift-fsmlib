@@ -72,6 +72,28 @@ public extension CBinding {
         let machineCode = cMachineInterface(for: llfsm, named: name, numberOfStates: llfsm.states.count, isSupensible: isSuspensible)
         try url.write(content: machineCode, to: "Machine_" + name + ".h")
     }
+    /// Write the state interface for the given LLFSM to the given URL.
+    ///
+    /// This method writes the language interface (if any)
+    /// for the given finite-state machine to the given URL.
+    ///
+    /// - Parameters:
+    ///   - llfsm: The finite-state machine to write.
+    ///   - url: The URL to write to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    @inlinable
+    func writeStateInterface(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws {
+        let name = url.deletingPathExtension().lastPathComponent
+        for stateID in fsm.states {
+            guard let state = fsm.stateMap[stateID] else {
+                fputs("Warning: orphaned state ID \(stateID) for \(name)\n", stderr)
+                continue
+            }
+            let transitions = fsm.transitionsFrom(stateID)
+            let stateCode = cStateInterface(for: state, llfsm: fsm, named: name, numberOfTransitions: transitions.count, isSupensible: isSuspensible)
+            try url.write(content: stateCode, to: "State_" + state.name + ".h")
+        }
+    }
     /// Write the code for the given LLFSM to the given URL.
     ///
     /// This method writes the implementation code
@@ -121,10 +143,10 @@ public func contentOfCStateFor(machine: URL, state: StateName) -> String? {
     let file = "State_\(state).h"
     let url = machine.appendingPathComponent(file)
     do {
-        let content = try NSString(contentsOf: url, usedEncoding: nil)
-        return content as String
+        let content = try String(contentsOf: url, encoding: .utf8)
+        return content
     } catch {
-        fputs("Cannot read '\(file): \(error.localizedDescription)'\n", stderr)
+        fputs("Error: cannot read '\(file): \(error.localizedDescription)'\n", stderr)
         return nil
     }
 }
@@ -153,10 +175,10 @@ public func expressionOfCTransitionFor(machine: URL, state: StateName, transitio
     let file = "State_\(state)_Transition_\(number).expr"
     let url = machine.appendingPathComponent(file)
     do {
-        let content = try NSString(contentsOf: url, usedEncoding: nil)
+        let content = try String(contentsOf: url, encoding: .utf8)
         return content.trimmingCharacters(in:.whitespacesAndNewlines)
     } catch {
-        fputs("Cannot read '\(file): \(error.localizedDescription)'\n", stderr)
+        fputs("Warning: cannot read '\(file): \(error.localizedDescription)'\n", stderr)
         return "true"
     }
 }
@@ -232,19 +254,22 @@ public func suspendStateOfCMachine(_ m: URL, states: [State]) -> StateID? {
 ///   - isSupensible: Set to `true` to create an interface that supports suspension.
 /// - Returns:
 public func cMachineInterface(for llfsm: LLFSM, named name: String, numberOfStates: Int, isSupensible: Bool) -> Code {
-    .includeFile(named: "LLFSM_MACHINE_" + name + "_h") {
-        "#define MACHINE_\(name.uppercased())_NUMBER_OF_STATES \(numberOfStates)"
+    let upperName = name.uppercased()
+    return .includeFile(named: "LLFSM_MACHINE_" + name + "_h") {
+        "#include <stdbool.h>"
+        ""
+        "#define MACHINE_\(upperName)_NUMBER_OF_STATES \(numberOfStates)"
         ""
         "#undef IS_SUSPENDED"
         "#undef IS_SUSPENSIBLE"
         if isSupensible {
             "#define IS_SUSPENSIBLE(m) (!!(m)->suspend_state)"
             "#define IS_SUSPENDED(m) ((m)->suspend_state == (m)->current_state)"
-            "#define MACHINE_\(name.uppercased())_IS_SUSPENSIBLE 1"
+            "#define MACHINE_\(name.uppercased())_IS_SUSPENSIBLE true"
         } else {
-            "#define IS_SUSPENSIBLE(m) 0"
-            "#define IS_SUSPENDED(m)   0"
-            "#define MACHINE_\(name.uppercased())_IS_SUSPENSIBLE 0"
+            "#define IS_SUSPENSIBLE(m) false"
+            "#define IS_SUSPENDED(m)   false"
+            "#define MACHINE_\(name.uppercased())_IS_SUSPENSIBLE false"
         }
         ""
         "struct Machine_" + name
@@ -256,7 +281,37 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, numberOfStat
                 "struct LLFSMState *suspend_state;"
                 "struct LLFSMState *resume_state;"
             }
-            "struct LLFSMState *states[MACHINE_\(name.uppercased())_NUMBER_OF_STATES];"
+            "struct LLFSMState *states[MACHINE_\(upperName)_NUMBER_OF_STATES];"
         } + ";"
+    }
+}
+
+/// Create the C include file for a State.
+///
+/// - Parameters:
+///   - llfsm: The finite-state machine to create code for.
+///   - name: The name of the State.
+///   - numberOfTransitions: The number of transitions state has.
+///   - isSupensible: Set to `true` to create an interface that supports suspension.
+/// - Returns:
+public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, numberOfTransitions: Int, isSupensible: Bool) -> Code {
+    let upperName = name.uppercased()
+    return .includeFile(named: "LLFSM_" + name + "_" + state.name + "_h") {
+        "#include <stdbool.h>"
+        ""
+        "#define MACHINE_\(upperName)_NUMBER_OF_TRANSITIONS \(numberOfTransitions)"
+        ""
+        "struct FSM\(name)_State_\(state.name)" + name
+        Code.bracedBlock {
+            "void (*on_entry)(struct LLFSMachine *, struct LLFSMState *);"
+            "void (*on_exit) (struct LLFSMachine *, struct LLFSMState *);"
+            "void (*internal)(struct LLFSMachine *, struct LLFSMState *);"
+            if isSupensible {
+                "void (*on_suspend)(struct LLFSMachine *, struct LLFSMState *);"
+                "void (*on_resume) (struct LLFSMachine *, struct LLFSMState *);"
+            }
+        } + ";"
+        ""
+        "struct LLFSMState *fsm_" + name + "_" + state.name + "_check_transitions();"
     }
 }

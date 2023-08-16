@@ -17,10 +17,10 @@ public struct LLFSM: SuspensibleFSM {
     public var transitions: TransitionArray
 
     /// Mapping from state IDs to states
-    var stateMap: StateDictionary
+    @usableFromInline var stateMap: StateDictionary
 
     /// Mapping from transition IDs to transitions
-    var transitionMap: TransitionDictionary
+    @usableFromInline var transitionMap: TransitionDictionary
 
     /// Return the transitions whose source is the given state
     public func transitionsFrom(_ s: StateID) -> TransitionArray {
