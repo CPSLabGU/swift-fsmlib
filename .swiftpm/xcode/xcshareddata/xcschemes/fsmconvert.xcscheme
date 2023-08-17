@@ -85,7 +85,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "/Users/rh/Downloads/CounterNew.machine"
+            argument = "/Users/rh/Downloads/Counter.arrangement"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -99,6 +99,10 @@
          <CommandLineArgument
             argument = "--non-suspensible"
             isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "--arrangement"
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "/Users/rh/Downloads/Counter.machine"

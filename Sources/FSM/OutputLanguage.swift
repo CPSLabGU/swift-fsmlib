@@ -8,11 +8,23 @@ import Foundation
 
 /// A language binding that can be used to generate code.
 public protocol OutputLanguage: LanguageBinding {
-    /// Create a file wrapper for the given URL.
+    /// Create a file wrapper at the given URL.
     ///
     /// This is used to create the file wrapper for the
     /// given URL in preparation for writing the FSM.
     func create(at url: URL) throws
+    /// Create an arrangement at the given URL.
+    ///
+    /// This is used to create the file wrapper for the
+    /// given URL in preparation for writing the FSM
+    /// arrangement.
+    ///
+    /// - Parameter url: The URL to create the file wrapper at.
+    func createArrangement(at url: URL) throws
+    /// Finalise writing.
+    ///
+    /// - Parameter url: The URL to finalise creating the file wrapper at.
+    func finalise(_ url: URL) throws
     /// Write the language information to the given URL
     /// - Parameter url: The URL to write to.
     func writeLanguage(to url: URL) throws
@@ -39,10 +51,10 @@ public protocol OutputLanguage: LanguageBinding {
     ///   - stateName: The name of the state to write the boilerplate for.
     func write(stateBoilerplate: any Boilerplate, to url: URL, for stateName: String) throws
     /// Write the interface for the given LLFSM to the given URL.
-    /// 
+    ///
     /// This method writes the language interface (if any)
     /// for the given finite-state machine to the given URL.
-    /// 
+    ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to write.
     ///   - url: The URL to write to.
@@ -59,10 +71,10 @@ public protocol OutputLanguage: LanguageBinding {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     func writeStateInterface(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws
     /// Write the code for the given LLFSM to the given URL.
-    /// 
+    ///
     /// This method writes the implementation code
     /// for the given finite-state machine to the given URL.
-    /// 
+    ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to write.
     ///   - url: The URL to write to.
@@ -105,10 +117,28 @@ public extension OutputLanguage {
     ///
     /// This is used to create the file wrapper for the
     /// given URL in preparation for writing the FSM.
+    ///
+    /// - Parameter url: The URL to create the file wrapper at.
     @inlinable
     func create(at url: URL) throws {
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     }
+    /// Create an arrangement file wrapper for the given URL.
+    ///
+    /// This is used to create the file wrapper for the
+    /// given URL in preparation for writing the FSM
+    /// arrangement.
+    ///
+    /// - Parameter url: The URL to create the file wrapper at.
+    @inlinable
+    func createArrangement(at url: URL) throws {
+        try create(at: url)
+    }
+    /// Finalise writing.
+    ///
+    /// - Parameter url: The URL to finalise creating the file wrapper at.
+    @inlinable
+    func finalise(_ url: URL) throws {}
     /// Write the language information to the given URL.
     ///
     /// The default implementation creates a `Language`

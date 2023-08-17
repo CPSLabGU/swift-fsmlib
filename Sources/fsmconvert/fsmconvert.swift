@@ -33,7 +33,7 @@ struct FSMConvert: AsyncParsableCommand {
 
     mutating func run() async throws {
         let fileManager = FileManager.default
-        let fsms = try inputMachines.map {
+        let fsmURLs = try inputMachines.map {
             let path: String
             if fileManager.fileExists(atPath: $0) {
                 path = $0
@@ -45,17 +45,22 @@ struct FSMConvert: AsyncParsableCommand {
             }
             let url = URL(fileURLWithPath: path)
             let fsm = try Machine(from: url)
-            return fsm
+            return (fsm, url)
         }
+        let fsms = fsmURLs.map { $0.0 }
+        let urls = fsmURLs.map { $0.1 }
         if verbose {
             print("\(fsms.count) FSMs with \(fsms.reduce(0) { $0 + $1.llfsm.states.count }) states and \(fsms.reduce(0) { $0 + $1.llfsm.transitions.count }) transitions\n")
         }
+        let outputURL = URL(fileURLWithPath: output)
         if arrangement || fsms.count > 1 {
-            print("Arrangements not yet supported.\n")
-        }
-        for fsm in fsms {
-            let url = URL(fileURLWithPath: output)
-            try fsm.write(to: url, format: format.isEmpty ? nil : Format(rawValue: format), isSuspensible: !nonSuspensible)
+            let arrangement = Arrangement(machines: fsms)
+            let fsmURLs: [URL] = try arrangement.write(to: outputURL, inputURLs: urls, format: format.isEmpty ? nil : Format(rawValue: format), isSuspensible: !nonSuspensible)
+            try zip(fsms, fsmURLs).forEach {
+                try $0.0.write(to: $0.1, format: format.isEmpty ? nil : Format(rawValue: format), isSuspensible: !nonSuspensible)
+            }
+        } else {
+            try fsms.first?.write(to: outputURL, format: format.isEmpty ? nil : Format(rawValue: format), isSuspensible: !nonSuspensible)
         }
     }
 }

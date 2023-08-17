@@ -122,6 +122,7 @@ public class Machine {
             throw FSMError.unsupportedOutputFormat
         }
         try destination.create(at: url)
+        defer { try? destination.finalise(url) }
         try destination.writeLanguage(to: url)
         try destination.write(boilerplate: boilerplate, to: url)
         try destination.write(windowLayout: windowLayout, to: url)
