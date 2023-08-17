@@ -165,6 +165,20 @@ public extension CBinding {
             }
         }
     }
+    /// Write a CMakefile for the given LLFSM to the given URL.
+    ///
+    /// This method creates a CMakefile to compile the
+    /// given finite-state machine locally at the given URL.
+    ///
+    /// - Parameters:
+    ///   - llfsm: The finite-state machine to write.
+    ///   - url: The URL to write to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    @inlinable
+    func writeCMakeFile(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws {
+        let cmakeLists = cMakeLists(for: fsm, at: url, isSuspensible: isSuspensible)
+        try url.write(content: cmakeLists, to: "CMakeLists.txt")
+    }
 }
 
 
@@ -665,3 +679,39 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSup
         }
     } + "\n"
 }
+
+public func cMakeLists(for fsm: LLFSM, at url: URL, isSuspensible: Bool) -> Code {
+    let name = url.deletingPathExtension().lastPathComponent
+    return .block {
+        "cmake_minimum_required(VERSION 3.21)"
+        ""
+        "project(\(name) C)"
+        ""
+        "# Require the C standard to be C17,"
+        "# but allow extensions."
+        "set(CMAKE_C_STANDARD 17)"
+        "set(CMAKE_C_STANDARD_REQUIRED ON)"
+        "set(CMAKE_C_EXTENSIONS ON)"
+        ""
+        "# Set the default build type to Debug."
+        "if(NOT CMAKE_BUILD_TYPE)"
+        "   set(CMAKE_BUILD_TYPE Debug)"
+        "endif()"
+        ""
+        "# Sources for the \(name) LLFSM."
+        "set(\(name)_SOURCES"
+        "    Machine_\(name).c"
+        Code.enumerating(array: fsm.states) { i, stateID in
+            if let state = fsm.stateMap[stateID] {
+                "    State_\(state.name).c"
+            } else {
+                "// Warning: ignoring orphaned state \(i) (\(stateID))"
+            }
+        }
+        ")"
+        ""
+        "add_library(\(name) STATIC ${\(name)_SOURCES})"
+        ""
+    }
+}
+
