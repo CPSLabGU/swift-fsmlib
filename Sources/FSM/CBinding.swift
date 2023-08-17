@@ -176,7 +176,8 @@ public extension CBinding {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
     func writeCMakeFile(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws {
-        let cmakeLists = cMakeLists(for: fsm, at: url, isSuspensible: isSuspensible)
+        let name = url.deletingPathExtension().lastPathComponent
+        let cmakeLists = cMakeLists(for: fsm, named: name, isSuspensible: isSuspensible)
         try url.write(content: cmakeLists, to: "CMakeLists.txt")
     }
 }

@@ -4,8 +4,6 @@
 //  Created by Rene Hexel on 17/08/2023.
 //  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
 //
-import Foundation
-
 /// Create the C include file for an LLFSM.
 ///
 /// - Parameters:
@@ -367,8 +365,7 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSup
     } + "\n"
 }
 
-public func cMakeLists(for fsm: LLFSM, at url: URL, isSuspensible: Bool) -> Code {
-    let name = url.deletingPathExtension().lastPathComponent
+public func cMakeLists(for fsm: LLFSM, named name: String, isSuspensible: Bool) -> Code {
     return .block {
         "cmake_minimum_required(VERSION 3.21)"
         ""
