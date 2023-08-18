@@ -50,20 +50,32 @@ public struct Arrangement {
         guard let destination = (language ?? machines.first?.language) as? OutputLanguage else {
             throw FSMError.unsupportedOutputFormat
         }
-        var fsms = [ String : Machine ]()
-        let machineNames = zip(machines, inputURLs).enumerated().map {
-            let i = $0.0
-            let machine = $0.1.0
-            let url = $0.1.1
+        var fsmMappings = [ String : (URL, Machine) ]()
+        let machineMap = zip(machines, inputURLs).map {
+            let machine = $0.0
+            let url = $0.1
             let name = url.deletingPathExtension().lastPathComponent
-            let uniqueName = fsms[name] == nil ? name : "\(name)_\(i)"
-            fsms[uniqueName] = machine
-            return uniqueName
+            var j = 1
+            var uniqueName = name
+            var resolvedURL = url
+            var resolvedMachine = machine
+            while let (existingURL, existingMachine) = fsmMappings[uniqueName] {
+                defer { j += 1 }
+                uniqueName = "\(name)_\(j)"
+                if url == existingURL { // avoid duplication
+                    resolvedMachine = existingMachine
+                    resolvedURL = existingURL
+                }
+            }
+            fsmMappings[uniqueName] = (resolvedURL, resolvedMachine)
+            return (resolvedURL, resolvedMachine)
         }
-        let machineFiles = inputURLs.map(\.lastPathComponent)
+        let machineFiles = machineMap.map { $0.0.lastPathComponent }
         try destination.createArrangement(at: url)
         try destination.writeLanguage(to: url)
         defer { try? destination.finalise(url) }
-        return zip(machines, machineFiles).map { url.appending(path: $0.1) }
+        return machineFiles.map {
+            url.appending(path: $0.hasSuffix(".machine") ? $0 : ($0 + ".machine"))
+        }
     }
 }
