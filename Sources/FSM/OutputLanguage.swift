@@ -70,6 +70,16 @@ public protocol OutputLanguage: LanguageBinding {
     ///   - url: The URL to write to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     func writeStateInterface(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws
+    /// Write the arrangment interface to the given URL.
+    ///
+    /// This method writes the arrangement interface (if any)
+    /// for the given finite-state machine instances to the given URL.
+    ///
+    /// - Parameters:
+    ///   - instances: The FSM instances to arrange.
+    ///   - url: The URL to write to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    func writeArrangementInterface(for instances: [Instance], to url: URL, isSuspensible: Bool) throws
     /// Write the code for the given LLFSM to the given URL.
     ///
     /// This method writes the implementation code
@@ -100,6 +110,16 @@ public protocol OutputLanguage: LanguageBinding {
     ///   - url: The URL to write to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     func writeTransitionCode(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws
+    /// Write the arrangment implementation to the given URL.
+    ///
+    /// This method writes the arrangement code (if any)
+    /// for the given finite-state machine instances to the given URL.
+    ///
+    /// - Parameters:
+    ///   - names: The names of the FSM instances.
+    ///   - url: The URL to write to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    func writeArrangementCode(for instances: [Instance], to url: URL, isSuspensible: Bool) throws
     /// Write a CMakefile for the given LLFSM to the given URL.
     ///
     /// This method creates a CMakefile to compile the

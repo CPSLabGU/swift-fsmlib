@@ -182,6 +182,38 @@ public extension CBinding {
     }
 }
 
+// Arrangments of C-language LLFSMs
+
+public extension CBinding {
+    /// Write the arrangment interface to the given URL.
+    ///
+    /// This method writes the arrangement interface (if any)
+    /// for the given finite-state machine instances to the given URL.
+    ///
+    /// - Parameters:
+    ///   - names: The names of the FSM instances.
+    ///   - url: The URL to write to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    func writeArrangementInterface(for instances: [Instance], to url: URL, isSuspensible: Bool) throws {
+        let name = url.deletingPathExtension().lastPathComponent
+        let arrangementInterface = cArrangementInterface(for: instances, named: name, isSuspensible: isSuspensible)
+        try url.write(content: arrangementInterface, to: "Arrangement_\(name).h")
+    }
+    /// Write the arrangment implementation to the given URL.
+    ///
+    /// This method writes the arrangement code
+    /// for the given finite-state machine instances to the given URL.
+    ///
+    /// - Parameters:
+    ///   - names: The names of the FSM instances.
+    ///   - url: The URL to write to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    func writeArrangementCode(for instances: [Instance], to url: URL, isSuspensible: Bool) throws {
+        let name = url.deletingPathExtension().lastPathComponent
+        let arrangementInterface = cArrangementCode(for: instances, named: name, isSuspensible: isSuspensible)
+        try url.write(content: arrangementInterface, to: "Arrangement_\(name).c")
+    }
+}
 
 /// Return the number of transitions based on the content of the State.h file
 /// - Parameter content: The content of the `State.h` file

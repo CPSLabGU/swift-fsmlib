@@ -20,7 +20,7 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, isSupensible
     // Automatically created using fsmconvert -- do not change manually!
     //
 
-    """ + .includeFile(named: "LLFSM_MACHINE_" + name + "_h") {
+    """ + .includeFile(named: "LLFSM_MACHINE_" + upperName + "_H") {
         "#include <stdbool.h>"
         ""
         "#define MACHINE_\(upperName)_NUMBER_OF_STATES \(llfsm.states.count)"
@@ -43,6 +43,7 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, isSupensible
         "#pragma clang diagnostic push"
         "#pragma clang diagnostic ignored \"-Wpadded\""
         ""
+        "struct LLFSMArrangement;"
         "struct LLFSMachine;"
         "struct LLFSMState;"
         ""

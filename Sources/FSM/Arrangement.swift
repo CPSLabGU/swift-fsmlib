@@ -51,7 +51,7 @@ public struct Arrangement {
             throw FSMError.unsupportedOutputFormat
         }
         var fsmMappings = [ String : (URL, Machine) ]()
-        let machineMap = zip(machines, inputURLs).map {
+        let instances = zip(machines, inputURLs).map {
             let machine = $0.0
             let url = $0.1
             let name = url.deletingPathExtension().lastPathComponent
@@ -68,14 +68,16 @@ public struct Arrangement {
                 }
             }
             fsmMappings[uniqueName] = (resolvedURL, resolvedMachine)
-            return (resolvedURL, resolvedMachine)
+            return Instance(name: uniqueName, url: resolvedURL, fsm: resolvedMachine.llfsm)
         }
-        let machineFiles = machineMap.map { $0.0.lastPathComponent }
+        let machineFiles = instances.map { $0.url.lastPathComponent }
         try destination.createArrangement(at: url)
         try destination.writeLanguage(to: url)
+        try destination.writeArrangementInterface(for: instances, to: url, isSuspensible: isSuspensible)
         defer { try? destination.finalise(url) }
         return machineFiles.map {
             url.appending(path: $0.hasSuffix(".machine") ? $0 : ($0 + ".machine"))
         }
     }
 }
+
