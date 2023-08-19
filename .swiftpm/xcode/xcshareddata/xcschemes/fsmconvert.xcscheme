@@ -85,7 +85,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "/Users/rh/Downloads/Counter.arrangement"
+            argument = "/Users/rh/Downloads/Loop.arrangement"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -105,7 +105,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "/Users/rh/Downloads/Counter.machine"
+            argument = "/Users/rh/Downloads/Loop.machine"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

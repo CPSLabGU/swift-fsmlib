@@ -18,6 +18,7 @@ public func cArrangementInterface(for instances: [Instance], named name: String,
     //
     // Automatically created using fsmconvert -- do not change manually!
     //
+
     """ + .includeFile(named: "LLFSM_ARRANGEMENT_" + upperName + "_H") {
         "#include <stdbool.h>"
         ""

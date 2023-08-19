@@ -74,6 +74,7 @@ public struct Arrangement {
         try destination.createArrangement(at: url)
         try destination.writeLanguage(to: url)
         try destination.writeArrangementInterface(for: instances, to: url, isSuspensible: isSuspensible)
+        try destination.writeArrangementCode(for: instances, to: url, isSuspensible: isSuspensible)
         defer { try? destination.finalise(url) }
         return machineFiles.map {
             url.appending(path: $0.hasSuffix(".machine") ? $0 : ($0 + ".machine"))
