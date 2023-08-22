@@ -370,6 +370,13 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSus
     } + "\n"
 }
 
+/// Create CMakeLists for an FSM.
+///
+/// - Parameters:
+///   - fsm: The FSM to create the CMakeLists.txt for.
+///   - name: The name of the Machine
+///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+/// - Returns: The CMakeLists.txt code.
 public func cMakeLists(for fsm: LLFSM, named name: String, isSuspensible: Bool) -> Code {
     return .block {
         "cmake_minimum_required(VERSION 3.21)"
@@ -388,7 +395,7 @@ public func cMakeLists(for fsm: LLFSM, named name: String, isSuspensible: Bool) 
         "endif()"
         ""
         "# Sources for the \(name) LLFSM."
-        "set(\(name)_SOURCES"
+        "set(\(name)_FSM_SOURCES"
         "    Machine_\(name).c"
         Code.enumerating(array: fsm.states) { i, stateID in
             if let state = fsm.stateMap[stateID] {
@@ -399,7 +406,7 @@ public func cMakeLists(for fsm: LLFSM, named name: String, isSuspensible: Bool) 
         }
         ")"
         ""
-        "add_library(\(name) STATIC ${\(name)_SOURCES})"
+        "add_library(\(name)_fsm STATIC ${\(name)_FSM_SOURCES})"
         ""
     }
 }

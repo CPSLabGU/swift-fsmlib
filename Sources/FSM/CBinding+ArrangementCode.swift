@@ -10,7 +10,7 @@
 ///   - name: The name of the arrangement
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The LLFSM arrangement interface code.
-public func cArrangementInterface(for instances: [Instance], named name: String, isSuspensible: Bool) -> String {
+public func cArrangementInterface(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
     let upperName = name.uppercased()
     return """
     //
@@ -63,7 +63,7 @@ public func cArrangementInterface(for instances: [Instance], named name: String,
 ///   - name: The name of the arrangement
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The LLFSM arrangement implementation code.
-public func cArrangementCode(for instances: [Instance], named name: String, isSuspensible: Bool) -> String {
+public func cArrangementCode(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
     let upperName = name.uppercased()
     return """
     //
@@ -114,7 +114,7 @@ public func cArrangementCode(for instances: [Instance], named name: String, isSu
 ///   - name: The name of the arrangement
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The LLFSM arrangement interface code.
-public func cArrangementMachineInterface(for instances: [Instance], named name: String, isSuspensible: Bool) -> String {
+public func cArrangementMachineInterface(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
     """
     //
     // Machine_Common.h
@@ -168,7 +168,7 @@ public func cArrangementMachineInterface(for instances: [Instance], named name: 
 ///   - name: The name of the arrangement
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The LLFSM arrangement implementation code.
-public func cArrangementMachineCode(for instances: [Instance], named name: String, isSuspensible: Bool) -> String {
+public func cArrangementMachineCode(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
     """
     //
     // Machine_Common.c
@@ -224,3 +224,57 @@ public func cArrangementMachineCode(for instances: [Instance], named name: Strin
         ""
     }
 }
+
+/// Create CMakeLists for a C-language LLFSM arrangement.
+///
+/// - Parameters:
+///   - instances: The instances to arrange.
+///   - name: The name of the arrangement
+///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+/// - Returns: The CMakeLists.txt code.
+public func cArrangementMakeLists(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
+    return .block {
+        "cmake_minimum_required(VERSION 3.21)"
+        ""
+        "project(\(name) C)"
+        ""
+        "# Require the C standard to be C17,"
+        "# but allow extensions."
+        "set(CMAKE_C_STANDARD 17)"
+        "set(CMAKE_C_STANDARD_REQUIRED ON)"
+        "set(CMAKE_C_EXTENSIONS ON)"
+        ""
+        "# Set the default build type to Debug."
+        "if(NOT CMAKE_BUILD_TYPE)"
+        "   set(CMAKE_BUILD_TYPE Debug)"
+        "endif()"
+        ""
+        "# Sources for the \(name) LLFSM arrangement."
+        "set(\(name)_ARRANGEMENT_SOURCES"
+        "    Arrangement_\(name).c"
+        "    Machine_Common.c"
+        ")"
+        ""
+        "# Machines for the \(name) LLFSM arrangement."
+        "set(\(name)_ARRANGEMENT_MACHINES"
+        "    Arrangement_\(name).c"
+        "    Machine_Common.c"
+        ")"
+        ""
+        "add_library(\(name)_arrangement STATIC ${\(name)_ARRANGEMENT_SOURCES})"
+        ""
+        Code.enumerating(array: instances) { i, instance in
+            "include(\(instance.url.deletingPathExtension().lastPathComponent)/CMakeLists.txt"
+        }
+        ""
+        "add_executable(run_\(name)_arrangement STATIC main.c)"
+        "target_link_libraries(run_\(name)_arrangement"
+        "    \(name)_arrangement"
+        Code.enumerating(array: instances) { i, instance in
+            "    \(instance.name)_fsm"
+        }
+        ")"
+        ""
+    }
+}
+
