@@ -9,9 +9,9 @@
 /// - Parameters:
 ///   - llfsm: The finite-state machine to create code for.
 ///   - name: The name of the LLFSM.
-///   - isSupensible: Set to `true` to create an interface that supports suspension.
+///   - isSuspensible: Set to `true` to create an interface that supports suspension.
 /// - Returns:
-public func cMachineInterface(for llfsm: LLFSM, named name: String, isSupensible: Bool) -> Code {
+public func cMachineInterface(for llfsm: LLFSM, named name: String, isSuspensible: Bool) -> Code {
     let upperName = name.uppercased()
     return """
     //
@@ -21,13 +21,14 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, isSupensible
     //
 
     """ + .includeFile(named: "LLFSM_MACHINE_" + upperName + "_H") {
+        "#include <inttypes.h>"
         "#include <stdbool.h>"
         ""
         "#define MACHINE_\(upperName)_NUMBER_OF_STATES \(llfsm.states.count)"
         ""
         "#undef IS_SUSPENDED"
         "#undef IS_SUSPENSIBLE"
-        if isSupensible {
+        if isSuspensible {
             "#define IS_SUSPENSIBLE(m) (!!(m)->suspend_state)"
             "#define IS_SUSPENDED(m) ((m)->suspend_state == (m)->current_state)"
             "#define MACHINE_\(name.uppercased())_IS_SUSPENSIBLE true"
@@ -52,8 +53,8 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, isSupensible
         Code.bracketedBlock(openingBracket: "{\n", closingBracket: "") {
             "struct LLFSMState *current_state;"
             "struct LLFSMState *previous_state;"
-            "unsigned long      state_time;"
-            if isSupensible {
+            "uintptr_t          state_time;"
+            if isSuspensible {
                 "struct LLFSMState *suspend_state;"
                 "struct LLFSMState *resume_state;"
             }
@@ -83,9 +84,9 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, isSupensible
 ///   - llfsm: The finite-state machine to create code for.
 ///   - name: The name of the LLFSM.
 ///   - numberOfStates: The number of states the LLFSM contains.
-///   - isSupensible: Set to `true` to create an interface that supports suspension.
+///   - isSuspensible: Set to `true` to create an interface that supports suspension.
 /// - Returns: The generated C code.
-public func cMachineCode(for llfsm: LLFSM, named name: String, isSupensible: Bool) -> Code {
+public func cMachineCode(for llfsm: LLFSM, named name: String, isSuspensible: Bool) -> Code {
     """
     //
     // Machine_\(name).c
@@ -109,7 +110,7 @@ public func cMachineCode(for llfsm: LLFSM, named name: String, isSupensible: Boo
             "machine->current_state = machine->states[0];"
             "machine->previous_state = NULL;"
             "machine->state_time = 0;"
-            if isSupensible {
+            if isSuspensible {
                 "machine->suspend_state = " + ((llfsm.suspendState.flatMap {
                     llfsm.states.firstIndex(of: $0).map { "machine->states[\($0)];" }
                 }) ?? "NULL;")
@@ -134,9 +135,9 @@ public func cMachineCode(for llfsm: LLFSM, named name: String, isSupensible: Boo
 /// - Parameters:
 ///   - llfsm: The finite-state machine to create code for.
 ///   - name: The name of the State.
-///   - isSupensible: Set to `true` to create an interface that supports suspension.
+///   - isSuspensible: Set to `true` to create an interface that supports suspension.
 /// - Returns: The generated header for the state.
-public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, isSupensible: Bool) -> Code {
+public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, isSuspensible: Bool) -> Code {
     let upperName = name.uppercased()
     return """
     //
@@ -162,10 +163,11 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
         ""
         "struct FSM\(name)_State_\(state.name)"
         Code.bracketedBlock(openingBracket: "{\n", closingBracket: "") {
+            "struct LLFSMState *(*check_transitions)(const struct LLFSMachine *, const struct LLFSMState *);"
             "void (*on_entry)(struct LLFSMachine *, struct LLFSMState *);"
             "void (*on_exit) (struct LLFSMachine *, struct LLFSMState *);"
             "void (*internal)(struct LLFSMachine *, struct LLFSMState *);"
-            if isSupensible {
+            if isSuspensible {
                 "void (*on_suspend)(struct LLFSMachine *, struct LLFSMState *);"
                 "void (*on_resume) (struct LLFSMachine *, struct LLFSMState *);"
             }
@@ -209,7 +211,7 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
         "///   - state: The state whose internal action to execute."
         "void fsm_" + name + "_" + state.name + "_internal(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state);"
         ""
-        if isSupensible {
+        if isSuspensible {
             "/// The onSuspend function for \(state.name)."
             "///"
             "/// - Parameters:"
@@ -235,9 +237,9 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
 /// - Parameters:
 ///   - llfsm: The finite-state machine to create code for.
 ///   - state: The name of the state to write the code for.
-///   - isSupensible: Set to `true` to create an interface that supports suspension.
+///   - isSuspensible: Set to `true` to create an interface that supports suspension.
 /// - Returns: The generated code for the state.
-public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSupensible: Bool) -> Code {
+public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSuspensible: Bool) -> Code {
     .block {
         "//"
         "// State_\(state.name).c"
@@ -263,10 +265,11 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSup
         "/// - Parameter state: The state to initialise."
         "void fsm_" + name + "_" + state.name + "_init(struct FSM\(name)_State_\(state.name) * const state)"
         Code.bracedBlock {
+            "state->check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *))fsm_" + name + "_" + state.name + "_check_transitions;"
             "state->on_entry   = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_entry;"
             "state->on_exit    = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_exit;"
             "state->internal   = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_internal;"
-            if isSupensible {
+            if isSuspensible {
                 "state->on_suspend = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_suspend;"
                 "state->on_resume  = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_resume;"
             }
@@ -278,11 +281,12 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSup
         "bool fsm_" + name + "_" + state.name + "_validate(const struct Machine_" + name + " * const machine, const struct FSM\(name)_State_\(state.name) * const state)"
         Code.bracedBlock {
             "(void)machine;"
-            "return state->on_entry   == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_entry &&"
+            "return state->check_transitions == (struct LLFSMState *(*)(const struct LLFSMachine * const machine, const struct LLFSMState * const state))fsm_" + name + "_" + state.name + "_check_transitions &&"
             Code.indentedBlock(with: "       ") {
+                "state->on_entry   == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_entry &&"
                 "state->on_exit    == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_exit &&"
-                "state->internal   == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_internal \(isSupensible ? "&&" : ";")"
-                if isSupensible {
+                "state->internal   == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_internal \(isSuspensible ? "&&" : ";")"
+                if isSuspensible {
                     "state->on_suspend == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_suspend &&"
                     "state->on_resume  == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_resume;"
                 }
@@ -321,7 +325,7 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSup
         "#   include \"State_\(state.name)_Internal.mm\""
         "}"
         ""
-        if isSupensible {
+        if isSuspensible {
             "/// The onSuspend function for \(state.name)."
             "///"
             "/// - Parameters:"

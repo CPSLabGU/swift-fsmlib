@@ -77,7 +77,7 @@ public extension CBinding {
     @inlinable
     func writeInterface(for llfsm: LLFSM, to url: URL, isSuspensible: Bool) throws {
         let name = url.deletingPathExtension().lastPathComponent
-        let machineCode = cMachineInterface(for: llfsm, named: name, isSupensible: isSuspensible)
+        let machineCode = cMachineInterface(for: llfsm, named: name, isSuspensible: isSuspensible)
         try url.write(content: machineCode, to: "Machine_" + name + ".h")
     }
     /// Write the state interface for the given LLFSM to the given URL.
@@ -97,7 +97,7 @@ public extension CBinding {
                 fputs("Warning: orphaned state ID \(stateID) for \(name)\n", stderr)
                 continue
             }
-            let stateCode = cStateInterface(for: state, llfsm: fsm, named: name, isSupensible: isSuspensible)
+            let stateCode = cStateInterface(for: state, llfsm: fsm, named: name, isSuspensible: isSuspensible)
             try url.write(content: stateCode, to: "State_" + state.name + ".h")
         }
     }
@@ -113,7 +113,7 @@ public extension CBinding {
     @inlinable
     func writeCode(for llfsm: LLFSM, to url: URL, isSuspensible: Bool) throws {
         let name = url.deletingPathExtension().lastPathComponent
-        let machineCode = cMachineCode(for: llfsm, named: name, isSupensible: isSuspensible)
+        let machineCode = cMachineCode(for: llfsm, named: name, isSuspensible: isSuspensible)
         try url.write(content: machineCode, to: "Machine_" + name + ".c")
     }
     /// Write the state code for the given LLFSM to the given URL.
@@ -133,7 +133,7 @@ public extension CBinding {
                 fputs("Warning: orphaned state ID \(stateID) for \(name)\n", stderr)
                 continue
             }
-            let stateCode = cStateCode(for: state, llfsm: fsm, named: name, isSupensible: isSuspensible)
+            let stateCode = cStateCode(for: state, llfsm: fsm, named: name, isSuspensible: isSuspensible)
             try url.write(content: stateCode, to: "State_" + state.name + ".c")
         }
     }
@@ -196,6 +196,8 @@ public extension CBinding {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     func writeArrangementInterface(for instances: [Instance], to url: URL, isSuspensible: Bool) throws {
         let name = url.deletingPathExtension().lastPathComponent
+        let commonInterface = cArrangementMachineInterface(for: instances, named: name, isSuspensible: isSuspensible)
+        try url.write(content: commonInterface, to: "Machine_Common.h")
         let arrangementInterface = cArrangementInterface(for: instances, named: name, isSuspensible: isSuspensible)
         try url.write(content: arrangementInterface, to: "Arrangement_\(name).h")
     }
@@ -210,6 +212,8 @@ public extension CBinding {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     func writeArrangementCode(for instances: [Instance], to url: URL, isSuspensible: Bool) throws {
         let name = url.deletingPathExtension().lastPathComponent
+        let commonCode = cArrangementMachineCode(for: instances, named: name, isSuspensible: isSuspensible)
+        try url.write(content: commonCode, to: "Machine_Common.c")
         let arrangementInterface = cArrangementCode(for: instances, named: name, isSuspensible: isSuspensible)
         try url.write(content: arrangementInterface, to: "Arrangement_\(name).c")
     }
