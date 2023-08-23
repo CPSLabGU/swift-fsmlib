@@ -75,7 +75,7 @@ public func==<T: TransitionVertex>(lhs: T, rhs: T) -> Bool {
 
 
 /// Concrete State Transition implementation
-public struct Transition: TransitionVertex, Equatable {
+public struct Transition: TransitionVertex, Equatable, Hashable {
     /// Unique ID of this transition
     public var id: TransitionID
     

@@ -263,11 +263,11 @@ public func cArrangementMakeLists(for instances: [Instance], named name: String,
         ""
         "add_library(\(name)_arrangement STATIC ${\(name)_ARRANGEMENT_SOURCES})"
         ""
-        Code.enumerating(array: instances) { i, instance in
-            "include(\(instance.url.deletingPathExtension().lastPathComponent)/CMakeLists.txt"
+        Code.enumerating(array: Array(Set(instances))) { i, instance in
+            "add_subdirectory(\(instance.url.lastPathComponent))"
         }
         ""
-        "add_executable(run_\(name)_arrangement STATIC main.c)"
+        "add_executable(run_\(name)_arrangement main.c)"
         "target_link_libraries(run_\(name)_arrangement"
         "    \(name)_arrangement"
         Code.enumerating(array: instances) { i, instance in

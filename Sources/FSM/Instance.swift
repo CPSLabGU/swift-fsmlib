@@ -6,7 +6,7 @@
 import Foundation
 
 /// Instance of an FSM.
-public struct Instance {
+public struct Instance: Equatable, Hashable {
     /// The name of the machine instance.
     public let name: String
     /// The URL the machine can be read from.

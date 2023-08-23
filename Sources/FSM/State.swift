@@ -29,7 +29,7 @@ public func==<S: StateNode>(lhs: S, rhs: S) -> Bool {
 }
 
 /// FSM State Implementations
-public struct State: StateNode {
+public struct State: StateNode, Equatable, Hashable {
     /// Unique ID of the state
     public var id: StateID
 

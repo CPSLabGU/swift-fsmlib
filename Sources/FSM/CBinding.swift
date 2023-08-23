@@ -207,7 +207,7 @@ public extension CBinding {
     /// for the given finite-state machine instances to the given URL.
     ///
     /// - Parameters:
-    ///   - names: The names of the FSM instances.
+    ///   - instances: The FSM instances.
     ///   - url: The URL to write to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     func writeArrangementCode(for instances: [Instance], to url: URL, isSuspensible: Bool) throws {
@@ -216,6 +216,21 @@ public extension CBinding {
         try url.write(content: commonCode, to: "Machine_Common.c")
         let arrangementInterface = cArrangementCode(for: instances, named: name, isSuspensible: isSuspensible)
         try url.write(content: arrangementInterface, to: "Arrangement_\(name).c")
+    }
+    /// Write a CMakefile for the given LLFSM arrangement to the given URL.
+    ///
+    /// This method creates a CMakefile to compile the
+    /// given finite-state machine locally at the given URL.
+    ///
+    /// - Parameters:
+    ///   - instances: The FSM instances.
+    ///   - url: The URL to write to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    @inlinable
+    func writeArrangementCMakeFile(for instances: [Instance], to url: URL, isSuspensible: Bool) throws {
+        let name = url.deletingPathExtension().lastPathComponent
+        let cmakeLists = cArrangementMakeLists(for: instances, named: name, isSuspensible: isSuspensible)
+        try url.write(content: cmakeLists, to: "CMakeLists.txt")
     }
 }
 

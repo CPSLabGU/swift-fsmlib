@@ -6,7 +6,7 @@
 //
 
 /// Generic implementation of an LLFSM
-public struct LLFSM: SuspensibleFSM {
+public struct LLFSM: SuspensibleFSM, Equatable, Hashable {
     /// The states this machine is made up of
     public var states: StateArray
 
@@ -28,12 +28,25 @@ public struct LLFSM: SuspensibleFSM {
     }
 }
 
-extension LLFSM {
-    public init(states: [State], transitions: [Transition], suspendState: StateID?) {
+public extension LLFSM {
+    init(states: [State], transitions: [Transition], suspendState: StateID?) {
         self.states = states.map { $0.id }
         self.transitions = transitions.map { $0.id }
         self.transitionMap = dictionary(transitions)
         self.stateMap = dictionary(states)
         self.suspendState = suspendState
+    }
+}
+
+// Hashable conformance
+public extension LLFSM {
+    /// Hash function.
+    /// - Parameter hasher: Hasher to use for hashing.
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(states)
+        hasher.combine(suspendState)
+        hasher.combine(transitions)
+        hasher.combine(stateMap)
+        hasher.combine(transitionMap)
     }
 }

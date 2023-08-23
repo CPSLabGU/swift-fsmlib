@@ -130,6 +130,16 @@ public protocol OutputLanguage: LanguageBinding {
     ///   - url: The URL to write to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     func writeCMakeFile(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws
+    /// Write a CMakefile for the given LLFSM arrangement to the given URL.
+    ///
+    /// This method creates a CMakefile to compile the
+    /// given finite-state machine locally at the given URL.
+    ///
+    /// - Parameters:
+    ///   - instances: The FSM instances.
+    ///   - url: The URL to write to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    func writeArrangementCMakeFile(for instances: [Instance], to url: URL, isSuspensible: Bool) throws
 }
 
 public extension OutputLanguage {
