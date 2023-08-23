@@ -87,12 +87,12 @@ extension Code {
     /// Create code iterating over the given array.
     ///
     /// - Parameters:
-    ///   - array: The array to iterate over.
+    ///   - collection: The collection to iterate over.
     ///   - codeBuilder: The code builder transforming the array into code.
     /// - Returns: The code resulting from iterating over the array.
-    static func forEach<Element>(_ array: [Element], @CodeBuilder codeBuilder: (Element) -> Code) -> Code {
-        guard !array.isEmpty else { return .ignored }
-        return array.map(codeBuilder).joined(separator: "\n")
+    static func forEach<Element>(_ collection: some Collection<Element>, @CodeBuilder codeBuilder: (Element) -> Code) -> Code {
+        guard !collection.isEmpty else { return .ignored }
+        return collection.map(codeBuilder).joined(separator: "\n")
     }
     /// Create code enumerating the given array.
     ///
