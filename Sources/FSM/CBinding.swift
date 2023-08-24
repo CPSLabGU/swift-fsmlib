@@ -200,6 +200,8 @@ public extension CBinding {
         try url.write(content: commonInterface, to: "Machine_Common.h")
         let arrangementInterface = cArrangementInterface(for: instances, named: name, isSuspensible: isSuspensible)
         try url.write(content: arrangementInterface, to: "Arrangement_\(name).h")
+        let staticInterface = cStaticArrangementInterface(for: instances, named: name, isSuspensible: isSuspensible)
+        try url.write(content: staticInterface, to: "Static_Arrangement_\(name).h")
     }
     /// Write the arrangment implementation to the given URL.
     ///
@@ -214,8 +216,12 @@ public extension CBinding {
         let name = url.deletingPathExtension().lastPathComponent
         let commonCode = cArrangementMachineCode(for: instances, named: name, isSuspensible: isSuspensible)
         try url.write(content: commonCode, to: "Machine_Common.c")
-        let arrangementInterface = cArrangementCode(for: instances, named: name, isSuspensible: isSuspensible)
-        try url.write(content: arrangementInterface, to: "Arrangement_\(name).c")
+        let arrangementCode = cArrangementCode(for: instances, named: name, isSuspensible: isSuspensible)
+        try url.write(content: arrangementCode, to: "Arrangement_\(name).c")
+        let staticCode = cStaticArrangementCode(for: instances, named: name, isSuspensible: isSuspensible)
+        try url.write(content: staticCode, to: "Static_Arrangement_\(name).c")
+        let mainCode = cStaticArrangementMainCode(for: instances, named: name, isSuspensible: isSuspensible)
+        try url.write(content: mainCode, to: "static_main.c")
     }
     /// Write a CMakefile for the given LLFSM arrangement to the given URL.
     ///
