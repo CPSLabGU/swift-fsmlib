@@ -53,6 +53,11 @@ public func cArrangementInterface(for instances: [Instance], named name: String,
         "/// - Parameter arrangement: The machine arrangement to initialise."
         "void arrangement_" + name + "_init(struct Arrangement_" + name + " * const arrangement);"
         ""
+        "/// Validate the \(name) LLFSM arrangement."
+        "///"
+        "/// - Parameter arrangement: The machine arrangement to initialise."
+        "bool arrangement_" + name + "_validate(struct Arrangement_" + name + " * const arrangement);"
+        ""
         "/// Run a ringlet of a C-language LLFSM Arrangement."
         "///"
         "/// This runs one ringlet of the machines of Arrangement " + name + "."
@@ -104,7 +109,18 @@ public func cArrangementCode(for instances: [Instance], named name: String, isSu
             }
         }
         ""
-        "/// Run a ringlet of a C-language LLFSM Arrangement."
+        "/// Validate the \(name) LLFSM arrangement."
+        "///"
+        "/// - Parameter arrangement: The machine arrangement to initialise."
+        "bool arrangement_" + name + "_validate(struct Arrangement_" + name + " * const arrangement)"
+        Code.bracedBlock {
+            "return arrangement->number_of_instances == ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES &&"
+            Code.enumerating(array: instances) { (i, instance) in
+                "    fsm_" + name + "_validate(arrangement->fsm_" + instance.name.lowercased() + (i < instances.count - 1 ? ") &&" : ");")
+            }
+        }
+        ""
+        "/// Run a ringlet of the \(name) LLFSM arrangement."
         "///"
         "/// - Parameter arrangement: The machine arrangement to run a ringlet over."
         "void arrangement_" + name + "_execute_once(struct Arrangement_" + name + " * const arrangement)"
@@ -401,6 +417,12 @@ public func cStaticArrangementMainCode(for instances: [Instance], named name: St
     int main(int argc, char *argv[])
     """ + Code.bracedBlock {
         "uintptr_t num_runs = (uintptr_t)(argc > 1 ? strtoull(argv[1], NULL, 10) : ~0ULL);"
+        ""
+        "if (!arrangement_" + name + "_validate(&static_arrangement_" + name.lowercased() + "))"
+        Code.bracedBlock {
+            "printf(\"'static_arrangement_" + name.lowercased() + "' does not validate!\\n\");"
+            "return EXIT_FAILURE;"
+        }
         ""
         "while (num_runs--)"
         Code.bracedBlock {
