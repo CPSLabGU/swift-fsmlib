@@ -105,7 +105,8 @@ public func cArrangementCode(for instances: [Instance], named name: String, isSu
         Code.bracedBlock {
             "arrangement->number_of_instances = ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES;"
             Code.forEach(instances) { instance in
-                "fsm_" + name + "_init(arrangement->fsm_" + instance.name.lowercased() + ");"
+                let lowerInstance = instance.name.lowercased()
+                "fsm_" + lowerInstance + "_init(arrangement->fsm_" + lowerInstance + ");"
             }
         }
         ""
@@ -116,7 +117,8 @@ public func cArrangementCode(for instances: [Instance], named name: String, isSu
         Code.bracedBlock {
             "return arrangement->number_of_instances == ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES &&"
             Code.enumerating(array: instances) { (i, instance) in
-                "    fsm_" + name + "_validate(arrangement->fsm_" + instance.name.lowercased() + (i < instances.count - 1 ? ") &&" : ");")
+                let lowerInstance = instance.name.lowercased()
+                "    fsm_" + lowerInstance + "_validate(arrangement->fsm_" + lowerInstance + (i < instances.count - 1 ? ") &&" : ");")
             }
         }
         ""
@@ -217,6 +219,7 @@ public func cStaticArrangementCode(for instances: [Instance], named name: String
         ""
         Code.forEach(instances) { instance in
             let machineName = instance.url.deletingPathExtension().lastPathComponent
+            let lowerMachine = machineName.lowercased()
             "/// Static instantiation of a \(machineName) LLFSM."
             "struct Machine_\(machineName) static_fsm_\(instance.name.lowercased()) = "
             Code.bracedBlock {
@@ -226,7 +229,7 @@ public func cStaticArrangementCode(for instances: [Instance], named name: String
                 if isSuspensible,
                    let suspendStateID = instance.fsm.suspendState,
                    let suspendState = instance.fsm.stateMap[suspendStateID] {
-                    ".suspend_state = &static_\(instance.name.lowercased())_state_\(suspendState.name),"
+                    ".suspend_state = (struct LLFSMState *) &static_\(instance.name.lowercased())_state_\(suspendState.name),"
                 }
                 ".states ="
                 Code.bracedBlock {
@@ -242,16 +245,17 @@ public func cStaticArrangementCode(for instances: [Instance], named name: String
             Code.forEach(instance.fsm.states.compactMap {
                 instance.fsm.stateMap[$0]
             }) { state in
+                let lowerState = state.name.lowercased()
                 "/// Static instantiation of the \(machineName) LLFSM state \(state.name)."
                 "struct FSM\(machineName)_State_\(state.name) static_\(instance.name.lowercased())_state_\(state.name) = "
                 Code.bracedBlock {
-                    ".check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *)) fsm_" + name + "_" + state.name + "_check_transitions,"
-                    ".on_entry = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_" + name + "_" + state.name + "_on_entry,"
-                    ".on_exit = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_" + name + "_" + state.name + "_on_exit,"
-                    ".internal = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_" + name + "_" + state.name + "_internal" + (isSuspensible ? "," : "")
+                    ".check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *)) fsm_" + lowerMachine + "_" + lowerState + "_check_transitions,"
+                    ".on_entry = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_" + lowerMachine + "_" + lowerState + "_on_entry,"
+                    ".on_exit = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_" + lowerMachine + "_" + lowerState + "_on_exit,"
+                    ".internal = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_" + lowerMachine + "_" + lowerState + "_internal" + (isSuspensible ? "," : "")
                     if isSuspensible {
-                        ".on_suspend = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_" + name + "_" + state.name + "_on_suspend,"
-                        ".on_resume = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_" + name + "_" + state.name + "_on_resume"
+                        ".on_suspend = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_" + lowerMachine + "_" + lowerState + "_on_suspend,"
+                        ".on_resume = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_" + lowerMachine + "_" + lowerState + "_on_resume"
                     }
                 } + ";"
             }
@@ -322,6 +326,8 @@ public func cArrangementMachineInterface(for instances: [Instance], named name: 
         ""
         "struct LLFSMState;"
         ""
+        "#ifndef STRUCT_LLFSMACHINE_"
+        "#define STRUCT_LLFSMACHINE_"
         "/// A generic LLFSM."
         "struct LLFSMachine"
         Code.bracedBlock {
@@ -334,7 +340,10 @@ public func cArrangementMachineInterface(for instances: [Instance], named name: 
             }
             "struct LLFSMState * const states[1];"
         } + ";"
+        "#endif // STRUCT_LLFSMACHINE_"
         ""
+        "#ifndef STRUCT_LLFSMSTATE_"
+        "#define STRUCT_LLFSMSTATE_"
         "struct LLFSMState"
         Code.bracedBlock {
             "struct LLFSMState *(*check_transitions)(const struct LLFSMachine * const, const struct LLFSMState * const);"
@@ -346,6 +355,7 @@ public func cArrangementMachineInterface(for instances: [Instance], named name: 
                 "void (*on_resume) (struct LLFSMachine *, struct LLFSMState *);"
             }
         } + ";"
+        "#endif // STRUCT_LLFSMSTATE_"
         ""
         "/// Run a ringlet of a C-language LLFSM."
         "///"

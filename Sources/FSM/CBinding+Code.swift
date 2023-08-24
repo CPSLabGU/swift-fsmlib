@@ -13,6 +13,7 @@
 /// - Returns:
 public func cMachineInterface(for llfsm: LLFSM, named name: String, isSuspensible: Bool) -> Code {
     let upperName = name.uppercased()
+    let lowerName = name.lowercased()
     return """
     //
     // Machine_\(name).h
@@ -23,6 +24,7 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, isSuspensibl
     """ + .includeFile(named: "LLFSM_MACHINE_" + upperName + "_H") {
         "#include <inttypes.h>"
         "#include <stdbool.h>"
+        "#include \"Machine_" + name + "_Includes.h\""
         ""
         "#ifdef INCLUDE_MACHINE_CUSTOM"
         "#include \"Machine_Custom.h\""
@@ -78,22 +80,7 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, isSuspensibl
         ""
         "struct LLFSMArrangement;"
         "struct LLFSMState;"
-        ""
-        "#ifndef STRUCT_LLFSMACHINE_"
-        "#define STRUCT_LLFSMACHINE_"
-        "/// A generic LLFSM."
-        "struct LLFSMachine"
-        Code.bracedBlock {
-            "struct LLFSMState *current_state;"
-            "struct LLFSMState *previous_state;"
-            "uintptr_t          state_time;"
-            if isSuspensible {
-                "struct LLFSMState *suspend_state;"
-                "struct LLFSMState *resume_state;"
-            }
-            "struct LLFSMState * const states[1];"
-        } + ";"
-        "#endif // STRUCT_LLFSMACHINE_"
+        "struct LLFSMachine;"
         ""
         "/// A \(name) LLFSM."
         "struct Machine_" + name
@@ -113,12 +100,12 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, isSuspensibl
         "/// Initialise a `Machine_" + name + "` LLFSM."
         "///"
         "/// - Parameter machine: The LLFSM to initialise."
-        "void fsm_" + name + "_init(struct Machine_" + name + " *);"
+        "void fsm_" + lowerName + "_init(struct Machine_" + name + " *);"
         ""
         "/// Validate a `Machine_" + name + "` LLFSM."
         "///"
         "/// - Parameter machine: The LLFSM to initialise."
-        "bool fsm_" + name + "_validate(struct Machine_" + name + " *);"
+        "bool fsm_" + lowerName + "_validate(struct Machine_" + name + " *);"
         ""
         "#pragma clang diagnostic pop"
         "#pragma GCC diagnostic pop"
@@ -142,8 +129,8 @@ public func cMachineCode(for llfsm: LLFSM, named name: String, isSuspensible: Bo
     //
 
     """ + .block {
+        let lowerName = name.lowercased()
         "#include \"Machine_\(name).h\""
-        "#include \"Machine_" + name + "_Includes.h\""
         ""
         "#ifndef NULL"
         "#define NULL ((void*)0)"
@@ -152,7 +139,7 @@ public func cMachineCode(for llfsm: LLFSM, named name: String, isSuspensible: Bo
         "/// Initialise an instance of `Machine_" + name + "."
         "///"
         "/// - Parameter machine: The machine to initialise."
-        "void fsm_" + name + "_init(struct Machine_" + name + " * const machine)"
+        "void fsm_" + lowerName + "_init(struct Machine_" + name + " * const machine)"
         Code.bracedBlock {
             "machine->current_state = machine->states[0];"
             "machine->previous_state = NULL;"
@@ -169,7 +156,7 @@ public func cMachineCode(for llfsm: LLFSM, named name: String, isSuspensible: Bo
         "///"
         "/// - Parameter machine: The machine to validate."
         "/// - Returns: `true` iff the machine appears valid."
-        "bool fsm_" + name + "_validate(struct Machine_" + name + " * const machine)"
+        "bool fsm_" + lowerName + "_validate(struct Machine_" + name + " * const machine)"
         Code.bracedBlock {
             "return machine->current_state != NULL &&"
             "true; // FIXME: check states"
@@ -186,6 +173,8 @@ public func cMachineCode(for llfsm: LLFSM, named name: String, isSuspensible: Bo
 /// - Returns: The generated header for the state.
 public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, isSuspensible: Bool) -> Code {
     let upperName = name.uppercased()
+    let lowerName = name.lowercased()
+    let lowerState = state.name.lowercased()
     return """
     //
     // State_\(state.name).h
@@ -227,38 +216,38 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
         "/// Initialise the given state."
         "///"
         "/// - Parameter state: The state to initialise."
-        "void fsm_" + name + "_" + state.name + "_init(struct FSM\(name)_State_\(state.name) * const state);"
+        "void fsm_" + lowerName + "_" + lowerState + "_init(struct FSM\(name)_State_\(state.name) * const state);"
         ""
         "/// Validate the given state."
         "///"
         "/// - Parameter state: The state to initialise."
-        "bool fsm_" + name + "_" + state.name + "_validate(const struct Machine_" + name + " * const machine, const struct FSM\(name)_State_\(state.name) * const state);"
+        "bool fsm_" + lowerName + "_" + lowerState + "_validate(const struct Machine_" + name + " * const machine, const struct FSM\(name)_State_\(state.name) * const state);"
         ""
         "/// Check the sequence of transitions for \(state.name)."
         "///"
         "/// - Returns: The state the machine transitions to (`NULL` if no transition fired)."
-        "struct LLFSMState *fsm_" + name + "_" + state.name + "_check_transitions(const struct Machine_" + name + " * const machine, const struct FSM\(name)_State_\(state.name) * const state);"
+        "struct LLFSMState *fsm_" + lowerName + "_" + lowerState + "_check_transitions(const struct Machine_" + name + " * const machine, const struct FSM\(name)_State_\(state.name) * const state);"
         ""
         "/// The onEntry function for \(state.name)."
         "///"
         "/// - Parameters:"
         "///   - machine: The machine that entered the state."
         "///   - state: The state that was entered."
-        "void fsm_" + name + "_" + state.name + "_on_entry(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state);"
+        "void fsm_" + lowerName + "_" + lowerState + "_on_entry(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state);"
         ""
         "/// The onExit function for \(state.name)."
         "///"
         "/// - Parameters:"
         "///   - machine: The machine this function belongs to."
         "///   - state: The state being exited."
-        "void fsm_" + name + "_" + state.name + "_on_exit(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state);"
+        "void fsm_" + lowerName + "_" + lowerState + "_on_exit(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state);"
         ""
         "/// The internal action for \(state.name)."
         "///"
         "/// - Parameters:"
         "///   - machine: The machine this function belongs to."
         "///   - state: The state whose internal action to execute."
-        "void fsm_" + name + "_" + state.name + "_internal(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state);"
+        "void fsm_" + lowerName + "_" + lowerState + "_internal(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state);"
         ""
         if isSuspensible {
             "/// The onSuspend function for \(state.name)."
@@ -266,14 +255,14 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
             "/// - Parameters:"
             "///   - machine: The machine that entered the state."
             "///   - state: The state that was suspended."
-            "void fsm_" + name + "_" + state.name + "_on_suspend(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state);"
+            "void fsm_" + lowerName + "_" + lowerState + "_on_suspend(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state);"
             ""
             "/// The onResume function for \(state.name)."
             "///"
             "/// - Parameters:"
             "///   - machine: The machine this function belongs to."
             "///   - state: The state being resumed."
-            "void fsm_" + name + "_" + state.name + "_on_resume(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state);"
+            "void fsm_" + lowerName + "_" + lowerState + "_on_resume(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state);"
         }
         ""
         "#pragma clang diagnostic pop"
@@ -290,6 +279,8 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
 /// - Returns: The generated code for the state.
 public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSuspensible: Bool) -> Code {
     .block {
+        let lowerName = name.lowercased()
+        let lowerState = state.name.lowercased()
         "//"
         "// State_\(state.name).c"
         "//"
@@ -310,32 +301,32 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSus
         "/// Initialise the given \(state.name) state."
         "///"
         "/// - Parameter state: The state to initialise."
-        "void fsm_" + name + "_" + state.name + "_init(struct FSM\(name)_State_\(state.name) * const state)"
+        "void fsm_" + lowerName + "_" + lowerState + "_init(struct FSM\(name)_State_\(state.name) * const state)"
         Code.bracedBlock {
-            "state->check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *))fsm_" + name + "_" + state.name + "_check_transitions;"
-            "state->on_entry   = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_entry;"
-            "state->on_exit    = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_exit;"
-            "state->internal   = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_internal;"
+            "state->check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *))fsm_" + lowerName + "_" + lowerState + "_check_transitions;"
+            "state->on_entry   = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + lowerName + "_" + lowerState + "_on_entry;"
+            "state->on_exit    = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + lowerName + "_" + lowerState + "_on_exit;"
+            "state->internal   = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + lowerName + "_" + lowerState + "_internal;"
             if isSuspensible {
-                "state->on_suspend = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_suspend;"
-                "state->on_resume  = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_resume;"
+                "state->on_suspend = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + lowerName + "_" + lowerState + "_on_suspend;"
+                "state->on_resume  = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + lowerName + "_" + lowerState + "_on_resume;"
             }
         }
         ""
         "/// Check the validity of the given \(state.name) state."
         "///"
-        "/// - Parameter state: The state to initialise."
-        "bool fsm_" + name + "_" + state.name + "_validate(const struct Machine_" + name + " * const machine, const struct FSM\(name)_State_\(state.name) * const state)"
+        "/// - Parameter state: The state to validate."
+        "bool fsm_" + lowerName + "_" + lowerState + "_validate(const struct Machine_" + name + " * const machine, const struct FSM\(name)_State_\(state.name) * const state)"
         Code.bracedBlock {
             "(void)machine;"
-            "return state->check_transitions == (struct LLFSMState *(*)(const struct LLFSMachine * const machine, const struct LLFSMState * const state))fsm_" + name + "_" + state.name + "_check_transitions &&"
+            "return state->check_transitions == (struct LLFSMState *(*)(const struct LLFSMachine * const machine, const struct LLFSMState * const state))fsm_" + lowerName + "_" + lowerState + "_check_transitions &&"
             Code.indentedBlock(with: "       ") {
-                "state->on_entry   == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_entry &&"
-                "state->on_exit    == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_exit &&"
-                "state->internal   == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_internal \(isSuspensible ? "&&" : ";")"
+                "state->on_entry   == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + lowerName + "_" + lowerState + "_on_entry &&"
+                "state->on_exit    == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + lowerName + "_" + lowerState + "_on_exit &&"
+                "state->internal   == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + lowerName + "_" + lowerState + "_internal \(isSuspensible ? "&&" : ";")"
                 if isSuspensible {
-                    "state->on_suspend == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_suspend &&"
-                    "state->on_resume  == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + name + "_" + state.name + "_on_resume;"
+                    "state->on_suspend == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + lowerName + "_" + lowerState + "_on_suspend &&"
+                    "state->on_resume  == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_" + lowerName + "_" + lowerState + "_on_resume;"
                 }
             }
         }
@@ -347,7 +338,7 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSus
         "/// - Parameters:"
         "///   - machine: The machine that entered the state."
         "///   - state: The state that was entered."
-        "void fsm_" + name + "_" + state.name + "_on_entry(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state)"
+        "void fsm_" + lowerName + "_" + lowerState + "_on_entry(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state)"
         "{"
         "#   include \"State_\(state.name)_OnEntry.mm\""
         "}"
@@ -357,7 +348,7 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSus
         "/// - Parameters:"
         "///   - machine: The machine this function belongs to."
         "///   - state: The state being exited."
-        "void fsm_" + name + "_" + state.name + "_on_exit(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state)"
+        "void fsm_" + lowerName + "_" + lowerState + "_on_exit(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state)"
         "{"
         "#   include \"State_\(state.name)_OnExit.mm\""
         "}"
@@ -367,7 +358,7 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSus
         "/// - Parameters:"
         "///   - machine: The machine this function belongs to."
         "///   - state: The state whose internal action to execute."
-        "void fsm_" + name + "_" + state.name + "_internal(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state)"
+        "void fsm_" + lowerName + "_" + lowerState + "_internal(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state)"
         "{"
         "#   include \"State_\(state.name)_Internal.mm\""
         "}"
@@ -378,7 +369,7 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSus
             "/// - Parameters:"
             "///   - machine: The machine that entered the state."
             "///   - state: The state that was suspended."
-            "void fsm_" + name + "_" + state.name + "_on_suspend(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state)"
+            "void fsm_" + lowerName + "_" + lowerState + "_on_suspend(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state)"
             "{"
             "#   include \"State_\(state.name)_OnSuspend.mm\""
             "}"
@@ -388,7 +379,7 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSus
             "/// - Parameters:"
             "///   - machine: The machine this function belongs to."
             "///   - state: The state being resumed."
-            "void fsm_" + name + "_" + state.name + "_on_resume(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state)"
+            "void fsm_" + lowerName + "_" + lowerState + "_on_resume(struct Machine_" + name + " * const machine, struct FSM\(name)_State_\(state.name) * const state)"
             "{"
             "#   include \"State_\(state.name)_OnResume.mm\""
             "}"
@@ -400,7 +391,7 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSus
         "///   - machine: The machine this function belongs to."
         "///   - state: The state being resumed."
         "/// - Returns: The state the machine transitions to (`NULL` if no transition fired)."
-        "struct LLFSMState *fsm_" + name + "_" + state.name + "_check_transitions(const struct Machine_" + name + " * const machine, const struct FSM\(name)_State_\(state.name) * const state)"
+        "struct LLFSMState *fsm_" + lowerName + "_" + lowerState + "_check_transitions(const struct Machine_" + name + " * const machine, const struct FSM\(name)_State_\(state.name) * const state)"
         Code.bracedBlock {
             Code.enumerating(array: llfsm.transitionsFrom(state.id)) { i, transitionID in
                 if let transition = llfsm.transitionMap[transitionID],
