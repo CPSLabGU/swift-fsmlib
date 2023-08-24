@@ -372,6 +372,7 @@ public func cArrangementMachineCode(for instances: [Instance], named name: Strin
             ""
             "if (current_state != machine->previous_state)"
             Code.bracedBlock {
+                "machine->state_time = GET_TIME();"
                 "current_state->on_entry(machine, current_state);"
             }
             "TAKE_SNAPSHOT();"
