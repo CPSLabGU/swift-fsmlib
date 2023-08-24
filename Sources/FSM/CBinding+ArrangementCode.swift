@@ -292,6 +292,34 @@ public func cArrangementMachineInterface(for instances: [Instance], named name: 
         "#include <inttypes.h>"
         "#include <stdbool.h>"
         ""
+        "#ifdef INCLUDE_MACHINE_CUSTOM"
+        "#include \"Machine_Custom.h\""
+        "#endif"
+        ""
+        "#pragma GCC diagnostic push"
+        "#pragma GCC diagnostic ignored \"-Wunknown-pragmas\""
+        ""
+        "#pragma clang diagnostic push"
+        "#pragma clang diagnostic ignored \"-Wunused-macros\""
+        ""
+        if isSuspensible {
+            "#ifndef SUSPEND"
+            "#define SUSPEND(m) ((m)->suspend_state && ((m)->resume_state = (m)->current_state == (m)->suspend_state ? (m)->resume_state : (m)->current_state) && ((m)->previous_state = (m)->current_state) && ((m)->current_state = (m)->suspend_state))"
+            "#endif"
+            "#ifndef RESUME"
+            "#define RESUME(m)  ((m)->suspend_state && (m)->current_state == (m)->suspend_state && ((m)->current_state = (m)->resume_state ? (m)->resume_state : ((m)->previous_state && (m)->previous_state != (m)->suspend_state ? (m)->previous_state : (m)->states[0])) && ((m)->previous_state = (m)->suspend_state))"
+            "#endif"
+        }
+        "#ifndef RESTART"
+        "#define RESTART(m) (((m)->previous_state = (m)->current_state) && ((m)->current_state = (m)->states[0]))"
+        "#endif"
+        "#ifndef GET_TIME"
+        "#define GET_TIME() (machine->state_time + 1)"
+        "#endif"
+        "#ifndef TAKE_SNAPSHOT"
+        "#define TAKE_SNAPSHOT()"
+        "#endif"
+        ""
         "struct LLFSMState;"
         ""
         "/// A generic LLFSM."
@@ -324,6 +352,9 @@ public func cArrangementMachineInterface(for instances: [Instance], named name: 
         "/// - Parameter machine: The machine arrangement to initialise."
         "void llfsm_execute_once(struct LLFSMachine * const machine);"
         ""
+        "#pragma clang diagnostic pop"
+        "#pragma GCC diagnostic pop"
+        ""
     }
 }
 
@@ -346,16 +377,6 @@ public func cArrangementMachineCode(for instances: [Instance], named name: Strin
     #pragma clang diagnostic push
     #pragma clang diagnostic ignored \"-Wunused-macros\"
     #pragma clang diagnostic ignored \"-Wdeclaration-after-statement\"
-
-    #ifdef INCLUDE_MACHINE_CUSTOM
-    #include \"Machine_Custom.h\"
-    #endif
-    #ifndef GET_TIME
-    #define GET_TIME() (machine->state_time + 1)
-    #endif
-    #ifndef TAKE_SNAPSHOT
-    #define TAKE_SNAPSHOT()
-    #endif
 
     #ifndef NULL
     #define NULL ((void*)0)

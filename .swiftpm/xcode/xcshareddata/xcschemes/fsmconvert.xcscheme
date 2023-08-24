@@ -105,6 +105,10 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "/Users/rh/Downloads/SuspendCounter.machine"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "/Users/rh/Downloads/Counter.machine"
             isEnabled = "YES">
          </CommandLineArgument>
