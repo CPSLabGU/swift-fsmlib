@@ -6,6 +6,10 @@
 //
 import Foundation
 
+#if !canImport(Darwin)
+public let UUID_NULL: uuid_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+#endif
+
 /// Array of state names
 public typealias StateNames = [StateName]
 
