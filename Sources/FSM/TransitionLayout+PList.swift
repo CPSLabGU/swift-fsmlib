@@ -17,15 +17,39 @@ public extension TransitionLayout {
 #endif
         let points = path.points
         let n = points.count
-        guard n > 0 else { return propertyList }
+        guard n > 0 else {
+#if canImport(Darwin)
+            return propertyList
+#else
+            return NSDictionary(dictionary: propertyList, copyItems: false)
+#endif
+        }
         propertyList.set(value: points,        forTransition: .bezierPath)
-        guard n > 1 else { return propertyList }
+        guard n > 1 else {
+#if canImport(Darwin)
+            return propertyList
+#else
+            return NSDictionary(dictionary: propertyList, copyItems: false)
+#endif
+        }
         propertyList.set(value: points.first,  forTransition: .srcPoint)
         propertyList.set(value: points.last,   forTransition: .dstPoint)
-        guard n > 2 else { return propertyList }
+        guard n > 2 else {
+#if canImport(Darwin)
+            return propertyList
+#else
+            return NSDictionary(dictionary: propertyList, copyItems: false)
+#endif
+        }
         propertyList.set(value: points[1],     forTransition: .ctlPoint1)
         propertyList.set(value: points[2],     forTransition: .ctlPoint2)
-        guard n > 3 else { return propertyList }
+        guard n > 3 else {
+#if canImport(Darwin)
+            return propertyList
+#else
+            return NSDictionary(dictionary: propertyList, copyItems: false)
+#endif
+        }
         propertyList.set(value: points[0].x,   forTransition: .srcPointX)
         propertyList.set(value: points[0].y,   forTransition: .srcPointY)
         propertyList.set(value: points[n-1].x, forTransition: .dstPointX)
