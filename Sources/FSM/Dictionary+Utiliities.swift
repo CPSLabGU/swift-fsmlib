@@ -48,7 +48,7 @@ extension NSDictionary {
     func transitionValue<T>(_ key: TransitionLayoutKey) -> T? {
         self[key.rawValue] as? T
     }
-
+#if canImport(Darwin)
     /// Set the value for the given state layout key.
     ///
     /// This function uses the strongly typed
@@ -74,6 +74,7 @@ extension NSDictionary {
     func set<T>(value: T, forTransition key: TransitionLayoutKey) {
         setValue(value, forKey: key.rawValue)
     }
+#endif
 }
 
 extension Dictionary where Key == AnyHashable, Value: Any {
