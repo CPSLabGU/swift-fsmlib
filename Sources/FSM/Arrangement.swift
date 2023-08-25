@@ -78,7 +78,12 @@ public struct Arrangement {
         try destination.writeArrangementCMakeFile(for: instances, to: url, isSuspensible: isSuspensible)
         defer { try? destination.finalise(url) }
         return machineFiles.map {
-            url.appending(path: $0.hasSuffix(".machine") ? $0 : ($0 + ".machine"))
+            let machinePath = $0.hasSuffix(".machine") ? $0 : ($0 + ".machine")
+#if canImport(Darwin)
+            return url.appending(path: machinePath)
+#else
+            return url.appendingPathComponent(machinePath)
+#endif
         }
     }
 }

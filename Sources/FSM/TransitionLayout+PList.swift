@@ -10,7 +10,11 @@ import Foundation
 public extension TransitionLayout {
     /// Property list representation
     var propertyList: NSDictionary {
+#if canImport(Darwin)
         let propertyList = NSDictionary()
+#else
+        var propertyList = [AnyHashable : Any]()
+#endif
         let points = path.points
         let n = points.count
         guard n > 0 else { return propertyList }
@@ -30,7 +34,11 @@ public extension TransitionLayout {
         propertyList.set(value: points[1].y,   forTransition: .ctlPoint1Y)
         propertyList.set(value: points[n-2].x, forTransition: .ctlPoint2X)
         propertyList.set(value: points[n-2].y, forTransition: .ctlPoint2Y)
+#if canImport(Darwin)
         return propertyList
+#else
+        return NSDictionary(dictionary: propertyList, copyItems: false)
+#endif
     }
 
     /// Property list initialiser for a state layout

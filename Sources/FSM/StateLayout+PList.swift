@@ -10,7 +10,11 @@ import Foundation
 public extension StateLayout {
     /// Property list representation
     var propertyList: NSDictionary {
+#if canImport(Darwin)
         let propertyList = NSDictionary()
+#else
+        var propertyList = [AnyHashable : Any]()
+#endif
         propertyList.set(value: isOpen, for: .expanded)
         propertyList.set(value: closedLayout.dimensions.w, for: .width)
         propertyList.set(value: closedLayout.dimensions.h, for: .height)
@@ -26,9 +30,13 @@ public extension StateLayout {
         propertyList.set(value: zoomedOnEntryHeight,     for: .zoomedOnEntryHeight)
         propertyList.set(value: zoomedOnExitHeight,      for: .zoomedOnExitHeight)
         propertyList.set(value: zoomedInternalHeight,    for: .zoomedInternalHeight)
-        propertyList.set(value: zoomedOnSuspendHeight,  for: .zoomedOnSuspendHeight)
+        propertyList.set(value: zoomedOnSuspendHeight,   for: .zoomedOnSuspendHeight)
         propertyList.set(value: zoomedOnResumeHeight,    for: .zoomedOnResumeHeight)
+#if canImport(Darwin)
         return propertyList
+#else
+        return NSDictionary(dictionary: propertyList, copyItems: false)
+#endif
     }
 
     /// Property list initialiser for a state layout
