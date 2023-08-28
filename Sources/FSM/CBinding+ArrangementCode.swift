@@ -59,67 +59,6 @@ public func cArrangementInterface(for instances: [Instance], named name: String,
         "/// - Parameter arrangement: The machine arrangement to initialise."
         "bool arrangement_" + lowerName + "_validate(struct Arrangement_" + name + " * const arrangement);"
         ""
-        "/// Run a ringlet of a C-language LLFSM Arrangement."
-        "///"
-        "/// This runs one ringlet of the machines of Arrangement " + name + "."
-        "///"
-        "/// - Parameter arrangement: The machine arrangement to run a ringlet over."
-        "void arrangement_" + lowerName + "_execute_once(struct Arrangement_" + name + " * const arrangement);"
-        ""
-        "/// Suspend all machines except for the first one."
-        "///"
-        "/// This suspends all LLFSMs in the '" + name + "' arrangement,"
-        "/// with the exception of the first machine."
-        "///"
-        "/// - Parameter arrangement: The machine arrangement to suspend."
-        "void arrangement_" + lowerName + "_suspend_all(struct Arrangement_" + name + " * const arrangement);"
-        ""
-        "/// Suspend all machines except for the given machine."
-        "///"
-        "/// This suspends all LLFSMs in the '" + name + "' arrangement,"
-        "/// with the exception of machine specified."
-        "///"
-        "/// - Parameters:"
-        "///   - arrangement: The machine arrangement to suspend."
-        "///   - machine: The machine to be excepted from suspension."
-        "void arrangement_" + lowerName + "_suspend_all_except(struct Arrangement_" + name + " * const arrangement, struct LLFSMachine * const machine);"
-        ""
-        "/// Resume all machines except for the first one."
-        "///"
-        "/// This resumes all LLFSMs in the '" + name + "' arrangement,"
-        "/// with the exception of the first machine."
-        "///"
-        "/// - Parameter arrangement: The machine arrangement to resume."
-        "void arrangement_" + lowerName + "_resume_all(struct Arrangement_" + name + " * const arrangement);"
-        ""
-        "/// Resume all machines except for the given machine."
-        "///"
-        "/// This resumes all LLFSMs in the '" + name + "' arrangement,"
-        "/// with the exception of machine specified."
-        "///"
-        "/// - Parameters:"
-        "///   - arrangement: The machine arrangement to resume."
-        "///   - machine: The machine to be excepted from resumption."
-        "void arrangement_" + lowerName + "_resume_all_except(struct Arrangement_" + name + " * const arrangement, struct LLFSMachine * const machine);"
-        ""
-        "/// Restart all machines except for the first one."
-        "///"
-        "/// This restarts all LLFSMs in the '" + name + "' arrangement,"
-        "/// with the exception of the first machine."
-        "///"
-        "/// - Parameter arrangement: The machine arrangement to restart."
-        "void arrangement_" + lowerName + "_restart_all(struct Arrangement_" + name + " * const arrangement);"
-        ""
-        "/// Restart all machines except for the given machine."
-        "///"
-        "/// This restarts all LLFSMs in the '" + name + "' arrangement,"
-        "/// with the exception of machine specified."
-        "///"
-        "/// - Parameters:"
-        "///   - arrangement: The machine arrangement to restart."
-        "///   - machine: The machine to be excepted from restarting."
-        "void arrangement_" + lowerName + "_restart_all_except(struct Arrangement_" + name + " * const arrangement, struct LLFSMachine * const machine);"
-        ""
     }
 }
 
@@ -176,121 +115,6 @@ public func cArrangementCode(for instances: [Instance], named name: String, isSu
             Code.enumerating(array: instances) { (i, instance) in
                 let lowerInstance = instance.name.lowercased()
                 "    fsm_" + lowerInstance + "_validate(arrangement->fsm_" + lowerInstance + (i < instances.count - 1 ? ") &&" : ");")
-            }
-        }
-        ""
-        "/// Run a ringlet of the \(name) LLFSM arrangement."
-        "///"
-        "/// - Parameter arrangement: The machine arrangement to run a ringlet over."
-        "void arrangement_" + lowerName + "_execute_once(struct Arrangement_" + name + " * const arrangement)"
-        Code.bracedBlock {
-            "unsigned i;"
-            "for (i = 0; i < ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES; i++)"
-            Code.bracedBlock {
-                "struct LLFSMachine * const machine = arrangement->machines[i];"
-                "llfsm_execute_once(machine);"
-            }
-        }
-        ""
-        "/// Suspend all machines except for the first one."
-        "///"
-        "/// This suspends all LLFSMs in the '" + name + "' arrangement,"
-        "/// with the exception of the first machine."
-        "///"
-        "/// - Parameter arrangement: The machine arrangement to suspend."
-        "void arrangement_" + lowerName + "_suspend_all(struct Arrangement_" + name + " * const arrangement)"
-        Code.bracedBlock {
-            "unsigned i;"
-            "for (i = 1; i < ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES; i++)"
-            Code.bracedBlock {
-                "struct LLFSMachine * const machine = arrangement->machines[i];"
-                "SUSPEND(machine);"
-            }
-        }
-        ""
-        "/// Suspend all machines except for the given machine."
-        "///"
-        "/// This suspends all LLFSMs in the '" + name + "' arrangement,"
-        "/// with the exception of machine specified."
-        "///"
-        "/// - Parameters:"
-        "///   - arrangement: The machine arrangement to suspend."
-        "///   - machine: The machine to be excepted from suspension."
-        "void arrangement_" + lowerName + "_suspend_all_except(struct Arrangement_" + name + " * const arrangement, struct LLFSMachine * const machine)"
-        Code.bracedBlock {
-            "unsigned i;"
-            "for (i = 0; i < ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES; i++)"
-            Code.bracedBlock {
-                "struct LLFSMachine * const m = arrangement->machines[i];"
-                "if (m != machine) SUSPEND(m);"
-            }
-        }
-        ""
-        "/// Resume all machines except for the first one."
-        "///"
-        "/// This resumes all LLFSMs in the '" + name + "' arrangement,"
-        "/// with the exception of the first machine."
-        "///"
-        "/// - Parameter arrangement: The machine arrangement to resume."
-        "void arrangement_" + lowerName + "_resume_all(struct Arrangement_" + name + " * const arrangement)"
-        Code.bracedBlock {
-            "unsigned i;"
-            "for (i = 1; i < ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES; i++)"
-            Code.bracedBlock {
-                "struct LLFSMachine * const machine = arrangement->machines[i];"
-                "RESUME(machine);"
-            }
-        }
-        ""
-        "/// Resume all machines except for the given machine."
-        "///"
-        "/// This resumes all LLFSMs in the '" + name + "' arrangement,"
-        "/// with the exception of machine specified."
-        "///"
-        "/// - Parameters:"
-        "///   - arrangement: The machine arrangement to resume."
-        "///   - machine: The machine to be excepted from resumption."
-        "void arrangement_" + lowerName + "_resume_all_except(struct Arrangement_" + name + " * const arrangement, struct LLFSMachine * const machine)"
-        Code.bracedBlock {
-            "unsigned i;"
-            "for (i = 0; i < ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES; i++)"
-            Code.bracedBlock {
-                "struct LLFSMachine * const m = arrangement->machines[i];"
-                "if (m != machine) RESUME(m);"
-            }
-        }
-        ""
-        "/// Restart all machines except for the first one."
-        "///"
-        "/// This restarts all LLFSMs in the '" + name + "' arrangement,"
-        "/// with the exception of the first machine."
-        "///"
-        "/// - Parameter arrangement: The machine arrangement to restart."
-        "void arrangement_" + lowerName + "_restart_all(struct Arrangement_" + name + " * const arrangement)"
-        Code.bracedBlock {
-            "unsigned i;"
-            "for (i = 1; i < ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES; i++)"
-            Code.bracedBlock {
-                "struct LLFSMachine * const machine = arrangement->machines[i];"
-                "RESTART(machine);"
-            }
-        }
-        ""
-        "/// Resume all machines except for the given machine."
-        "///"
-        "/// This resumes all LLFSMs in the '" + name + "' arrangement,"
-        "/// with the exception of machine specified."
-        "///"
-        "/// - Parameters:"
-        "///   - arrangement: The machine arrangement to restart."
-        "///   - machine: The machine to be excepted from restarting."
-        "void arrangement_" + lowerName + "_restart_all_except(struct Arrangement_" + name + " * const arrangement, struct LLFSMachine * const machine)"
-        Code.bracedBlock {
-            "unsigned i;"
-            "for (i = 0; i < ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES; i++)"
-            Code.bracedBlock {
-                "struct LLFSMachine * const m = arrangement->machines[i];"
-                "if (m != machine) RESTART(m);"
             }
         }
         ""
@@ -477,12 +301,21 @@ public func cArrangementMachineInterface(for instances: [Instance], named name: 
         "#pragma clang diagnostic ignored \"-Wunused-macros\""
         ""
         if isSuspensible {
+            "#ifndef IS_SUSPENSIBLE"
+            "#define IS_SUSPENSIBLE(m) (!!(m)->suspend_state)"
+            "#endif"
+            "#ifndef IS_SUSPENDED"
+            "#define IS_SUSPENDED(m) ((m)->suspend_state == (m)->current_state)"
+            "#endif"
             "#ifndef SUSPEND"
             "#define SUSPEND(m) ((m)->suspend_state && ((m)->resume_state = (m)->current_state == (m)->suspend_state ? (m)->resume_state : (m)->current_state) && ((m)->previous_state = (m)->current_state) && ((m)->current_state = (m)->suspend_state))"
             "#endif"
             "#ifndef RESUME"
             "#define RESUME(m)  ((m)->suspend_state && (m)->current_state == (m)->suspend_state && ((m)->current_state = (m)->resume_state ? (m)->resume_state : ((m)->previous_state && (m)->previous_state != (m)->suspend_state ? (m)->previous_state : (m)->states[0])) && ((m)->previous_state = (m)->suspend_state))"
             "#endif"
+        } else {
+            "#define IS_SUSPENSIBLE(m) false"
+            "#define IS_SUSPENDED(m)   false"
         }
         "#ifndef RESTART"
         "#define RESTART(m) (((m)->previous_state = (m)->current_state) && ((m)->current_state = (m)->states[0]))"
@@ -495,6 +328,15 @@ public func cArrangementMachineInterface(for instances: [Instance], named name: 
         "#endif"
         ""
         "struct LLFSMState;"
+        "struct LLFSMachine;"
+        ""
+        "/// A generic LLFSM Arrangement."
+        "struct LLFSMArrangement"
+        Code.bracedBlock {
+            "/// The number of instances in this arrangement."
+            "uintptr_t number_of_instances;"
+            "struct LLFSMachine *machines[\(instances.count)];"
+        } + ";"
         ""
         "#ifndef STRUCT_LLFSMACHINE_"
         "#define STRUCT_LLFSMACHINE_"
@@ -526,6 +368,73 @@ public func cArrangementMachineInterface(for instances: [Instance], named name: 
             }
         } + ";"
         "#endif // STRUCT_LLFSMSTATE_"
+//        "/// Validate an LLFSM arrangement."
+//        "///"
+//        "/// - Parameter arrangement: The machine arrangement to validate."
+//        "bool fsm_arrangement_validate(struct LLFSMArrangement * const arrangement);"
+//        ""
+        "/// Run a ringlet of a C-language LLFSM Arrangement."
+        "///"
+        "/// This runs one ringlet of the machines of the given LLFSM arrangement."
+        "///"
+        "/// - Parameter arrangement: The machine arrangement to run a ringlet over."
+        "void fsm_arrangement_execute_once(struct LLFSMArrangement * const arrangement);"
+        ""
+        if isSuspensible {
+            "/// Suspend all machines except for the first one."
+            "///"
+            "/// This suspends all LLFSMs in the given arrangement,"
+            "/// with the exception of the first machine."
+            "///"
+            "/// - Parameter arrangement: The machine arrangement to suspend."
+            "void fsm_arrangement_suspend_all(struct LLFSMArrangement * const arrangement);"
+            ""
+            "/// Suspend all machines except for the given machine."
+            "///"
+            "/// This suspends all LLFSMs in the given arrangement,"
+            "/// with the exception of machine specified."
+            "///"
+            "/// - Parameters:"
+            "///   - arrangement: The machine arrangement to suspend."
+            "///   - machine: The machine to be excepted from suspension."
+            "void fsm_arrangement_suspend_all_except(struct LLFSMArrangement * const arrangement, struct LLFSMachine * const machine);"
+            ""
+            "/// Resume all machines except for the first one."
+            "///"
+            "/// This resumes all LLFSMs in the given arrangement,"
+            "/// with the exception of the first machine."
+            "///"
+            "/// - Parameter arrangement: The machine arrangement to resume."
+            "void fsm_arrangement_resume_all(struct LLFSMArrangement * const arrangement);"
+            ""
+            "/// Resume all machines except for the given machine."
+            "///"
+            "/// This resumes all LLFSMs in the '" + name + "' arrangement,"
+            "/// with the exception of machine specified."
+            "///"
+            "/// - Parameters:"
+            "///   - arrangement: The machine arrangement to resume."
+            "///   - machine: The machine to be excepted from resumption."
+            "void fsm_arrangement_resume_all_except(struct LLFSMArrangement * const arrangement, struct LLFSMachine * const machine);"
+            ""
+        }
+        "/// Restart all machines except for the first one."
+        "///"
+        "/// This restarts all LLFSMs in the given arrangement,"
+        "/// with the exception of the first machine."
+        "///"
+        "/// - Parameter arrangement: The machine arrangement to restart."
+        "void fsm_arrangement_restart_all(struct LLFSMArrangement * const arrangement);"
+        ""
+        "/// Restart all machines except for the given machine."
+        "///"
+        "/// This restarts all LLFSMs in the given arrangement,"
+        "/// with the exception of machine specified."
+        "///"
+        "/// - Parameters:"
+        "///   - arrangement: The machine arrangement to restart."
+        "///   - machine: The machine to be excepted from restarting."
+        "void fsm_arrangement_restart_all_except(struct LLFSMArrangement * const arrangement, struct LLFSMachine * const machine);"
         ""
         "/// Run a ringlet of a C-language LLFSM."
         "///"
@@ -563,6 +472,145 @@ public func cArrangementMachineCode(for instances: [Instance], named name: Strin
     #endif
 
     """ + .block {
+//        "/// Validate an LLFSM arrangement."
+//        "///"
+//        "/// - Parameter arrangement: The machine arrangement to validate."
+//        "bool fsm_arrangement_validate(struct LLFSMArrangement * const arrangement)"
+//        Code.bracedBlock {
+//            "const uintptr_t n = arrangement->number_of_instances;"
+//            "unsigned i;"
+//            "for (i = 0; i < n; i++)"
+//            Code.bracedBlock {
+//                "struct LLFSMachine * const machine = arrangement->machines[i];"
+//                "llfsm_validate(machine);"
+//            }
+//        }
+//        ""
+        "/// Run a ringlet of a C-language LLFSM Arrangement."
+        "///"
+        "/// This runs one ringlet of the machines of the given LLFSM arrangement."
+        "///"
+        "/// - Parameter arrangement: The machine arrangement to run a ringlet over."
+        "void fsm_arrangement_execute_once(struct LLFSMArrangement * const arrangement)"
+        Code.bracedBlock {
+            "const uintptr_t n = arrangement->number_of_instances;"
+            "unsigned i;"
+            "for (i = 0; i < n; i++)"
+            Code.bracedBlock {
+                "struct LLFSMachine * const machine = arrangement->machines[i];"
+                "llfsm_execute_once(machine);"
+            }
+        }
+        ""
+        if isSuspensible {
+            "/// Suspend all machines except for the first one."
+            "///"
+            "/// This suspends all LLFSMs in the given arrangement,"
+            "/// with the exception of the first machine."
+            "///"
+            "/// - Parameter arrangement: The machine arrangement to suspend."
+            "void fsm_arrangement_suspend_all(struct LLFSMArrangement * const arrangement)"
+            Code.bracedBlock {
+                "const uintptr_t n = arrangement->number_of_instances;"
+                "unsigned i;"
+                "for (i = 1; i < n; i++)"
+                Code.bracedBlock {
+                    "struct LLFSMachine * const machine = arrangement->machines[i];"
+                    "SUSPEND(machine);"
+                }
+            }
+            ""
+            "/// Suspend all machines except for the given machine."
+            "///"
+            "/// This suspends all LLFSMs in the given arrangement,"
+            "/// with the exception of machine specified."
+            "///"
+            "/// - Parameters:"
+            "///   - arrangement: The machine arrangement to suspend."
+            "///   - machine: The machine to be excepted from suspension."
+            "void fsm_arrangement_suspend_all_except(struct LLFSMArrangement * const arrangement, struct LLFSMachine * const machine)"
+            Code.bracedBlock {
+                "const uintptr_t n = arrangement->number_of_instances;"
+                "unsigned i;"
+                "for (i = 1; i < n; i++)"
+                Code.bracedBlock {
+                    "struct LLFSMachine * const m = arrangement->machines[i];"
+                    "if (m != machine) SUSPEND(machine);"
+                }
+            }
+            ""
+            "/// Resume all machines except for the first one."
+            "///"
+            "/// This resumes all LLFSMs in the given arrangement,"
+            "/// with the exception of the first machine."
+            "///"
+            "/// - Parameter arrangement: The machine arrangement to resume."
+            "void fsm_arrangement_resume_all(struct LLFSMArrangement * const arrangement)"
+            Code.bracedBlock {
+                "const uintptr_t n = arrangement->number_of_instances;"
+                "unsigned i;"
+                "for (i = 1; i < n; i++)"
+                Code.bracedBlock {
+                    "struct LLFSMachine * const machine = arrangement->machines[i];"
+                    "RESUME(machine);"
+                }
+            }
+            ""
+            "/// Resume all machines except for the given machine."
+            "///"
+            "/// This resumes all LLFSMs in the '" + name + "' arrangement,"
+            "/// with the exception of machine specified."
+            "///"
+            "/// - Parameters:"
+            "///   - arrangement: The machine arrangement to resume."
+            "///   - machine: The machine to be excepted from resumption."
+            "void fsm_arrangement_resume_all_except(struct LLFSMArrangement * const arrangement, struct LLFSMachine * const machine)"
+            Code.bracedBlock {
+                "const uintptr_t n = arrangement->number_of_instances;"
+                "unsigned i;"
+                "for (i = 1; i < n; i++)"
+                Code.bracedBlock {
+                    "struct LLFSMachine * const m = arrangement->machines[i];"
+                    "if (m != machine) RESUME(machine);"
+                }
+            }
+            ""
+        }
+        "/// Restart all machines except for the first one."
+        "///"
+        "/// This restarts all LLFSMs in the given arrangement,"
+        "/// with the exception of the first machine."
+        "///"
+        "/// - Parameter arrangement: The machine arrangement to restart."
+        "void fsm_arrangement_restart_all(struct LLFSMArrangement * const arrangement)"
+        Code.bracedBlock {
+            "const uintptr_t n = arrangement->number_of_instances;"
+            "unsigned i;"
+            "for (i = 1; i < n; i++)"
+            Code.bracedBlock {
+                "struct LLFSMachine * const machine = arrangement->machines[i];"
+                "RESTART(machine);"
+            }
+        }
+        ""
+        "/// Restart all machines except for the given machine."
+        "///"
+        "/// This restarts all LLFSMs in the given arrangement,"
+        "/// with the exception of machine specified."
+        "///"
+        "/// - Parameters:"
+        "///   - arrangement: The machine arrangement to restart."
+        "///   - machine: The machine to be excepted from restarting."
+        "void fsm_arrangement_restart_all_except(struct LLFSMArrangement * const arrangement, struct LLFSMachine * const machine)"
+        Code.bracedBlock {
+            "const uintptr_t n = arrangement->number_of_instances;"
+            "unsigned i;"
+            "for (i = 1; i < n; i++)"
+            Code.bracedBlock {
+                "struct LLFSMachine * const m = arrangement->machines[i];"
+                "if (m != machine) RESTART(machine);"
+            }
+        }
         ""
         "/// Run a ringlet of a C-language LLFSM."
         "///"
@@ -629,7 +677,7 @@ public func cStaticArrangementMainCode(for instances: [Instance], named name: St
         ""
         "while (num_runs--)"
         Code.bracedBlock {
-            "arrangement_" + lowerName + "_execute_once(&static_arrangement_" + lowerName + ");"
+            "fsm_arrangement_execute_once((struct LLFSMArrangement *)&static_arrangement_" + lowerName + ");"
         }
         ""
         "return EXIT_SUCCESS;"
@@ -674,11 +722,51 @@ public func cArrangementMakeLists(for instances: [Instance], named name: String,
         "add_library(\(name)_arrangement STATIC ${\(name)_ARRANGEMENT_SOURCES})"
         "add_library(\(name)_static_arrangement STATIC ${\(name)_STATIC_ARRANGEMENT_SOURCES})"
         ""
+        "target_include_directories(\(name)_arrangement PRIVATE"
+        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
+        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
+        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
+            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}" + directory + ">"
+        }
+        "  $<INSTALL_INTERFACE:fsms/\(name).arrangement>"
+        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
+            "  $<INSTALL_INTERFACE:fsms/\(name).arrangement/" + directory + ">"
+        }
+        ")"
+        "target_include_directories(\(name)_static_arrangement PRIVATE"
+        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
+        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
+        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
+            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}" + directory + ">"
+        }
+        "  $<INSTALL_INTERFACE:fsms/\(name).arrangement>"
+        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
+            "  $<INSTALL_INTERFACE:fsms/\(name).arrangement/" + directory + ">"
+        }
+        ")"
+        ""
+        "add_executable(run_\(name)_arrangement static_main.c)"
+        ""
+        "target_include_directories(run_\(name)_arrangement PRIVATE"
+        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
+        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
+        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
+            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}" + directory + ">"
+        }
+        "  $<INSTALL_INTERFACE:fsms/\(name).arrangement>"
+        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
+            "  $<INSTALL_INTERFACE:fsms/\(name).arrangement/" + directory + ">"
+        }
+        ")"
         Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
             "add_subdirectory(" + directory + ")"
         }
-        ""
-        "add_executable(run_\(name)_arrangement static_main.c)"
         "target_link_libraries(run_\(name)_arrangement"
         "    \(name)_static_arrangement"
         "    \(name)_arrangement"
