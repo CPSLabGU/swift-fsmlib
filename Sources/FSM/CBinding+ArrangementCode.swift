@@ -622,6 +622,18 @@ public func cArrangementMachineCode(for instances: [Instance], named name: Strin
             "if (current_state != machine->previous_state)"
             Code.bracedBlock {
                 "machine->state_time = GET_TIME();"
+                if isSuspensible {
+                    "if (current_state == machine->suspend_state)"
+                    Code.bracedBlock {
+                        "if (machine->previous_state && machine->previous_state->on_suspend) machine->previous_state->on_suspend(machine, machine->previous_state);"
+                        "if (current_state->on_suspend) current_state->on_suspend(machine, current_state);"
+                    }
+                    "else if (machine->previous_state == machine->suspend_state)"
+                    Code.bracedBlock {
+                        "if (machine->previous_state && machine->previous_state->on_resume) machine->previous_state->on_resume(machine, machine->previous_state);"
+                        "if (current_state->on_resume) current_state->on_resume(machine, current_state);"
+                    }
+                }
                 "current_state->on_entry(machine, current_state);"
             }
             "TAKE_SNAPSHOT();"
