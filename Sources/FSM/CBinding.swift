@@ -235,7 +235,9 @@ public extension CBinding {
     @inlinable
     func writeArrangementCMakeFile(for instances: [Instance], to url: URL, isSuspensible: Bool) throws {
         let name = url.deletingPathExtension().lastPathComponent
-        let cmakeLists = cArrangementMakeLists(for: instances, named: name, isSuspensible: isSuspensible)
+        let cmakeFragment = cArrangementCMakeFragment(for: instances, named: name, isSuspensible: isSuspensible)
+        try url.write(content: cmakeFragment, to: "project.cmake")
+        let cmakeLists = cArrangementCMakeLists(for: instances, named: name, isSuspensible: isSuspensible)
         try url.write(content: cmakeLists, to: "CMakeLists.txt")
     }
 }

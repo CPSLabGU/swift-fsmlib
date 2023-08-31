@@ -696,30 +696,15 @@ public func cStaticArrangementMainCode(for instances: [Instance], named name: St
     } + "\n"
 }
 
-/// Create CMakeLists for a C-language LLFSM arrangement.
+/// Create a CMake fragment for a C-language LLFSM arrangement.
 ///
 /// - Parameters:
 ///   - instances: The instances to arrange.
 ///   - name: The name of the arrangement
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The CMakeLists.txt code.
-public func cArrangementMakeLists(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
+public func cArrangementCMakeFragment(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
     return .block {
-        "cmake_minimum_required(VERSION 3.21)"
-        ""
-        "project(\(name) C)"
-        ""
-        "# Require the C standard to be C17,"
-        "# but allow extensions."
-        "set(CMAKE_C_STANDARD 17)"
-        "set(CMAKE_C_STANDARD_REQUIRED ON)"
-        "set(CMAKE_C_EXTENSIONS ON)"
-        ""
-        "# Set the default build type to Debug."
-        "if(NOT CMAKE_BUILD_TYPE)"
-        "   set(CMAKE_BUILD_TYPE Debug)"
-        "endif()"
-        ""
         "# Sources for the \(name) LLFSM arrangement."
         "set(\(name)_ARRANGEMENT_SOURCES"
         "    Arrangement_\(name).c"
@@ -767,6 +752,25 @@ public func cArrangementMakeLists(for instances: [Instance], named name: String,
             "  $<INSTALL_INTERFACE:fsms/\(name).arrangement/" + directory + ">"
         }
         ")"
+        ""
+    }
+}
+
+
+/// Create CMakeLists for a C-language LLFSM arrangement.
+///
+/// - Parameters:
+///   - instances: The instances to arrange.
+///   - name: The name of the arrangement
+///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+/// - Returns: The CMakeLists.txt code.
+public func cArrangementCMakeLists(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
+    return .block {
+        "cmake_minimum_required(VERSION 3.21)"
+        ""
+        "project(\(name) C)"
+        ""
+        "include(project.cmake)"
         ""
         "add_library(\(name)_arrangement STATIC ${\(name)_ARRANGEMENT_SOURCES})"
         "add_library(\(name)_static_arrangement STATIC ${\(name)_STATIC_ARRANGEMENT_SOURCES})"
