@@ -726,55 +726,65 @@ public func cArrangementMakeLists(for instances: [Instance], named name: String,
         "    Machine_Common.c"
         ")"
         ""
-        "# Machines for the \(name) LLFSM arrangement."
+        "# Static arrangement of machines for \(name)."
         "set(\(name)_STATIC_ARRANGEMENT_SOURCES"
         "    Static_Arrangement_\(name).c"
+        ")"
+        ""
+        "# Include directories for building \(name)."
+        "set(\(name)_ARRANGEMENT_INCDIRS"
+        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
+        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
+        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
+            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/" + directory + "/include>"
+            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/" + directory + ">"
+        }
+        ")"
+        ""
+        "# Subdirectories for building \(name)."
+        "set(\(name)_ARRANGEMENT_SUBDIRS"
+        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
+            "    \"" + directory + "\""
+        }
+        ")"
+        ""
+        "# Build directories for \(name)."
+        "set(\(name)_ARRANGEMENT_BUILD_DIRS"
+        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
+            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/" + directory + ">"
+        }
+        ")"
+        ""
+        "# Installed include directories for \(name)."
+        "set(\(name)_ARRANGEMENT_INSTALL_INCDIRS"
+        "  $<INSTALL_INTERFACE:include/fsms/\(name).arrangement> "
+        "  $<INSTALL_INTERFACE:fsms/\(name).arrangement> "
+        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
+            "  $<INSTALL_INTERFACE:include/fsms/\(name).arrangement/" + directory + ">"
+            "  $<INSTALL_INTERFACE:fsms/\(name).arrangement/" + directory + ">"
+        }
         ")"
         ""
         "add_library(\(name)_arrangement STATIC ${\(name)_ARRANGEMENT_SOURCES})"
         "add_library(\(name)_static_arrangement STATIC ${\(name)_STATIC_ARRANGEMENT_SOURCES})"
         ""
-        "target_include_directories(\(name)_arrangement PRIVATE"
-        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
-        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
-        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
-        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
-            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}" + directory + ">"
-        }
-        "  $<INSTALL_INTERFACE:fsms/\(name).arrangement>"
-        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
-            "  $<INSTALL_INTERFACE:fsms/\(name).arrangement/" + directory + ">"
-        }
+        "target_include_directories(\(name)_arrangement PRIVATE "
+        "  ${\(name)_ARRANGEMENT_INCDIRS}"
+        "  ${\(name)_ARRANGEMENT_INSTALL_INCDIRS}"
         ")"
         "target_include_directories(\(name)_static_arrangement PRIVATE"
-        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
-        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
-        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
-        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
-            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}" + directory + ">"
-        }
-        "  $<INSTALL_INTERFACE:fsms/\(name).arrangement>"
-        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
-            "  $<INSTALL_INTERFACE:fsms/\(name).arrangement/" + directory + ">"
-        }
+        "  ${\(name)_ARRANGEMENT_INCDIRS}"
+        "  ${\(name)_ARRANGEMENT_INSTALL_INCDIRS}"
         ")"
         ""
         "add_executable(run_\(name)_arrangement static_main.c)"
         ""
         "target_include_directories(run_\(name)_arrangement PRIVATE"
-        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
-        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
-        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
-        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
-            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}" + directory + ">"
-        }
-        "  $<INSTALL_INTERFACE:fsms/\(name).arrangement>"
-        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
-            "  $<INSTALL_INTERFACE:fsms/\(name).arrangement/" + directory + ">"
-        }
+        "  ${\(name)_ARRANGEMENT_INCDIRS}"
+        "  ${\(name)_ARRANGEMENT_INSTALL_INCDIRS}"
         ")"
         Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
             "add_subdirectory(" + directory + ")"
