@@ -395,6 +395,30 @@ public func cStateCode(for state: State, llfsm: LLFSM, named name: String, isSus
     } + "\n"
 }
 
+/// Create CMakeList fragment for an FSM.
+///
+/// - Parameters:
+///   - fsm: The FSM to create the cmake fragment for.
+///   - name: The name of the Machine
+///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+/// - Returns: The CMakeLists.txt code.
+public func cMakeFragment(for fsm: LLFSM, named name: String, isSuspensible: Bool) -> Code {
+    return .block {
+        "# Sources for the \(name) LLFSM."
+        "set(\(name)_FSM_SOURCES"
+        "    Machine_\(name).c"
+        Code.enumerating(array: fsm.states) { i, stateID in
+            if let state = fsm.stateMap[stateID] {
+                "    State_\(state.name).c"
+            } else {
+                "// Warning: ignoring orphaned state \(i) (\(stateID))"
+            }
+        }
+        ")"
+        ""
+    }
+}
+
 /// Create CMakeLists for an FSM.
 ///
 /// - Parameters:
@@ -419,17 +443,7 @@ public func cMakeLists(for fsm: LLFSM, named name: String, isSuspensible: Bool) 
         "   set(CMAKE_BUILD_TYPE Debug)"
         "endif()"
         ""
-        "# Sources for the \(name) LLFSM."
-        "set(\(name)_FSM_SOURCES"
-        "    Machine_\(name).c"
-        Code.enumerating(array: fsm.states) { i, stateID in
-            if let state = fsm.stateMap[stateID] {
-                "    State_\(state.name).c"
-            } else {
-                "// Warning: ignoring orphaned state \(i) (\(stateID))"
-            }
-        }
-        ")"
+        "include(project.cmake)"
         ""
         "add_library(\(name)_fsm STATIC ${\(name)_FSM_SOURCES})"
         "target_include_directories(\(name)_fsm PRIVATE"
@@ -437,6 +451,7 @@ public func cMakeLists(for fsm: LLFSM, named name: String, isSuspensible: Bool) 
         "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
         "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
         "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
+        "  $<INSTALL_INTERFACE:include/fsms/\(name).machine>"
         "  $<INSTALL_INTERFACE:fsms/\(name).machine>"
         ")"
         ""

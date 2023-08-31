@@ -753,6 +753,16 @@ public func cArrangementCMakeFragment(for instances: [Instance], named name: Str
         }
         ")"
         ""
+        Code.forEach(Array(Set(instances.map(\.url)))) { url in
+            let directory = url.lastPathComponent
+            let fsm = url.deletingPathExtension().lastPathComponent
+            "include(${CMAKE_CURRENT_LIST_DIR}/" + directory + "/project.cmake)"
+            "foreach(src ${\(fsm)_FSM_SOURCES})"
+            "  list(APPEND \(name)_ARRANGEMENT_FSMS \"\(fsm)\")"
+            "  list(APPEND \(name)_ARRANGEMENT_FSM_\(fsm)_SOURCES \(directory)/${src})"
+            "  list(APPEND \(name)_ARRANGEMENT_SOURCES \(directory)/${src})"
+            "endforeach()"
+        }
     }
 }
 
