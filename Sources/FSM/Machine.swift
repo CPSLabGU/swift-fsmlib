@@ -144,7 +144,7 @@ public class Machine {
             }
             try destination.write(stateBoilerplate: boilerplate, to: url, for: stateName)
         }
-        try destination.writeCMakeFile(for: llfsm, to: url, isSuspensible: isSuspensible)
+        try destination.writeCMakeFile(for: llfsm, boilerplate: boilerplate, to: url, isSuspensible: isSuspensible)
     }
 
     /// Write the FSM to the given URL in the given format..

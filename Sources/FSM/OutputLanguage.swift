@@ -127,9 +127,10 @@ public protocol OutputLanguage: LanguageBinding {
     ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to write.
+    ///   - boilerplate: The boilerplate for the machine.
     ///   - url: The URL to write to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func writeCMakeFile(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws
+    func writeCMakeFile(for fsm: LLFSM, boilerplate: any Boilerplate, to url: URL, isSuspensible: Bool) throws
     /// Write a CMakefile for the given LLFSM arrangement to the given URL.
     ///
     /// This method creates a CMakefile to compile the

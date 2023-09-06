@@ -424,10 +424,12 @@ public func cMakeFragment(for fsm: LLFSM, named name: String, isSuspensible: Boo
 /// - Parameters:
 ///   - fsm: The FSM to create the CMakeLists.txt for.
 ///   - name: The name of the Machine
+///   - boilerplate: The boilerplate containing the include paths.
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The CMakeLists.txt code.
-public func cMakeLists(for fsm: LLFSM, named name: String, isSuspensible: Bool) -> Code {
-    return .block {
+public func cMakeLists(for fsm: LLFSM, named name: String, boilerplate: any Boilerplate, isSuspensible: Bool) -> Code {
+    .block {
+        let includePaths = boilerplate.getSection(named: CBoilerplate.SectionName.includePath.rawValue).split(separator: "\n")
         "cmake_minimum_required(VERSION 3.21)"
         ""
         "project(\(name) C)"
@@ -453,6 +455,9 @@ public func cMakeLists(for fsm: LLFSM, named name: String, isSuspensible: Bool) 
         "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
         "  $<INSTALL_INTERFACE:include/fsms/\(name).machine>"
         "  $<INSTALL_INTERFACE:fsms/\(name).machine>"
+        Code.forEach(includePaths) { path in
+            #"  ""# + path + #"""#
+        }
         ")"
         ""
     }

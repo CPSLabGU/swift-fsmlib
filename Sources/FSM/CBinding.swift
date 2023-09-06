@@ -172,14 +172,15 @@ public extension CBinding {
     ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to write.
+    ///   - boilerplate: The boilerplate containing the include paths.
     ///   - url: The URL to write to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeCMakeFile(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws {
+    func writeCMakeFile(for fsm: LLFSM, boilerplate: any Boilerplate, to url: URL, isSuspensible: Bool) throws {
         let name = url.deletingPathExtension().lastPathComponent
         let cmakeFragment = cMakeFragment(for: fsm, named: name, isSuspensible: isSuspensible)
         try url.write(content: cmakeFragment, to: "project.cmake")
-        let cmakeLists = cMakeLists(for: fsm, named: name, isSuspensible: isSuspensible)
+        let cmakeLists = cMakeLists(for: fsm, named: name, boilerplate: boilerplate, isSuspensible: isSuspensible)
         try url.write(content: cmakeLists, to: "CMakeLists.txt")
     }
 }
