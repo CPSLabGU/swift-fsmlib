@@ -62,6 +62,8 @@ public enum VHDLError: Error {
 
     case invalidBoilerplate
 
+    case missingState(id: StateID)
+
     public var localizedDescription: String {
         switch self {
         case .malformed(let value):
@@ -70,6 +72,8 @@ public enum VHDLError: Error {
             return "Found invalid state \(state)."
         case .invalidBoilerplate:
             return "Cannot create boilerplate with incorrect type."
+        case .missingState(let id):
+            return "Cannot find state with id \(id.uuidString)."
         }
     }
 
