@@ -92,22 +92,24 @@ public struct VHDLBinding: OutputLanguage {
         }
     }
 
-    public let targetOfTransition: (URL, [State], StateName) -> (Int) -> StateID? = {
+    public let targetOfTransition: (URL, [State], StateName) -> (Int) -> StateID? = { path, states, source in
         do {
-            let targets = try vhdlGetTransitions(path: $0, name: $2).map {
+            let targets = try vhdlGetTransitions(path: path, name: source).map {
                 let expressionAndTarget: [Substring] = $0.split(separator: ",")
-                guard
-                    expressionAndTarget.count == 2,
-                    let id = StateID(
-                        uuidString: expressionAndTarget[1].trimmingCharacters(in: .whitespacesAndNewlines)
-                    )
-                else {
+                guard expressionAndTarget.count == 2 else {
                     throw VHDLError.malformed(value: $0)
+                }
+                let name = expressionAndTarget[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                guard let id = states.first(where: { $0.name == name })?.id else {
+                    throw VHDLError.invalidState(state: name)
                 }
                 return id
             }
-            let stateSet = Set($1.map { $0.id})
+            let stateSet = Set(states.map { $0.id})
             return {
+                guard $0 >= 0, $0 < targets.count else {
+                    return nil
+                }
                 let id = targets[$0]
                 guard stateSet.contains(id) else {
                     return nil
@@ -116,7 +118,7 @@ public struct VHDLBinding: OutputLanguage {
             }
         } catch {
             fputs(
-                "Error: cannot read transitions in state \($1) for machine (\($0.path)): " +
+                "Error: cannot read transitions in state \(source) for machine (\(path.path)): " +
                     "\(error.localizedDescription)'\n",
                 stderr
             )
