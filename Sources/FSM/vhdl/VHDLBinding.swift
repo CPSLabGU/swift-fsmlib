@@ -76,9 +76,13 @@ public struct VHDLBinding: OutputLanguage {
     public let expressionOfTransition: (URL, StateName) -> (Int) -> String = {
         do {
             let expressions = try vhdlGetTransitions(path: $0, name: $1).map {
-                guard let expression = $0.split(separator: ",").first else {
+                let targetAndExpression = $0.split(
+                    separator: ",", maxSplits: 1, omittingEmptySubsequences: false
+                )
+                guard targetAndExpression.count == 2 else {
                     throw VHDLError.malformed(value: $0)
                 }
+                let expression = targetAndExpression[1]
                 return String(expression)
             }
             return { expressions[$0] }
@@ -95,11 +99,13 @@ public struct VHDLBinding: OutputLanguage {
     public let targetOfTransition: (URL, [State], StateName) -> (Int) -> StateID? = { path, states, source in
         do {
             let targets = try vhdlGetTransitions(path: path, name: source).map {
-                let expressionAndTarget: [Substring] = $0.split(separator: ",")
-                guard expressionAndTarget.count == 2 else {
+                let targetAndExpression: [Substring] = $0.split(
+                    separator: ",", maxSplits: 1, omittingEmptySubsequences: false
+                )
+                guard targetAndExpression.count == 2 else {
                     throw VHDLError.malformed(value: $0)
                 }
-                let name = expressionAndTarget[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                let name = targetAndExpression[0].trimmingCharacters(in: .whitespacesAndNewlines)
                 guard let id = states.first(where: { $0.name == name })?.id else {
                     throw VHDLError.invalidState(state: name)
                 }
@@ -195,7 +201,7 @@ public struct VHDLBinding: OutputLanguage {
     public func writeTransitionCode(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws {
         let transitionsSet = Set(fsm.transitions)
         let transitions = fsm.transitionMap.filter { transitionsSet.contains($0.key) }
-        var stateTransitionsMap: [StateName: [(Expression, StateName)]] = [:]
+        var stateTransitionsMap: [StateName: [(StateName, Expression)]] = [:]
         try transitions.values.forEach {
             guard let source = fsm.stateMap[$0.source]?.name else {
                 throw VHDLError.missingState(id: $0.source)
@@ -203,7 +209,7 @@ public struct VHDLBinding: OutputLanguage {
             guard let target = fsm.stateMap[$0.target]?.name else {
                 throw VHDLError.missingState(id: $0.target)
             }
-            let newValue = [($0.label, target)]
+            let newValue = [(target, $0.label)]
             guard let currentValue = stateTransitionsMap[source] else {
                 stateTransitionsMap[source] = newValue
                 return
