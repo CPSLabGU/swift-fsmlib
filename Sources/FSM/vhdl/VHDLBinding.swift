@@ -82,8 +82,11 @@ public struct VHDLBinding: OutputLanguage {
                 guard targetAndExpression.count == 2 else {
                     throw VHDLError.malformed(value: $0)
                 }
-                let expression = targetAndExpression[1]
-                return String(expression)
+                let expression = targetAndExpression[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !expression.isEmpty else {
+                    throw VHDLError.malformed(value: $0)
+                }
+                return expression
             }
             return { expressions[$0] }
         } catch {
@@ -106,6 +109,9 @@ public struct VHDLBinding: OutputLanguage {
                     throw VHDLError.malformed(value: $0)
                 }
                 let name = targetAndExpression[0].trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !name.isEmpty else {
+                    throw VHDLError.malformed(value: $0)
+                }
                 guard let id = states.first(where: { $0.name == name })?.id else {
                     throw VHDLError.invalidState(state: name)
                 }
