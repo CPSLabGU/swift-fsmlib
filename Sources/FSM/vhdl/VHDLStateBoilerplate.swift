@@ -62,6 +62,16 @@ public struct VHDLStateBoilerplate: Boilerplate {
 
         case variables = "Variables"
 
+        case onEntry = "OnEntry"
+
+        case onExit = "OnExit"
+
+        case `internal` = "Internal"
+
+        case onSuspend = "OnSuspend"
+
+        case onResume = "OnResume"
+
     }
 
     public var sections: [SectionName: BoilerplateCode] = {
