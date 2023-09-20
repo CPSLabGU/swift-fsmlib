@@ -63,8 +63,12 @@ public struct VHDLBoilerplate: Boilerplate {
         case imports = "Imports"
 
         case clocks = "Clocks"
+
+        case drivingClock = "Driving_Clock"
         /// The code containing variable definitions.
         case externalVariables = "External_Variables"
+
+        case isParameterised = "Is_Parameterised"
 
         case machineVariables = "Machine_Variables"
 

@@ -128,6 +128,9 @@ public struct VHDLBinding: OutputLanguage {
         let suspendFile = $0.appendingPathComponent("SuspendedState", isDirectory: false)
         do {
             let contents = try String(contentsOf: suspendFile).trimmingCharacters(in: .whitespacesAndNewlines)
+            if let value = Int(contents), value == -1 {
+                return nil
+            }
             return $1.first { $0.name == contents }?.id
         } catch {
             fputs(
@@ -178,6 +181,38 @@ public struct VHDLBinding: OutputLanguage {
             return VHDLStateBoilerplate()
         }
     }
+
+    public func write(boilerplate: any Boilerplate, to url: URL) throws {
+        try boilerplate.write(to: url)
+    }
+
+    public func write(stateBoilerplate: any Boilerplate, to url: URL, for stateName: String) throws {
+        try stateBoilerplate.write(state: stateName, to: url)
+    }
+
+}
+
+public extension VHDLBinding {
+
+    func writeInterface(for llfsm: LLFSM, to url: URL, isSuspensible: Bool) throws {}
+
+    func writeStateInterface(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws {}
+
+    func writeArrangementInterface(for instances: [Instance], to url: URL, isSuspensible: Bool) throws {}
+
+    func writeCode(for llfsm: LLFSM, to url: URL, isSuspensible: Bool) throws {}
+
+    func writeStateCode(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws {}
+
+    func writeTransitionCode(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws {}
+
+    func writeArrangementCode(for instances: [Instance], to url: URL, isSuspensible: Bool) throws {}
+
+    func writeArrangementCMakeFile(for instances: [Instance], to url: URL, isSuspensible: Bool) throws {}
+
+    func writeCMakeFile(
+        for fsm: LLFSM, boilerplate: any Boilerplate, to url: URL, isSuspensible: Bool
+    ) throws {}
 
 }
 
