@@ -176,7 +176,7 @@ public struct VHDLBinding: OutputLanguage {
             return VHDLStateBoilerplate(name: name, sections: sections)
         } catch {
             fputs(
-                "Error: cannot read boilerplate for machine (\(path.path)): " +
+                "Error: cannot read boilerplate for state \(name) in machine (\(path.path)): " +
                     "\(error.localizedDescription)'\n",
                 stderr
             )
