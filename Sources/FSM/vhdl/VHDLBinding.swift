@@ -190,6 +190,31 @@ public struct VHDLBinding: OutputLanguage {
         try stateBoilerplate.write(state: stateName, to: url)
     }
 
+    public func writeTransitionCode(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws {
+        let transitionsSet = Set(fsm.transitions)
+        let transitions = fsm.transitionMap.filter { transitionsSet.contains($0.key) }
+        var stateTransitionsMap: [StateName: [(Expression, StateName)]] = [:]
+        try transitions.values.forEach {
+            guard let source = fsm.stateMap[$0.source]?.name else {
+                throw VHDLError.missingState(id: $0.source)
+            }
+            guard let target = fsm.stateMap[$0.target]?.name else {
+                throw VHDLError.missingState(id: $0.target)
+            }
+            let newValue = [($0.label, target)]
+            guard let currentValue = stateTransitionsMap[source] else {
+                stateTransitionsMap[source] = newValue
+                return
+            }
+            stateTransitionsMap[source] = currentValue + newValue
+        }
+        try stateTransitionsMap.forEach {
+            let path = url.appendingPathComponent("STATE_\($0.key)_Transitions", isDirectory: false)
+            let contents = $0.value.map { "\($0.0),\($0.1)" }.joined(separator: "\n")
+            try contents.write(to: path, atomically: true, encoding: .utf8)
+        }
+    }
+
 }
 
 public extension VHDLBinding {
@@ -203,8 +228,6 @@ public extension VHDLBinding {
     func writeCode(for llfsm: LLFSM, to url: URL, isSuspensible: Bool) throws {}
 
     func writeStateCode(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws {}
-
-    func writeTransitionCode(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws {}
 
     func writeArrangementCode(for instances: [Instance], to url: URL, isSuspensible: Bool) throws {}
 
