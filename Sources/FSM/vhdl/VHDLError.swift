@@ -71,7 +71,8 @@ public enum VHDLError: Error {
         case .invalidState(let state):
             return "Found invalid state \(state)."
         case .invalidBoilerplate:
-            return "Cannot create boilerplate with incorrect type."
+            return "Cannot create boilerplate with incorrect type. Please make sure you use " +
+                "VHDLStateBoilerplate for states and VHDLBoilerplate for machines."
         case .missingState(let id):
             return "Cannot find state with id \(id.uuidString)."
         }
