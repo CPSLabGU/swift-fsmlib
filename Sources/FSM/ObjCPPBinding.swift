@@ -75,7 +75,7 @@ public struct ObjCPPBinding: LanguageBinding {
     /// - Returns: The boilerplate for the given state.
     @inlinable
     public func stateBoilerplate(for machineWrapper: MachineWrapper, stateName: StateName) -> any Boilerplate {
-        stateBoilerplate(for: machineWrapper, stateName: stateName)
+        boilerplateofObjCPPState(stateName, of: machineWrapper)
     }
 
     /// Objective-C++ binding from URL and state name to number of transitions.
