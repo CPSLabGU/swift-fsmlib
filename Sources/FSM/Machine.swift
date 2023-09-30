@@ -5,6 +5,7 @@
 //  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
 //
 import Foundation
+import SystemPackage
 
 #if !canImport(Darwin)
 public let UUID_NULL: uuid_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -42,24 +43,36 @@ public class Machine {
     public var stateBoilerplate: [StateID : any Boilerplate]
     /// Source code of OnEntry/OnExit/Internal actions of states
     public var activities: StateActivitiesSourceCode
-    
+
     /// Constructor for reading an FSM from a given URL.
     ///
     /// This initialiser will read the states and transitions from
-    /// the FileWrapper at the given URL.
+    /// the MachineWrapper at the given URL.
     ///
     /// - Note: The URL is expected to point to a directory containing the machine.
     /// - Parameter url: The URL to read the FSM from.
-    public init(from url: URL) throws {
-        language = languageBinding(for: url)
-        boilerplate = language.boilerplate(url)
-        windowLayout = language.windowLayout(for: url)
+    public convenience init(from url: URL) throws {
+        let wrapper = try MachineWrapper(url: url)
+        try self.init(from: wrapper)
+    }
+
+    /// Constructor for reading an FSM from a given MachineWrapper.
+    ///
+    /// This initialiser will read the states and transitions from
+    /// the given MachineWrapper.
+    ///
+    /// - Note: The MachineWrapper is expected to point to a directory containing the machine.
+    /// - Parameter wrapper: The MachineWrapper to read the FSM from.
+    public init(from machineWrapper: MachineWrapper) throws {
+        language = languageBinding(for: machineWrapper)
+        boilerplate = language.boilerplate(for: machineWrapper)
+        windowLayout = language.windowLayout(for: machineWrapper)
         activities = StateActivitiesSourceCode()
-        let names = try stateNames(from: url.fileURL(for: .states))
+        let names = stateNames(for: machineWrapper, statesFilename: .states)
         let states = names.map { State(id: StateID(), name: $0) }
-        let susp = language.suspendState(url, states)
+        let susp = language.suspendState(for: machineWrapper, states: states)
         var transitionMap = [StateID : [TransitionID]]()
-        let transitionsForState = transitionsFor(machine: url, with: states, using: language)
+        let transitionsForState = transitions(for: machineWrapper, with: states, using: language)
         let transitions = states.flatMap {
             let transitions = transitionsForState($0)
             transitionMap[$0.id] = transitions.map(\.id)
@@ -67,12 +80,11 @@ public class Machine {
         }
         llfsm = LLFSM(states: states, transitions: transitions, suspendState: susp)
         
-        let layoutURL = url.fileURL(for: .layout)
         let namesLayout: StateNameLayouts
-        do {
-            try namesLayout = stateNameLayouts(from: layoutURL)
-        } catch {
-            fputs("Cannot open '\(layoutURL.path): \(error.localizedDescription)'\n", stderr)
+        if let layoutWrapper = machineWrapper.fileWrappers?[.layout] {
+            namesLayout = stateNameLayouts(from: layoutWrapper)
+        } else {
+            fputs("Cannot read layout file from '\(machineWrapper.directoryName)'\n", stderr)
             namesLayout = [:]
         }
         //
@@ -84,7 +96,7 @@ public class Machine {
         stateBoilerplate = [:]
         for si in states.enumerated() {
             let state = si.element
-            let boilerplate = language.stateBoilerplate(url, state.name)
+            let boilerplate = language.stateBoilerplate(for: machineWrapper, stateName: state.name)
             stateBoilerplate[state.id] = boilerplate
             let gridLayout = StateLayout(index: si.offset)
             let layoutsForName = namesLayout[state.name]
@@ -174,8 +186,33 @@ public class Machine {
 /// - Returns: An array of state names.
 @inlinable
 public func stateNames(from url: URL) throws -> StateNames {
-    let content = try String(contentsOf: url, encoding: .utf8)
-    return content.lines.map(trimmed).filter(nonempty)
+    try stateNames(from: String(contentsOf: url, encoding: .utf8))
+}
+
+/// Read the names of states from the given MachineWrapper.
+/// 
+/// This reads the content of the given MachineWrapper and interprets
+/// each line as a state name.
+/// 
+/// - Parameters:
+///   - wrapper: The machine wrapper to examine.
+///   - statesFile: The name of the states file.
+/// - Throws: `NSError` if the file cannot be read.
+/// - Returns: An array of state names.
+@inlinable
+public func stateNames(for wrapper: MachineWrapper, statesFilename: Filename) -> StateNames {
+    stateNames(from: wrapper.fileWrappers?[statesFilename]?.stringContents ?? "")
+}
+
+/// Read the names of states from the given string.
+///
+/// This  interprets each line as a state name.
+///
+/// - Parameter content: content of the state names file.
+/// - Returns: An array of state names.
+@inlinable
+public func stateNames(from content: String)  -> StateNames {
+    content.lines.map(trimmed).filter(nonempty)
 }
 
 /// Read the layout of state names from the given URL.
@@ -189,6 +226,23 @@ public func stateNames(from url: URL) throws -> StateNames {
 @inlinable
 public func stateNameLayouts(from url: URL) throws -> StateNameLayouts {
     (NSDictionary(contentsOf: url)?[String.states] as? NSDictionary).flatMap {
+        stateNameLayouts(from: $0)
+    } ?? [:]
+}
+
+/// Read the layout of state names from the given wrapper.
+///
+/// This function reads the state layout from the given wrapper
+/// (the property list representation of the layout).
+///
+/// - Parameter layoutWrapper: wrapper for the layout file.
+/// - Throws: `NSError` if the file cannot be read.
+/// - Returns: A mapping from state names to state layouts.
+@inlinable
+public func stateNameLayouts(from layoutWrapper: MachineWrapper) -> StateNameLayouts {
+    layoutWrapper.regularFileContents.flatMap {
+        try? PropertyListSerialization.propertyList(from: $0, options: [], format: nil) as? NSDictionary
+    }.flatMap {
         stateNameLayouts(from: $0)
     } ?? [:]
 }
@@ -220,22 +274,21 @@ public func stateNameLayouts(from dict: NSDictionary) -> StateNameLayouts {
 /// file wrapper.
 ///
 /// - Parameters:
-///   - url: The URL of the machine FileWrapper.
+///   - machineWrapper: The MachineWrapper to examine.
 ///   - states: The array of states.
 ///   - language: The language binding to use (defaults to ObjCPPBinding).
 /// - Returns: A function that returns an array of transitions for a given source state.
 @inlinable
-func transitionsFor(machine url: URL, with states: [State], using language: LanguageBinding = ObjCPPBinding()) -> (State) -> [Transition] {
+func transitions(for machineWrapper: MachineWrapper, with states: [State], using language: LanguageBinding = ObjCPPBinding()) -> (State) -> [Transition] {
     return { (state: State) -> [Transition] in
         let sourceID = state.id
-        let expression = language.expressionOfTransition(url, state.name)
-        let target = language.targetOfTransition(url, states, state.name)
-        let n = language.numberOfTransitions(url, state.name)
+        let n = language.numberOfTransitions(for: machineWrapper, stateName: state.name)
         let transitionIndices = (0..<n).enumerated()
         let transitions = transitionIndices.map { i, _ -> Transition in
-            let targetID = target(i) ?? StateID(uuid: UUID_NULL)
-            return Transition(id: TransitionID(), label: expression(i), source: sourceID, target: targetID)
+            let targetID = language.target(of: i, for: machineWrapper, stateName: state.name, with: states) ?? StateID(uuid: UUID_NULL)
+            return Transition(id: TransitionID(), label: language.expression(of: i, for: machineWrapper, stateName: state.name), source: sourceID, target: targetID)
         }
         return transitions
     }
 }
+

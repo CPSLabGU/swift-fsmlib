@@ -13,10 +13,9 @@ public extension CBoilerplate {
     @inlinable
     func write(to url: URL) throws {
         let name = url.deletingPathExtension().lastPathComponent
-        try url.write(content: sections[.includePath] ?? "", to: "IncludePath")
-        try url.write(content: sections[.includes]    ?? "", to: "Machine_\(name)_Includes.h")
-        try url.write(content: sections[.variables]   ?? "", to: "Machine_\(name)_Variables.h")
-        try url.write(content: sections[.functions]   ?? "", to: "Machine_\(name)_Methods.h")
+        for (section, fileName) in cBoilerplateFileMappings(for: name) {
+            try url.write(content: sections[section] ?? "", to: fileName)
+        }
     }
     /// Write the boilerplate for a given state to the given URL.
     /// - Throws: Any error thrown by the underlying file system.
@@ -25,14 +24,9 @@ public extension CBoilerplate {
     ///   - url: The machine URL to write to.
     @inlinable
     func write(state: String, to url: URL) throws {
-        try url.write(content: sections[.includes]    ?? "", to: "State_\(state)_Includes.h")
-        try url.write(content: sections[.variables]   ?? "", to: "State_\(state)_Variables.h")
-        try url.write(content: sections[.functions]   ?? "", to: "State_\(state)_Methods.h")
-        try url.write(content: sections[.onEntry]     ?? "", to: "State_\(state)_OnEntry.mm")
-        try url.write(content: sections[.onExit]      ?? "", to: "State_\(state)_OnExit.mm")
-        try url.write(content: sections[.internal]    ?? "", to: "State_\(state)_Internal.mm")
-        try url.write(content: sections[.onSuspend]   ?? "", to: "State_\(state)_OnSuspend.mm")
-        try url.write(content: sections[.onResume]    ?? "", to: "State_\(state)_OnResume.mm")
+        for (section, fileName) in cStateBoilerplateFileMappings(for: state) {
+            try url.write(content: sections[section] ?? "", to: fileName)
+        }
     }
 }
 
@@ -40,13 +34,11 @@ public extension CBoilerplate {
 /// - Parameter machine: The machine URL.
 /// - Returns: The boilerplate for the given machine.
 @inlinable
-public func boilerplateofCMachine(at machine: URL) -> any Boilerplate {
-    let name = machine.deletingPathExtension().lastPathComponent
+public func boilerplateOfCMachine(at machineWrapper: MachineWrapper) -> any Boilerplate {
     var boilerplate = CBoilerplate()
-    boilerplate.sections[.includePath] = machine.stringContents(of: "IncludePath")
-    boilerplate.sections[.includes]    = machine.stringContents(of: "Machine_\(name)_Includes.h")
-    boilerplate.sections[.variables]   = machine.stringContents(of: "Machine_\(name)_Variables.h")
-    boilerplate.sections[.functions]   = machine.stringContents(of: "Machine_\(name)_Methods.h")
+    for (section, fileName) in cBoilerplateFileMappings(for: machineWrapper.directoryName) {
+        boilerplate.sections[section] = machineWrapper.stringContents(of: fileName)
+    }
     return boilerplate
 }
 
@@ -57,15 +49,49 @@ public func boilerplateofCMachine(at machine: URL) -> any Boilerplate {
 ///   - state: The name of the state to examine.
 /// - Returns: The boilerplate for the given state.
 @inlinable
-public func boilerplateofCState(at machine: URL, state: StateName) -> any Boilerplate {
+public func boilerplateofCState(_ state: StateName, of machineWrapper: MachineWrapper) -> any Boilerplate {
     var boilerplate = CBoilerplate()
-    boilerplate.sections[.includes]  = machine.stringContents(of: "State_\(state)_Includes.h")
-    boilerplate.sections[.variables] = machine.stringContents(of: "State_\(state)_Variables.h")
-    boilerplate.sections[.functions] = machine.stringContents(of: "State_\(state)_Methods.h")
-    boilerplate.sections[.onEntry]   = machine.stringContents(of: "State_\(state)_OnEntry.mm")
-    boilerplate.sections[.onExit]    = machine.stringContents(of: "State_\(state)_OnExit.mm")
-    boilerplate.sections[.internal]  = machine.stringContents(of: "State_\(state)_Internal.mm")
-    boilerplate.sections[.onSuspend] = machine.stringContents(of: "State_\(state)_OnSuspend.mm")
-    boilerplate.sections[.onResume]  = machine.stringContents(of: "State_\(state)_OnResume.mm")
+    for (section, fileName) in cStateBoilerplateFileMappings(for: state) {
+        boilerplate.sections[section] = machineWrapper.stringContents(of: fileName)
+    }
     return boilerplate
+}
+
+/// Return the mappings of machine boilerplate sections to filenames.
+///
+/// This function returns the file names relative to the machine URL
+/// for the sections of the given machine.
+///
+/// - Parameter name: The name of the machine the boilerplate belongs to.
+/// - Returns: The mappings from section to filename.
+@usableFromInline
+func cBoilerplateFileMappings(for machineName: String) -> [CBoilerplate.BoilerplateFileMapping] {
+    [
+        (.includePath, Filename.includePath),
+        (.includes,  "Machine_\(machineName)_Includes.h"),
+        (.variables, "Machine_\(machineName)_Variables.h"),
+        (.functions, "Machine_\(machineName)_Methods.h")
+    ]
+}
+
+/// Return the mappings of state boilerplate sections to filenames.
+///
+/// This function returns the file names relative to the machine URL
+/// for the sections of the given state.
+///
+/// - Parameter state: The name of the state the boilerplate belongs to.
+/// - Returns: The mappings from section to filename.
+@usableFromInline
+func cStateBoilerplateFileMappings(for state: String) -> [CBoilerplate.BoilerplateFileMapping] {
+    [
+        (.includes,  "State_\(state)_Includes.h"),
+        (.variables, "State_\(state)_Variables.h"),
+        (.variables, "State_\(state)_Variables.h"),
+        (.functions, "State_\(state)_Methods.h"),
+        (.onEntry,   "State_\(state)_OnEntry.mm"),
+        (.onExit,    "State_\(state)_OnExit.mm"),
+        (.internal,  "State_\(state)_Internal.mm"),
+        (.onSuspend, "State_\(state)_OnSuspend.mm"),
+        (.onResume,  "State_\(state)_OnResume.mm")
+    ]
 }

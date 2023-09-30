@@ -13,6 +13,8 @@ public typealias BoilerplateCode = String
 public protocol Boilerplate {
     /// Section names for boilerplate code.
     associatedtype SectionName: RawRepresentable, Hashable where SectionName.RawValue == String
+    /// Mapping from file to Boilerplate section.
+    typealias BoilerplateFileMapping = (SectionName, Filename)
     /// Boilerplate sections
     var sections: [SectionName : BoilerplateCode] { get mutating set }
     /// Designated initialiser.

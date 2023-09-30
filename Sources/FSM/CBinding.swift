@@ -11,35 +11,70 @@ public struct CBinding: OutputLanguage {
     /// The canonical name of the language binding.
     public let name = Format.c.rawValue
 
-    /// C Language binding from URL and state name to number of transitions
-    public let numberOfTransitions: (URL, StateName) -> Int = { url, s in
-        numberOfCTransitionsFor(machine: url, state: s)
-    }
-    /// C Language binding from URL, state name, and transition to expression
-    public let expressionOfTransition: (URL, StateName) -> (Int) -> String = {
-        url, s in { number in
-            expressionOfCTransitionFor(machine: url, state: s, transition: number)
-        }
-    }
-    /// C Language binding from URL, states, source state name, and transition to target state ID
-    public let targetOfTransition: (URL, [State], StateName) -> (Int) -> StateID? = { url, ss, s in
-        { number in
-            targetOfCTransitionFor(machine: url, states: ss, state: s, transition: number)
-        }
-    }
-    /// C Language binding from URL, states to suspend state ID
-    public let suspendState: (URL, [State]) -> StateID? = { url, ss in
-        suspendStateOfCMachine(url, states: ss)
+    /// C binding from URL and state name to number of transitions.
+    ///
+    /// - Parameters:
+    ///   - machineWrapper: The MachineWrapper to examine.
+    ///   - stateName: The name of the state to examine.
+    /// - Returns: The number of transitions in the given state.
+    @inlinable
+    public func numberOfTransitions(for machineWrapper: MachineWrapper, stateName: StateName) -> Int {
+        numberOfCTransitions(for: machineWrapper, state: stateName)
     }
 
-    /// C Language binding from URL to machine boilerplate.
-    public let boilerplate: (URL) -> any Boilerplate = { url in
-        boilerplateofCMachine(at: url)
+    /// Objective-C++ binding from URL, state name, and transition to expression.
+    ///
+    /// - Parameters:
+    ///   - transitionNumber: The transition number to examine.
+    ///   - machineWrapper: The MachineWrapper to examine.
+    ///   - stateName: The name of the state to examine.
+    /// - Returns: The expression of the given transition.
+    @inlinable
+    public func expression(of transitionNumber: Int, for machineWrapper: MachineWrapper, stateName: StateName) -> String {
+        expressionOfCTransition(transitionNumber, state: stateName, for: machineWrapper)
     }
 
-    /// C Language binding from URL and state name to state boilerplate.
-    public var stateBoilerplate: (URL, StateName) -> any Boilerplate = { url, stateName in
-        boilerplateofCState(at: url, state: stateName)
+    /// Objective-C++ binding from URL, states, source state name, and transition to target state ID.
+    ///
+    /// - Parameters:
+    ///   - transitionNumber: The transition number to examine.
+    ///   - machineWrapper: The MachineWrapper to examine.
+    ///   - stateName: The name of the state to examine.
+    ///   - states: The states of the machine.
+    /// - Returns: The target state ID of the given transition.
+    @inlinable
+    public func target(of transitionNumber: Int, for machineWrapper: MachineWrapper, stateName: StateName, with states: [State]) -> StateID? {
+        targetOfCTransition(transitionNumber, state: stateName, for: machineWrapper, with: states)
+    }
+
+    /// Objective-C++ binding from URL, states to suspend state ID.
+    ///
+    /// - Parameters:
+    ///   - machineWrapper: The MachineWrapper to examine.
+    ///   - states: The states of the machine.
+    /// - Returns: The suspend state ID of the given machine.
+    @inlinable
+    public func suspendState(for machineWrapper: MachineWrapper, states: [State]) -> StateID? {
+        suspendStateOfCMachine(machineWrapper, states: states)
+    }
+    /// Objective-C++ binding from URL to machine boilerplate.
+    ///
+    /// - Parameter machineWrapper: The MachineWrapper to examine.
+    /// - Returns: The boilerplate for the given machine.
+    @inlinable
+    public func boilerplate(for machineWrapper: MachineWrapper) -> any Boilerplate {
+        boilerplateOfCMachine(at: machineWrapper)
+    }
+
+    /// Objective-C++ binding from URL and state name to state boilerplate.
+    ///
+    /// - Parameters:
+    ///   - machineWrapper: The MachineWrapper to examine.
+    ///   - stateName: The name of the state to examine.
+    /// - Returns: The boilerplate for the given state.
+    @inlinable
+    public func stateBoilerplate(for machineWrapper: MachineWrapper, stateName: StateName) -> any Boilerplate {
+        boilerplateofCState(stateName, of: machineWrapper)
     }
 }
 
@@ -52,7 +87,7 @@ public extension CBinding {
     ///
     /// - Parameters:
     ///   - boilerplate: The boilerplate to write.
-    ///   - url: The machine URL to write to.
+    ///   - url: The MachineWrapper to write to.
     @inlinable
     func write(boilerplate: any Boilerplate, to url: URL) throws {
         try CBoilerplate(boilerplate).write(to: url)
@@ -60,7 +95,7 @@ public extension CBinding {
     /// Write the given state boilerplate to the given URL
     /// - Parameters:
     ///   - stateBoilerplate: The boilerplate to write.
-    ///   - url: The machine URL to write to.
+    ///   - url: The MachineWrapper to write to.
     ///   - stateName: The name of the state to write the boilerplate for.
     func write(stateBoilerplate: any Boilerplate, to url: URL, for stateName: String) throws {
         try CBoilerplate(stateBoilerplate).write(state: stateName, to: url)
@@ -272,89 +307,75 @@ public func targetStateIndexOfCTransition(_ i: Int, inHeader content: String) ->
 
 /// Read the content of the `State.h` file.
 /// - Parameters:
-///   - machine: The machine URL.
+///   - machineWrapper: The MachineWrapper.
 ///   - state: The name of the state to examine.
 /// - Returns: The content of the `State.h` file.
 @inlinable
-public func contentOfCStateFor(machine: URL, state: StateName) -> String? {
+public func contentOfCState(for machineWrapper: MachineWrapper, state: StateName) -> String? {
     let file = "State_\(state).h"
-    let url = machine.appendingPathComponent(file)
-    do {
-        let content = try String(contentsOf: url, encoding: .utf8)
-        return content
-    } catch {
-        fputs("Error: cannot read '\(file): \(error.localizedDescription)'\n", stderr)
+    guard let content = machineWrapper.stringContents(of: file) else {
+        fputs("Error: cannot read '\(file)'\n", stderr)
         return nil
     }
+    return content
 }
-
 
 /// Read the content of the State.h file and return the number of transitions
 /// - Parameters:
-///   - m: The machine URL.
-///   - s: The name of the state to examine.
+///   - machineWrapper: The MachineWrapper.
+///   - name: The name of the state to examine.
 /// - Returns: The number of transitions leaving the given state.
 @inlinable
-public func numberOfCTransitionsFor(machine m: URL, state s: StateName) -> Int {
-    guard let content = contentOfCStateFor(machine: m, state: s) else { return 0 }
+public func numberOfCTransitions(for machineWrapper: MachineWrapper, state name: StateName) -> Int {
+    guard let content = contentOfCState(for: machineWrapper, state: name) else { return 0 }
     return numberOfCTransitionsIn(header: content)
 }
 
 
 /// Read State_%@_Transition_%ld.expr and return the transition expression
 /// - Parameters:
-///   - machine: The machine URL.
-///   - state: The name of the state to examine.
 ///   - number: The transition number.
+///   - state: The name of the state to examine.
+///   - machineWrapper: The MachineWrapper.
 /// - Returns: The transition expression.
 @inlinable
-public func expressionOfCTransitionFor(machine: URL, state: StateName, transition number: Int) -> String {
+public func expressionOfCTransition(_ number: Int, state: StateName, for machineWrapper: MachineWrapper) -> String {
     let file = "State_\(state)_Transition_\(number).expr"
-    let url = machine.appendingPathComponent(file)
-    do {
-        let content = try String(contentsOf: url, encoding: .utf8)
-        return content.trimmingCharacters(in:.whitespacesAndNewlines)
-    } catch {
-        fputs("Warning: cannot read '\(file): \(error.localizedDescription)'\n", stderr)
+    guard let content = machineWrapper.stringContents(of: file) else {
+        fputs("Error: cannot read '\(file)'\n", stderr)
         return "true"
     }
+    return content.trimmingCharacters(in:.whitespacesAndNewlines)
 }
-
 
 /// Return the target state ID for a given transition
 /// - Parameters:
-///   - m: URL for the machine in question.
-///   - states: Array of states to examine.
-///   - name: The name of the state to search for.
 ///   - number:The sequence number of the transition to examine.
+///   - name: The name of the state to search for.
+///   - machineWrapper: MachineWrapper for the machine in question.
+///   - states: Array of states to examine.
 /// - Returns: The State ID if found, `nil` otherwise.
 @inlinable
-public func targetOfCTransitionFor(machine m: URL, states: [State], state name: StateName, transition number: Int) -> StateID? {
-    guard let content = contentOfCStateFor(machine: m, state: name),
+public func targetOfCTransition(_ number: Int, state name: StateName, for machineWrapper: MachineWrapper, with states: [State]) -> StateID? {
+    guard let content = contentOfCState(for: machineWrapper, state: name),
           let i = targetStateIndexOfCTransition(number, inHeader: content),
           i >= 0 && i < states.count else { return nil }
     let targetState = states[i]
     return targetState.id
 }
 
-
-/// Read the content of the <Machine>.mm file
-/// - Parameter machine: The machine URL.
+/// Read the content of the <Machine>.c file
+/// - Parameter machineWrapper: The MachineWrapper.
 /// - Returns: The content of the machine, or `nil` if not found.
 @inlinable
-public func contentOfCImplementationFor(machine: URL) -> String? {
-    let name = machine.deletingPathExtension().lastPathComponent
-    let file = "\(name).c"
-    let url = machine.appendingPathComponent(file)
-    do {
-        let content = try NSString(contentsOf: url, usedEncoding: nil)
-        return content as String
-    } catch {
-        fputs("Cannot read '\(file): \(error.localizedDescription)'\n", stderr)
+public func contentOfCImplementation(for machineWrapper: MachineWrapper) -> String? {
+    let file = "\(machineWrapper.directoryName).c"
+    guard let content = machineWrapper.stringContents(of: file) else {
+        fputs("Error: cannot read '\(file)'\n", stderr)
         return nil
     }
+    return content
 }
-
 
 /// Return the target state index of the given transition
 /// based on the content of the State.h file
@@ -367,15 +388,14 @@ public func suspendStateIndexOfCMachine(inImplementation content: String) -> Int
     return targetStateIndex
 }
 
-
 /// Return the suspend state ID for a given machine
 /// - Parameters:
-///   - m: The machine URL.
+///   - machineWrapper: The MachineWrapper.
 ///   - states: The states the machine is composed of.
 /// - Returns: The suspend state ID, or `nil` if nonexistent.
 @inlinable
-public func suspendStateOfCMachine(_ m: URL, states: [State]) -> StateID? {
-    guard let content = contentOfCImplementationFor(machine: m),
+public func suspendStateOfCMachine(_ machineWrapper: MachineWrapper, states: [State])  -> StateID? {
+    guard let content = contentOfCImplementation(for: machineWrapper),
           let i = suspendStateIndexOfCMachine(inImplementation: content),
           i >= 0 && i < states.count else { return nil }
     let suspendState = states[i]
