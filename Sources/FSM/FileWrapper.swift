@@ -1,0 +1,195 @@
+//
+//  FileWrapper.swift
+//
+//  Created by Rene Hexel on 1/10/2023.
+//  Copyright © 2023 Rene Hexel. All rights reserved.
+//
+#if !canImport(Darwin)
+import Foundation
+
+/// A file wrapper is a wrapper around a filesystem object.
+///
+/// The FileWrapper class provides a convenient way to access the contents
+/// of files, directories, or symbiolic links.  It provides a uniform interface to their
+/// contents, regardless of their underlying representation on disk.
+/// In addition to representing a regular file, a directory, or a symbolic link,
+/// a FileWrapper subclass can also represent a custom file type that you define.
+open class FileWrapper: @unchecked Sendable {
+    /// The content of the file wrapper.
+    @usableFromInline var content: Content?
+    /// The URL of the file wrapper.
+    @usableFromInline var url: URL
+    /// The resource values associated with the URL
+    @usableFromInline var resourceValues: URLResourceValues
+    /// Reading options for the file wrapper.
+    @usableFromInline var readingOptions: ReadingOptions
+    /// Return the file name of the file wrapper.
+    open var filename: String?
+    /// Return the preferred file name of the file wrapper.
+    open var preferredFilename: String?
+    /// Returns whether the file wrapper is a directory.
+    @inlinable open var isDirectory: Bool { resourceValues.isDirectory ?? false }
+    /// Returns whether the file wrapper is a directory.
+    @inlinable open var isSymbolicLink: Bool { resourceValues.isSymbolicLink ?? false }
+    /// Returns whether the file wrapper is a directory.
+    @inlinable open var isRegularFile: Bool { resourceValues.isRegularFile ?? false }
+    /// Returns the regular file contents of the file wrapper.
+    @inlinable open var regularFileContents: Data? {
+        guard isRegularFile else { return nil }
+        if content == nil { try? read() }
+        guard case let .data(regularFileContents) = content else { return nil }
+        return regularFileContents
+    }
+    /// Returns the file wrappers contained in a directory.
+    @inlinable open var fileWrappers: [String : FileWrapper]? {
+        guard isDirectory else { return nil }
+        if content == nil { try? read() }
+        guard case let .directory(fileWrappers) = content else { return nil }
+        return fileWrappers
+    }
+    /// Designated initialiser for reading from a URL.
+    ///
+    ///This initialiser sets up a file wrapper for  reading from the given URL.
+    /// - Parameters:
+    ///   - url: The URL to read from.
+    ///   - options: The reading options to use.
+    /// - Throws: Any error thrown by the underlying file system.
+    public init(url: URL, options: ReadingOptions = []) throws {
+        self.url = url
+        self.filename = url.lastPathComponent
+        self.preferredFilename = url.lastPathComponent
+        self.readingOptions = options
+        self.resourceValues = try url.resourceValues(forKeys: urlKeys)
+        if options.contains(.immediate) {
+            try read()
+        }
+    }
+
+    /// Read form the given URL.
+    ///
+    /// Recursively reads the contents of the file wrapper from the given URL.
+    /// When reading a directory, the contents of the directory are read as
+    /// child file wrappers.
+    /// - Parameters:
+    ///   - url: The URL to read from.
+    ///   - options: The reading options to use.
+    @inlinable
+    open func read(from url: URL, options: ReadingOptions = []) throws {
+        self.url = url
+        self.filename = url.lastPathComponent
+        self.preferredFilename = url.lastPathComponent
+        self.readingOptions = options
+        try read()
+    }
+
+    /// Read the file wrapper contents.
+    @usableFromInline
+    func read() throws {
+        if isDirectory {
+            try readDirectory()
+        } else if isSymbolicLink {
+            try readSymbolicLink()
+        } else if isRegularFile {
+            try readRegularFile()
+        }
+    }
+
+    /// Read the directory associated with the file wrapper.
+    @usableFromInline
+    func readDirectory() throws {
+        let fileManager = FileManager.default
+        let contents = try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: Array(urlKeys))
+        var children = [Filename : FileWrapper]()
+        try contents.forEach {
+            children[$0.lastPathComponent] = try FileWrapper(url: $0, options: readingOptions)
+        }
+        content = .directory(children)
+    }
+
+    /// Read the symbolic link associated with the file wrapper.
+    @usableFromInline
+    func readSymbolicLink() throws {
+        let fileManager = FileManager.default
+        let destination = try fileManager.destinationOfSymbolicLink(atPath: url.path)
+        var isDirectory: ObjCBool = false
+        _ = fileManager.fileExists(atPath: destination, isDirectory: &isDirectory)
+        content = .symbolicLink(URL(fileURLWithPath: destination, isDirectory: isDirectory.boolValue))
+    }
+
+    /// Read the symbolic link associated with the file wrapper.
+    @usableFromInline
+    func readRegularFile() throws {
+        let data = try Data(contentsOf: url, options: readingOptions.contains(.withoutMapping) ? [] : .mappedIfSafe)
+        content = .data(data)
+    }
+}
+
+public extension FileWrapper {
+    /// The reading options for the file wrapper.
+    struct ReadingOptions: OptionSet, @unchecked Sendable {
+        /// Raw value of the reading options.
+        public var rawValue: UInt
+        /// Designated raw value initialiser.
+        /// - Parameter rawValue: The raw value to initialise with.
+        @inlinable
+        public init(rawValue: UInt) {
+            self.rawValue = rawValue
+        }
+        /// Read the file wrapper immediately.
+        ///
+        /// This option causes the file wrapper to
+        /// read its content immediatelay after creation.
+        public static var immediate: FileWrapper.ReadingOptions { .init(rawValue: 1) }
+        /// Do not use memory mapping.
+        ///
+        /// This option causes the file wrapper to
+        /// read its content without attempting to use
+        /// memory mapping.
+        ///
+        /// - Note: this option is useful to prevent
+        /// the file wrapper to keep a file open, whiich
+        /// may prevent media from being ejected.
+        public static var withoutMapping: FileWrapper.ReadingOptions { .init(rawValue: 2) }
+    }
+
+    /// The writeing options for the file wrapper.
+    struct WritingOptions: OptionSet, @unchecked Sendable {
+        /// Raw value of the writeing options.
+        public var rawValue: UInt
+        /// Designated raw value initialiser.
+        /// - Parameter rawValue: The raw value to initialise with.
+        @inlinable
+        public init(rawValue: UInt) {
+            self.rawValue = rawValue
+        }
+        /// Write the file wrapper atomically.
+        ///
+        /// This option causes the file wrapper to
+        /// write its content atomically, i.e. the
+        /// file wrapper will write to a temporary
+        /// file and then rename it to the target
+        /// file name.
+        public static var atomic: FileWrapper.ReadingOptions { .init(rawValue: 1) }
+        /// Update the file name on successful write.
+        ///
+        /// This option causes the file wrapper to
+        /// update its file name to the target file
+        /// name if the write operation succeeds.
+        public static var withNameUpdating: FileWrapper.ReadingOptions { .init(rawValue: 2) }
+    }
+}
+
+extension FileWrapper {
+    /// The content of a FileWrapper.
+    @usableFromInline enum Content {
+        /// File data associated with the FileWraper.
+        case data(Data)
+        /// Directory Bundle of FileWrapper.
+        case directory([Filename: FileWrapper])
+        /// Symbolic link target URL of FileWrapper.
+        case symbolicLink(URL)
+    }
+}
+
+fileprivate let urlKeys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey, .isRegularFileKey]
+#endif
