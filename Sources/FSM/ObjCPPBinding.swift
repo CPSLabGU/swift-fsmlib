@@ -279,7 +279,7 @@ public func contentOfObjCPPImplementationFor(machine: URL) -> String? {
 /// - Returns: The content of the machine, or `nil` if not found.
 @inlinable
 public func contentOfObjCPPImplementation(for machineWrapper: MachineWrapper) -> String? {
-    let file = "\(machineWrapper.directoryName).mm"
+    let file = "\(machineWrapper.machineName).mm"
     guard let content = machineWrapper.stringContents(of: file) else {
         fputs("Cannot read '\(file)'\n", stderr)
         return nil
@@ -363,7 +363,7 @@ public func boilerplateofObjCPPMachine(at machine: URL) -> any Boilerplate {
 @inlinable
 public func boilerplateofObjCPPMachine(for machineWrapper: MachineWrapper) -> any Boilerplate {
     var boilerplate = CBoilerplate()
-    for (section, fileName) in objCPPboilerplateFileMappings(for: machineWrapper.directoryName) {
+    for (section, fileName) in objCPPboilerplateFileMappings(for: machineWrapper.machineName) {
         boilerplate.sections[section] = machineWrapper.stringContents(of: fileName)
     }
     return boilerplate

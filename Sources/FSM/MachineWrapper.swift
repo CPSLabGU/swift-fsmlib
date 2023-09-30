@@ -14,7 +14,15 @@ extension MachineWrapper {
     @usableFromInline var directoryName: String {
         filename ?? preferredFilename ?? FileManager.default.currentDirectoryName
     }
-    
+
+    /// Machine name without the file extension.
+    @usableFromInline var machineName: String {
+        let dirName = directoryName
+        return dirName.lastIndex(of: ".").map {
+            String(dirName[dirName.startIndex..<$0])
+        } ?? dirName
+    }
+
     /// Return the contents of the given file as a String.
     ///
     /// - Parameter fileName: Name of the file inside the receiver.

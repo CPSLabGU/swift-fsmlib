@@ -84,7 +84,7 @@ public class Machine {
         if let layoutWrapper = machineWrapper.fileWrappers?[.layout] {
             namesLayout = stateNameLayouts(from: layoutWrapper)
         } else {
-            fputs("Cannot read layout file from '\(machineWrapper.directoryName)'\n", stderr)
+            fputs("Cannot read layout file from '\(machineWrapper.directoryName)/\(Filename.layout)'\n", stderr)
             namesLayout = [:]
         }
         //

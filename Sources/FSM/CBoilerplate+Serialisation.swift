@@ -36,7 +36,7 @@ public extension CBoilerplate {
 @inlinable
 public func boilerplateOfCMachine(at machineWrapper: MachineWrapper) -> any Boilerplate {
     var boilerplate = CBoilerplate()
-    for (section, fileName) in cBoilerplateFileMappings(for: machineWrapper.directoryName) {
+    for (section, fileName) in cBoilerplateFileMappings(for: machineWrapper.machineName) {
         boilerplate.sections[section] = machineWrapper.stringContents(of: fileName)
     }
     return boilerplate
