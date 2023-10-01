@@ -344,7 +344,7 @@ public func targetOfCTransitionFor(machine m: URL, states: [State], state name: 
 @inlinable
 public func contentOfCImplementationFor(machine: URL) -> String? {
     let name = machine.deletingPathExtension().lastPathComponent
-    let file = "\(name).c"
+    let file = "Machine_\(name).c"
     let url = machine.appendingPathComponent(file)
     do {
         let content = try NSString(contentsOf: url, usedEncoding: nil)
