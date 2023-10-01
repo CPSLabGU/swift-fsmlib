@@ -369,7 +369,7 @@ public func targetOfCTransition(_ number: Int, state name: StateName, for machin
 /// - Returns: The content of the machine, or `nil` if not found.
 @inlinable
 public func contentOfCImplementation(for machineWrapper: MachineWrapper) -> String? {
-    let file = "\(machineWrapper.machineName).c"
+    let file = "Machine_\(machineWrapper.machineName).c"
     guard let content = machineWrapper.stringContents(of: file) else {
         fputs("Error: cannot read '\(file)'\n", stderr)
         return nil
