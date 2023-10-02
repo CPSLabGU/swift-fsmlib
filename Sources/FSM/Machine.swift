@@ -145,6 +145,15 @@ public class Machine {
             try destination.write(stateBoilerplate: boilerplate, to: url, for: stateName)
         }
         try destination.writeCMakeFile(for: llfsm, boilerplate: boilerplate, to: url, isSuspensible: isSuspensible)
+        var layouts = StateNameLayouts()
+        for (stateID, layout) in stateLayout {
+            guard let state = llfsm.stateMap[stateID] else { continue }
+            let tl = llfsm.transitionsFrom(stateID).compactMap {
+                transitionLayout[$0]
+            }
+            layouts[state.name] = (state: layout, transitions: tl)
+        }
+        try destination.write(layout: layouts, to: url)
     }
 
     /// Write the FSM to the given URL in the given format..
@@ -211,6 +220,40 @@ public func stateNameLayouts(from dict: NSDictionary) -> StateNameLayouts {
         layouts[s] = (StateLayout(d), ts)
     }
     return layouts
+}
+
+/// Create a dictionary from the given State layouts.
+///
+/// This function reads the state layout from the given dictionary
+/// (the property list representation of the layout).
+///
+/// - Parameter dict: Dictionary containing the layout.
+/// - Returns: A mapping from state names to state layouts.
+@inlinable
+public func dictionary(from layouts: StateNameLayouts) -> NSDictionary {
+#if canImport(Darwin)
+    let states = MutableDictionary()
+#else
+    var states = MutableDictionary()
+#endif
+    for (state, (stateLayout, transitionLayouts)) in layouts {
+#if canImport(Darwin)
+        let stateDict = stateLayout.layoutDictionary
+#else
+        var stateDict = stateLayout.layoutDictionary
+#endif
+        let transitions = transitionLayouts.map(\.propertyList)
+        stateDict.set(value: transitions, forTransition: .transitions)
+        states.set(value: asPList(stateDict), forString: state)
+    }
+#if canImport(Darwin)
+    let dictionary = MutableDictionary()
+#else
+    var dictionary = MutableDictionary()
+#endif
+    dictionary.set(value: "1.3",  forString: .fileVersionKey)
+    dictionary.set(value: states, forString: .states)
+    return asPList(dictionary)
 }
 
 /// Return an array of transitions for a given source state.

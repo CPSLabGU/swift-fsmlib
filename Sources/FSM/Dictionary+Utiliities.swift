@@ -74,6 +74,16 @@ extension NSDictionary {
     func set<T>(value: T, forTransition key: TransitionLayoutKey) {
         setValue(value, forKey: key.rawValue)
     }
+
+    /// Set the value for the given string key.
+    ///
+    /// - Parameters:
+    ///   - value: The value to set.
+    ///   - key: The layout key to use.
+    @usableFromInline
+    func set<T>(value: T, forString key: String) {
+        setValue(value, forKey: key)
+    }
 #endif
 }
 
@@ -144,5 +154,15 @@ extension Dictionary where Key == AnyHashable, Value: Any {
     @usableFromInline
     mutating func set<T>(value: T, forTransition key: TransitionLayoutKey) {
         self[AnyHashable(key.rawValue)] = value as? Value
+    }
+
+    /// Set the value for the given string key.
+    ///
+    /// - Parameters:
+    ///   - value: The value to set.
+    ///   - key: The layout key to use.
+    @usableFromInline
+    mutating func set<T>(value: T, forString key: String) {
+        self[AnyHashable(key)] = value as? Value
     }
 }

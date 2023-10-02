@@ -28,6 +28,12 @@ public protocol OutputLanguage: LanguageBinding {
     /// Write the language information to the given URL
     /// - Parameter url: The URL to write to.
     func writeLanguage(to url: URL) throws
+    /// Write the FSM layout.
+    ///
+    /// - Parameters:
+    ///   - layout: The state and transition layout
+    ///   - url: The machine URL to write to.
+    func write(layout: StateNameLayouts, to url: URL) throws
     /// Write the window layout.
     ///
     /// - Parameters:
@@ -177,6 +183,17 @@ public extension OutputLanguage {
     @inlinable
     func writeLanguage(to url: URL) throws {
         try url.write(content: name, to: .language)
+    }
+    /// Write the layout to the given URL.
+    ///
+    /// - Parameters:
+    ///   - layout: The FSM layout.
+    ///   - url: The URL to write to.
+    @inlinable
+    func write(layout: StateNameLayouts, to url: URL) throws {
+        let plist = dictionary(from: layout)
+        let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+        try url.write(data, to: .layout)
     }
     /// Write the window layout to the given URL.
     ///

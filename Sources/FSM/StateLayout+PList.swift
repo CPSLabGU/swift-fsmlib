@@ -6,38 +6,32 @@
 //
 import Foundation
 
+#if canImport(Darwin)
+public typealias LayoutDictionary = NSDictionary
+@usableFromInline typealias MutableDictionary = NSMutableDictionary
+/// Return the Layout Dictionary as a Property List dictionary
+/// - Parameter dict: The layout dictionary to convert.
+/// - Returns: The NSDictionary representing the property list.
+@usableFromInline
+func asPList(_ dict: LayoutDictionary) -> NSDictionary {
+    dict
+}
+#else
+public typealias LayoutDictionary = [AnyHashable : Any]
+@usableFromInline typealias MutableDictionary = LayoutDictionary
+/// Return the Layout Dictionary as a Property List dictionary
+/// - Parameter dict: The layout dictionary to convert.
+/// - Returns: The NSDictionary representing the property list.
+@usableFromInline
+func asPList(_ dict: LayoutDictionary) -> NSDictionary {
+    NSDictionary(dictionary: dict, copyItems: false)
+}
+#endif
+
 /// Reading a state layout from a property list
 public extension StateLayout {
     /// Property list representation
-    var propertyList: NSDictionary {
-#if canImport(Darwin)
-        let propertyList = NSDictionary()
-#else
-        var propertyList = [AnyHashable : Any]()
-#endif
-        propertyList.set(value: isOpen, for: .expanded)
-        propertyList.set(value: closedLayout.dimensions.w, for: .width)
-        propertyList.set(value: closedLayout.dimensions.h, for: .height)
-        propertyList.set(value: openLayout.dimensions.w, for: .expandedWidth)
-        propertyList.set(value: openLayout.dimensions.h, for: .expandedHeight)
-        propertyList.set(value: closedLayout.x,          for: .positionX)
-        propertyList.set(value: closedLayout.y,          for: .positionY)
-        propertyList.set(value: onEntryHeight,           for: .onEntryHeight)
-        propertyList.set(value: onExitHeight,            for: .onExitHeight)
-        propertyList.set(value: internalHeight,          for: .internalHeight)
-        propertyList.set(value: onSuspendHeight,         for: .onSuspendHeight)
-        propertyList.set(value: onResumeHeight,          for: .onResumeHeight)
-        propertyList.set(value: zoomedOnEntryHeight,     for: .zoomedOnEntryHeight)
-        propertyList.set(value: zoomedOnExitHeight,      for: .zoomedOnExitHeight)
-        propertyList.set(value: zoomedInternalHeight,    for: .zoomedInternalHeight)
-        propertyList.set(value: zoomedOnSuspendHeight,   for: .zoomedOnSuspendHeight)
-        propertyList.set(value: zoomedOnResumeHeight,    for: .zoomedOnResumeHeight)
-#if canImport(Darwin)
-        return propertyList
-#else
-        return NSDictionary(dictionary: propertyList, copyItems: false)
-#endif
-    }
+    @inlinable var propertyList: NSDictionary { asPList(layoutDictionary) }
 
     /// Property list initialiser for a state layout
     /// - Parameters:
@@ -65,5 +59,34 @@ public extension StateLayout {
         zoomedInternalHeight  = propertyList.value(.zoomedInternalHeight, default: sh)
         zoomedOnSuspendHeight = propertyList.value(.zoomedOnSuspendHeight, default: sh)
         zoomedOnResumeHeight  = propertyList.value(.zoomedOnResumeHeight,  default: sh)
+    }
+}
+
+extension StateLayout {
+    /// Layout dictionary representation
+    @usableFromInline var layoutDictionary: LayoutDictionary {
+#if canImport(Darwin)
+        let propertyList = MutableDictionary()
+#else
+        var propertyList = MutableDictionary()
+#endif
+        propertyList.set(value: isOpen, for: .expanded)
+        propertyList.set(value: closedLayout.dimensions.w, for: .width)
+        propertyList.set(value: closedLayout.dimensions.h, for: .height)
+        propertyList.set(value: openLayout.dimensions.w, for: .expandedWidth)
+        propertyList.set(value: openLayout.dimensions.h, for: .expandedHeight)
+        propertyList.set(value: closedLayout.x,          for: .positionX)
+        propertyList.set(value: closedLayout.y,          for: .positionY)
+        propertyList.set(value: onEntryHeight,           for: .onEntryHeight)
+        propertyList.set(value: onExitHeight,            for: .onExitHeight)
+        propertyList.set(value: internalHeight,          for: .internalHeight)
+        propertyList.set(value: onSuspendHeight,         for: .onSuspendHeight)
+        propertyList.set(value: onResumeHeight,          for: .onResumeHeight)
+        propertyList.set(value: zoomedOnEntryHeight,     for: .zoomedOnEntryHeight)
+        propertyList.set(value: zoomedOnExitHeight,      for: .zoomedOnExitHeight)
+        propertyList.set(value: zoomedInternalHeight,    for: .zoomedInternalHeight)
+        propertyList.set(value: zoomedOnSuspendHeight,   for: .zoomedOnSuspendHeight)
+        propertyList.set(value: zoomedOnResumeHeight,    for: .zoomedOnResumeHeight)
+        return propertyList
     }
 }
