@@ -57,21 +57,21 @@ extension TransitionLayout {
         let points = path.points
         let n = points.count
         guard n > 0 else {
-            return asPList(propertyList)
+            return propertyList
         }
         propertyList.set(value: points.map(asPList), forTransition: .bezierPath)
         guard n > 1 else {
-            return asPList(propertyList)
+            return propertyList
         }
         propertyList.set(value: asPList(points[0]),   forTransition: .srcPoint)
         propertyList.set(value: asPList(points[n-1]), forTransition: .dstPoint)
         guard n > 2 else {
-            return asPList(propertyList)
+            return propertyList
         }
         propertyList.set(value: asPList(points[1]),   forTransition: .ctlPoint1)
         propertyList.set(value: asPList(points[n-2]), forTransition: .ctlPoint2)
         guard n > 3 else {
-            return asPList(propertyList)
+            return propertyList
         }
         propertyList.set(value: points[0].x,   forTransition: .srcPointX)
         propertyList.set(value: points[0].y,   forTransition: .srcPointY)
