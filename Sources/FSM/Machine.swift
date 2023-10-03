@@ -252,7 +252,9 @@ public func stateNameLayouts(from layoutWrapper: MachineWrapper) -> StateNameLay
     layoutWrapper.regularFileContents.flatMap {
         try? PropertyListSerialization.propertyList(from: $0, options: [], format: nil) as? NSDictionary
     }.flatMap {
-        stateNameLayouts(from: $0)
+        ($0[String.states] as? NSDictionary).flatMap {
+            stateNameLayouts(from: $0)
+        }
     } ?? [:]
 }
 
