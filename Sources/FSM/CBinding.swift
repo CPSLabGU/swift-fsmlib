@@ -11,237 +11,289 @@ public struct CBinding: OutputLanguage {
     /// The canonical name of the language binding.
     public let name = Format.c.rawValue
 
-    /// C Language binding from URL and state name to number of transitions
-    public let numberOfTransitions: (URL, StateName) -> Int = { url, s in
-        numberOfCTransitionsFor(machine: url, state: s)
-    }
-    /// C Language binding from URL, state name, and transition to expression
-    public let expressionOfTransition: (URL, StateName) -> (Int) -> String = {
-        url, s in { number in
-            expressionOfCTransitionFor(machine: url, state: s, transition: number)
-        }
-    }
-    /// C Language binding from URL, states, source state name, and transition to target state ID
-    public let targetOfTransition: (URL, [State], StateName) -> (Int) -> StateID? = { url, ss, s in
-        { number in
-            targetOfCTransitionFor(machine: url, states: ss, state: s, transition: number)
-        }
-    }
-    /// C Language binding from URL, states to suspend state ID
-    public let suspendState: (URL, [State]) -> StateID? = { url, ss in
-        suspendStateOfCMachine(url, states: ss)
+    /// C binding from URL and state name to number of transitions.
+    ///
+    /// - Parameters:
+    ///   - machineWrapper: The MachineWrapper to examine.
+    ///   - stateName: The name of the state to examine.
+    /// - Returns: The number of transitions in the given state.
+    @inlinable
+    public func numberOfTransitions(for machineWrapper: MachineWrapper, stateName: StateName) -> Int {
+        numberOfCTransitions(for: machineWrapper, state: stateName)
     }
 
-    /// C Language binding from URL to machine boilerplate.
-    public let boilerplate: (URL) -> any Boilerplate = { url in
-        boilerplateofCMachine(at: url)
+    /// Objective-C++ binding from URL, state name, and transition to expression.
+    ///
+    /// - Parameters:
+    ///   - transitionNumber: The transition number to examine.
+    ///   - machineWrapper: The MachineWrapper to examine.
+    ///   - stateName: The name of the state to examine.
+    /// - Returns: The expression of the given transition.
+    @inlinable
+    public func expression(of transitionNumber: Int, for machineWrapper: MachineWrapper, stateName: StateName) -> String {
+        expressionOfCTransition(transitionNumber, state: stateName, for: machineWrapper)
     }
 
-    /// C Language binding from URL and state name to state boilerplate.
-    public var stateBoilerplate: (URL, StateName) -> any Boilerplate = { url, stateName in
-        boilerplateofCState(at: url, state: stateName)
+    /// Objective-C++ binding from URL, states, source state name, and transition to target state ID.
+    ///
+    /// - Parameters:
+    ///   - transitionNumber: The transition number to examine.
+    ///   - machineWrapper: The MachineWrapper to examine.
+    ///   - stateName: The name of the state to examine.
+    ///   - states: The states of the machine.
+    /// - Returns: The target state ID of the given transition.
+    @inlinable
+    public func target(of transitionNumber: Int, for machineWrapper: MachineWrapper, stateName: StateName, with states: [State]) -> StateID? {
+        targetOfCTransition(transitionNumber, state: stateName, for: machineWrapper, with: states)
+    }
+
+    /// Objective-C++ binding from URL, states to suspend state ID.
+    ///
+    /// - Parameters:
+    ///   - machineWrapper: The MachineWrapper to examine.
+    ///   - states: The states of the machine.
+    /// - Returns: The suspend state ID of the given machine.
+    @inlinable
+    public func suspendState(for machineWrapper: MachineWrapper, states: [State]) -> StateID? {
+        suspendStateOfCMachine(machineWrapper, states: states)
+    }
+    /// Objective-C++ binding from URL to machine boilerplate.
+    ///
+    /// - Parameter machineWrapper: The MachineWrapper to examine.
+    /// - Returns: The boilerplate for the given machine.
+    @inlinable
+    public func boilerplate(for machineWrapper: MachineWrapper) -> any Boilerplate {
+        boilerplateOfCMachine(at: machineWrapper)
+    }
+
+    /// Objective-C++ binding from URL and state name to state boilerplate.
+    ///
+    /// - Parameters:
+    ///   - machineWrapper: The MachineWrapper to examine.
+    ///   - stateName: The name of the state to examine.
+    /// - Returns: The boilerplate for the given state.
+    @inlinable
+    public func stateBoilerplate(for machineWrapper: MachineWrapper, stateName: StateName) -> any Boilerplate {
+        boilerplateofCState(stateName, of: machineWrapper)
     }
 }
 
 public extension CBinding {
-    /// Write the given boilerplate to the given URL.
+    /// Add the given boilerplate to the given `MachineWrapper`.
     ///
     /// This function tries to convert the given boilerplate
-    /// to a C lanaguage boilerplate and then writes it
-    /// to the given URL.
+    /// to a C lanaguage boilerplate and then adds it
+    /// to the given `MachineWrapper`.
     ///
     /// - Parameters:
-    ///   - boilerplate: The boilerplate to write.
-    ///   - url: The machine URL to write to.
+    ///   - boilerplate: The boilerplate to add.
+    ///   - wrapper: The `MachineWrapper` to add to.
     @inlinable
-    func write(boilerplate: any Boilerplate, to url: URL) throws {
-        try CBoilerplate(boilerplate).write(to: url)
+    func add(boilerplate: any Boilerplate, to wrapper: MachineWrapper) throws {
+        CBoilerplate(boilerplate).add(to: wrapper)
     }
     /// Write the given state boilerplate to the given URL
     /// - Parameters:
-    ///   - stateBoilerplate: The boilerplate to write.
-    ///   - url: The machine URL to write to.
-    ///   - stateName: The name of the state to write the boilerplate for.
-    func write(stateBoilerplate: any Boilerplate, to url: URL, for stateName: String) throws {
-        try CBoilerplate(stateBoilerplate).write(state: stateName, to: url)
+    ///   - stateBoilerplate: The boilerplate to add.
+    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - stateName: The name of the state to add the boilerplate for.
+    func add(stateBoilerplate: any Boilerplate, to wrapper: MachineWrapper, for stateName: String) throws {
+        CBoilerplate(stateBoilerplate).add(state: stateName, to: wrapper)
     }
-    /// Write the interface for the given LLFSM to the given URL.
+    /// Add the interface for the given LLFSM to the given `MachineWrapper`.
     ///
-    /// This method writes the language interface (if any)
-    /// for the given finite-state machine to the given URL.
+    /// This method adds the language interface (if any)
+    /// for the given finite-state machine to the given `MachineWrapper`.
     ///
     /// - Parameters:
-    ///   - llfsm: The finite-state machine to write.
-    ///   - url: The URL to write to.
+    ///   - llfsm: The finite-state machine to add.
+    ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeInterface(for llfsm: LLFSM, to url: URL, isSuspensible: Bool) throws {
-        let name = url.deletingPathExtension().lastPathComponent
+    func addInterface(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.machineName
         let machineCode = cMachineInterface(for: llfsm, named: name, isSuspensible: isSuspensible)
-        try url.write(content: machineCode, to: "Machine_" + name + ".h")
+        let fileWrapper = fileWrapper(named: "Machine_" + name + ".h", from: machineCode)
+        wrapper.addFileWrapper(fileWrapper)
     }
-    /// Write the state interface for the given LLFSM to the given URL.
+    /// Add the state interface for the given LLFSM to the given `MachineWrapper`.
     ///
-    /// This method writes the language interface (if any)
-    /// for the given finite-state machine to the given URL.
+    /// This method adds the language interface (if any)
+    /// for the given finite-state machine to the given `MachineWrapper`.
     ///
     /// - Parameters:
-    ///   - llfsm: The finite-state machine to write.
-    ///   - url: The URL to write to.
+    ///   - llfsm: The finite-state machine to add.
+    ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeStateInterface(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws {
-        let name = url.deletingPathExtension().lastPathComponent
+    func addStateInterface(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.machineName
         for stateID in fsm.states {
             guard let state = fsm.stateMap[stateID] else {
                 fputs("Warning: orphaned state ID \(stateID) for \(name)\n", stderr)
                 continue
             }
             let stateCode = cStateInterface(for: state, llfsm: fsm, named: name, isSuspensible: isSuspensible)
-            try url.write(content: stateCode, to: "State_" + state.name + ".h")
+            let fileWrapper = fileWrapper(named: "State_" + state.name + ".h", from: stateCode)
+            wrapper.addFileWrapper(fileWrapper)
         }
     }
-    /// Write the code for the given LLFSM to the given URL.
+    /// Add the code for the given LLFSM to the given `MachineWrapper`.
     ///
-    /// This method writes the implementation code
-    /// for the given finite-state machine to the given URL.
+    /// This method adds the implementation code
+    /// for the given finite-state machine to the given `MachineWrapper`.
     ///
     /// - Parameters:
-    ///   - llfsm: The finite-state machine to write.
-    ///   - url: The URL to write to.
+    ///   - llfsm: The finite-state machine to add.
+    ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeCode(for llfsm: LLFSM, to url: URL, isSuspensible: Bool) throws {
-        let name = url.deletingPathExtension().lastPathComponent
+    func addCode(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.machineName
         let machineCode = cMachineCode(for: llfsm, named: name, isSuspensible: isSuspensible)
-        try url.write(content: machineCode, to: "Machine_" + name + ".c")
+        let fileWrapper = fileWrapper(named: "Machine_" + name + ".c", from: machineCode)
+        wrapper.addFileWrapper(fileWrapper)
     }
-    /// Write the state code for the given LLFSM to the given URL.
+    /// Add the state code for the given LLFSM to the given `MachineWrapper`.
     ///
-    /// This method writes the language interface (if any)
-    /// for the given finite-state machine to the given URL.
+    /// This method adds the language interface (if any)
+    /// for the given finite-state machine to the given `MachineWrapper`.
     ///
     /// - Parameters:
-    ///   - llfsm: The finite-state machine to write.
-    ///   - url: The URL to write to.
+    ///   - llfsm: The finite-state machine to add.
+    ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeStateCode(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws {
-        let name = url.deletingPathExtension().lastPathComponent
+    func addStateCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.machineName
         for stateID in fsm.states {
             guard let state = fsm.stateMap[stateID] else {
                 fputs("Warning: orphaned state ID \(stateID) for \(name)\n", stderr)
                 continue
             }
             let stateCode = cStateCode(for: state, llfsm: fsm, named: name, isSuspensible: isSuspensible)
-            try url.write(content: stateCode, to: "State_" + state.name + ".c")
+            let fileWrapper = fileWrapper(named: "State_" + state.name + ".c", from: stateCode)
+            wrapper.addFileWrapper(fileWrapper)
         }
     }
-    /// Write the transition expressions for the given LLFSM to the given URL.
+    /// Add the transition expressions for the given LLFSM to the given `MachineWrapper`.
     ///
-    /// This method writes the transition expressions
-    /// for the given finite-state machine to the given URL.
+    /// This method adds the transition expressions
+    /// for the given finite-state machine to the given `MachineWrapper`.
     ///
     /// - Parameters:
-    ///   - llfsm: The finite-state machine to write.
-    ///   - url: The URL to write to.
+    ///   - llfsm: The finite-state machine to add.
+    ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeTransitionCode(for fsm: LLFSM, to url: URL, isSuspensible: Bool) throws {
-        let name = url.deletingPathExtension().lastPathComponent
+    func addTransitionCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.machineName
         for (i, stateID) in fsm.states.enumerated() {
             guard let state = fsm.stateMap[stateID] else {
                 fputs("Warning: orphaned state \(i) ID \(stateID) for \(name)\n", stderr)
                 continue
             }
             let transitions = fsm.transitionsFrom(stateID)
-            try transitions.enumerated().forEach { number, transitionID in
+            transitions.enumerated().forEach { number, transitionID in
                 guard let transition = fsm.transitionMap[transitionID] else {
                     fputs("Warning: orphaned transition \(number) (\(transitionID)) for \(state.name)\n", stderr)
                     return
                 }
                 let file = "State_\(state.name)_Transition_\(number).expr"
-                try url.write(content: transition.label + "\n", to: file)
+                let fileWrapper = fileWrapper(named: file, from: transition.label + "\n")
+                wrapper.addFileWrapper(fileWrapper)
             }
         }
     }
-    /// Write a CMakefile for the given LLFSM to the given URL.
+    /// Add a CMakefile for the given LLFSM to the given `MachineWrapper`.
     ///
     /// This method creates a CMakefile to compile the
-    /// given finite-state machine locally at the given URL.
+    /// given finite-state machine locally and adds it
+    /// to the given `MachineWrapper`.
     ///
     /// - Parameters:
-    ///   - llfsm: The finite-state machine to write.
+    ///   - llfsm: The finite-state machine to add.
     ///   - boilerplate: The boilerplate containing the include paths.
-    ///   - url: The URL to write to.
+    ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeCMakeFile(for fsm: LLFSM, boilerplate: any Boilerplate, to url: URL, isSuspensible: Bool) throws {
-        let name = url.deletingPathExtension().lastPathComponent
+    func addCMakeFile(for fsm: LLFSM, boilerplate: any Boilerplate, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.machineName
         let cmakeFragment = cMakeFragment(for: fsm, named: name, isSuspensible: isSuspensible)
-        try url.write(content: cmakeFragment, to: "project.cmake")
+        let fragmentWrapper = fileWrapper(named: "project.cmake", from: cmakeFragment)
+        wrapper.addFileWrapper(fragmentWrapper)
         let cmakeLists = cMakeLists(for: fsm, named: name, boilerplate: boilerplate, isSuspensible: isSuspensible)
-        try url.write(content: cmakeLists, to: "CMakeLists.txt")
+        let cmakeWrapper = fileWrapper(named: "CMakeLists.txt", from: cmakeLists)
+        wrapper.addFileWrapper(cmakeWrapper)
     }
 }
 
 // Arrangments of C-language LLFSMs
 
 public extension CBinding {
-    /// Write the arrangment interface to the given URL.
+    /// Add the arrangment interface to the given `MachineWrapper`.
     ///
-    /// This method writes the arrangement interface (if any)
-    /// for the given finite-state machine instances to the given URL.
+    /// This method adds the arrangement interface (if any)
+    /// for the given finite-state machine instances to the given `MachineWrapper`.
     ///
     /// - Parameters:
     ///   - names: The names of the FSM instances.
-    ///   - url: The URL to write to.
+    ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func writeArrangementInterface(for instances: [Instance], to url: URL, isSuspensible: Bool) throws {
-        let name = url.deletingPathExtension().lastPathComponent
+    func addArrangementInterface(for instances: [Instance], to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.machineName
         let commonInterface = cArrangementMachineInterface(for: instances, named: name, isSuspensible: isSuspensible)
-        try url.write(content: commonInterface, to: "Machine_Common.h")
+        let commonWrapper = fileWrapper(named: "Machine_Common.h", from: commonInterface)
+        wrapper.addFileWrapper(commonWrapper)
         let arrangementInterface = cArrangementInterface(for: instances, named: name, isSuspensible: isSuspensible)
-        try url.write(content: arrangementInterface, to: "Arrangement_\(name).h")
+        let arrangementWrapper = fileWrapper(named: "Arrangement_\(name).h", from: arrangementInterface)
+        wrapper.addFileWrapper(arrangementWrapper)
         let staticInterface = cStaticArrangementInterface(for: instances, named: name, isSuspensible: isSuspensible)
-        try url.write(content: staticInterface, to: "Static_Arrangement_\(name).h")
+        let staticWrapper = fileWrapper(named: "Static_Arrangement_\(name).h", from: staticInterface)
+        wrapper.addFileWrapper(staticWrapper)
     }
-    /// Write the arrangment implementation to the given URL.
+    /// Add the arrangment implementation to the given .
     ///
-    /// This method writes the arrangement code
+    /// This method adds the arrangement code
     /// for the given finite-state machine instances to the given URL.
     ///
     /// - Parameters:
     ///   - instances: The FSM instances.
-    ///   - url: The URL to write to.
+    ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func writeArrangementCode(for instances: [Instance], to url: URL, isSuspensible: Bool) throws {
-        let name = url.deletingPathExtension().lastPathComponent
+    func addArrangementCode(for instances: [Instance], to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.machineName
         let commonCode = cArrangementMachineCode(for: instances, named: name, isSuspensible: isSuspensible)
-        try url.write(content: commonCode, to: "Machine_Common.c")
+        let commonWrapper = fileWrapper(named: "Machine_Common.c", from: commonCode)
+        wrapper.addFileWrapper(commonWrapper)
         let arrangementCode = cArrangementCode(for: instances, named: name, isSuspensible: isSuspensible)
-        try url.write(content: arrangementCode, to: "Arrangement_\(name).c")
+        let arrangementWrapper = fileWrapper(named: "Arrangement_\(name).c", from: arrangementCode)
+        wrapper.addFileWrapper(arrangementWrapper)
         let staticCode = cStaticArrangementCode(for: instances, named: name, isSuspensible: isSuspensible)
-        try url.write(content: staticCode, to: "Static_Arrangement_\(name).c")
+        let staticWrapper = fileWrapper(named: "Static_Arrangement_\(name).c", from: staticCode)
+        wrapper.addFileWrapper(staticWrapper)
         let mainCode = cStaticArrangementMainCode(for: instances, named: name, isSuspensible: isSuspensible)
-        try url.write(content: mainCode, to: "static_main.c")
+        let mainWrapper = fileWrapper(named: "static_main.c", from: mainCode)
+        wrapper.addFileWrapper(mainWrapper)
     }
-    /// Write a CMakefile for the given LLFSM arrangement to the given URL.
+    /// Add a CMakefile for the given LLFSM arrangement to the given `MachineWrapper`.
     ///
     /// This method creates a CMakefile to compile the
-    /// given finite-state machine locally at the given URL.
+    /// given finite-state machine locally at the given `MachineWrapper`.
     ///
     /// - Parameters:
     ///   - instances: The FSM instances.
-    ///   - url: The URL to write to.
+    ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeArrangementCMakeFile(for instances: [Instance], to url: URL, isSuspensible: Bool) throws {
-        let name = url.deletingPathExtension().lastPathComponent
+    func addArrangementCMakeFile(for instances: [Instance], to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.machineName
         let cmakeFragment = cArrangementCMakeFragment(for: instances, named: name, isSuspensible: isSuspensible)
-        try url.write(content: cmakeFragment, to: "project.cmake")
+        let fragmentWrapper = fileWrapper(named: "project.cmake", from: cmakeFragment)
+        wrapper.addFileWrapper(fragmentWrapper)
         let cmakeLists = cArrangementCMakeLists(for: instances, named: name, isSuspensible: isSuspensible)
-        try url.write(content: cmakeLists, to: "CMakeLists.txt")
+        let cmakeWrapper = fileWrapper(named: "CMakeLists.txt", from: cmakeLists)
+        wrapper.addFileWrapper(cmakeWrapper)
     }
 }
 
@@ -272,89 +324,74 @@ public func targetStateIndexOfCTransition(_ i: Int, inHeader content: String) ->
 
 /// Read the content of the `State.h` file.
 /// - Parameters:
-///   - machine: The machine URL.
+///   - machineWrapper: The MachineWrapper.
 ///   - state: The name of the state to examine.
 /// - Returns: The content of the `State.h` file.
 @inlinable
-public func contentOfCStateFor(machine: URL, state: StateName) -> String? {
+public func contentOfCState(for machineWrapper: MachineWrapper, state: StateName) -> String? {
     let file = "State_\(state).h"
-    let url = machine.appendingPathComponent(file)
-    do {
-        let content = try String(contentsOf: url, encoding: .utf8)
-        return content
-    } catch {
-        fputs("Error: cannot read '\(file): \(error.localizedDescription)'\n", stderr)
+    guard let content = machineWrapper.stringContents(of: file) else {
+        fputs("Error: cannot read '\(file)'\n", stderr)
         return nil
     }
+    return content
 }
-
 
 /// Read the content of the State.h file and return the number of transitions
 /// - Parameters:
-///   - m: The machine URL.
-///   - s: The name of the state to examine.
+///   - machineWrapper: The MachineWrapper.
+///   - name: The name of the state to examine.
 /// - Returns: The number of transitions leaving the given state.
 @inlinable
-public func numberOfCTransitionsFor(machine m: URL, state s: StateName) -> Int {
-    guard let content = contentOfCStateFor(machine: m, state: s) else { return 0 }
+public func numberOfCTransitions(for machineWrapper: MachineWrapper, state name: StateName) -> Int {
+    guard let content = contentOfCState(for: machineWrapper, state: name) else { return 0 }
     return numberOfCTransitionsIn(header: content)
 }
 
 
 /// Read State_%@_Transition_%ld.expr and return the transition expression
 /// - Parameters:
-///   - machine: The machine URL.
-///   - state: The name of the state to examine.
 ///   - number: The transition number.
+///   - state: The name of the state to examine.
+///   - machineWrapper: The MachineWrapper.
 /// - Returns: The transition expression.
 @inlinable
-public func expressionOfCTransitionFor(machine: URL, state: StateName, transition number: Int) -> String {
+public func expressionOfCTransition(_ number: Int, state: StateName, for machineWrapper: MachineWrapper) -> String {
     let file = "State_\(state)_Transition_\(number).expr"
-    let url = machine.appendingPathComponent(file)
-    do {
-        let content = try String(contentsOf: url, encoding: .utf8)
-        return content.trimmingCharacters(in:.whitespacesAndNewlines)
-    } catch {
-        fputs("Warning: cannot read '\(file): \(error.localizedDescription)'\n", stderr)
+    guard let content = machineWrapper.stringContents(of: file) else {
+        fputs("Error: cannot read '\(file)'\n", stderr)
         return "true"
     }
+    return content.trimmingCharacters(in:.whitespacesAndNewlines)
 }
-
 
 /// Return the target state ID for a given transition
 /// - Parameters:
-///   - m: URL for the machine in question.
-///   - states: Array of states to examine.
-///   - name: The name of the state to search for.
 ///   - number:The sequence number of the transition to examine.
+///   - name: The name of the state to search for.
+///   - machineWrapper: MachineWrapper for the machine in question.
+///   - states: Array of states to examine.
 /// - Returns: The State ID if found, `nil` otherwise.
 @inlinable
-public func targetOfCTransitionFor(machine m: URL, states: [State], state name: StateName, transition number: Int) -> StateID? {
-    guard let content = contentOfCStateFor(machine: m, state: name),
+public func targetOfCTransition(_ number: Int, state name: StateName, for machineWrapper: MachineWrapper, with states: [State]) -> StateID? {
+    guard let content = contentOfCState(for: machineWrapper, state: name),
           let i = targetStateIndexOfCTransition(number, inHeader: content),
           i >= 0 && i < states.count else { return nil }
     let targetState = states[i]
     return targetState.id
 }
 
-
-/// Read the content of the <Machine>.mm file
-/// - Parameter machine: The machine URL.
+/// Read the content of the <Machine>.c file
+/// - Parameter machineWrapper: The MachineWrapper.
 /// - Returns: The content of the machine, or `nil` if not found.
-@inlinable
-public func contentOfCImplementationFor(machine: URL) -> String? {
-    let name = machine.deletingPathExtension().lastPathComponent
-    let file = "Machine_\(name).c"
-    let url = machine.appendingPathComponent(file)
-    do {
-        let content = try NSString(contentsOf: url, usedEncoding: nil)
-        return content as String
-    } catch {
-        fputs("Cannot read '\(file): \(error.localizedDescription)'\n", stderr)
+public func contentOfCImplementation(for machineWrapper: MachineWrapper) -> String? {
+    let file = "Machine_\(machineWrapper.machineName).c"
+    guard let content = machineWrapper.stringContents(of: file) else {
+        fputs("Error: cannot read '\(file)'\n", stderr)
         return nil
     }
+    return content
 }
-
 
 /// Return the target state index of the given transition
 /// based on the content of the State.h file
@@ -367,15 +404,14 @@ public func suspendStateIndexOfCMachine(inImplementation content: String) -> Int
     return targetStateIndex
 }
 
-
 /// Return the suspend state ID for a given machine
 /// - Parameters:
-///   - m: The machine URL.
+///   - machineWrapper: The MachineWrapper.
 ///   - states: The states the machine is composed of.
 /// - Returns: The suspend state ID, or `nil` if nonexistent.
 @inlinable
-public func suspendStateOfCMachine(_ m: URL, states: [State]) -> StateID? {
-    guard let content = contentOfCImplementationFor(machine: m),
+public func suspendStateOfCMachine(_ machineWrapper: MachineWrapper, states: [State])  -> StateID? {
+    guard let content = contentOfCImplementation(for: machineWrapper),
           let i = suspendStateIndexOfCMachine(inImplementation: content),
           i >= 0 && i < states.count else { return nil }
     let suspendState = states[i]

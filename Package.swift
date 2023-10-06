@@ -14,9 +14,12 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.0"),
+        .package(url: "https://github.com/apple/swift-system", from: "1.2.0"),
     ],
     targets: [
-        .target(name: "FSM"),
+        .target(name: "FSM", dependencies: [
+            .product(name: "SystemPackage", package: "swift-system"),
+        ]),
         .executableTarget(name: "fsmconvert", dependencies: [
             .product(name: "ArgumentParser", package: "swift-argument-parser"),
             "FSM"

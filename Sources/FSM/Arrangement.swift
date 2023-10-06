@@ -71,12 +71,12 @@ public struct Arrangement {
             return Instance(name: uniqueName, url: resolvedURL, fsm: resolvedMachine.llfsm)
         }
         let machineFiles = instances.map { $0.url.lastPathComponent }
-        try destination.createArrangement(at: url)
-        try destination.writeLanguage(to: url)
-        try destination.writeArrangementInterface(for: instances, to: url, isSuspensible: isSuspensible)
-        try destination.writeArrangementCode(for: instances, to: url, isSuspensible: isSuspensible)
-        try destination.writeArrangementCMakeFile(for: instances, to: url, isSuspensible: isSuspensible)
-        defer { try? destination.finalise(url) }
+        let arrangement = try destination.createArrangement(at: url)
+        try destination.addLanguage(to: arrangement)
+        try destination.addArrangementInterface(for: instances, to: arrangement, isSuspensible: isSuspensible)
+        try destination.addArrangementCode(for: instances, to: arrangement, isSuspensible: isSuspensible)
+        try destination.addArrangementCMakeFile(for: instances, to: arrangement, isSuspensible: isSuspensible)
+        defer { try? destination.finalise(arrangement, writingTo: url) }
         return machineFiles.map {
             let machinePath = $0.hasSuffix(".machine") ? $0 : ($0 + ".machine")
 #if canImport(Darwin)
