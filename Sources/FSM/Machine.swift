@@ -133,12 +133,31 @@ public class Machine {
     ///   - url: The filesystem URL to write the FSM to.
     ///   - targetLanguage: The language to use (defaults to the original language).
     ///   - isSuspensible: Whether the FSM code will allow suspension.
+    @inlinable
     public func write(to url: URL, language targetLanguage: LanguageBinding? = nil, isSuspensible: Bool) throws {
         guard let destination = (targetLanguage ?? language) as? OutputLanguage else {
             throw FSMError.unsupportedOutputFormat
         }
         let arrangement = try destination.create(at: url)
-        defer { try? destination.finalise(arrangement, writingTo: url) }
+        try add(to: arrangement, language: targetLanguage, isSuspensible: isSuspensible)
+        try destination.finalise(arrangement, writingTo: url)
+    }
+
+    /// Add the FSM to the given `MachineWrapper`.
+    ///
+    /// This method will add the FSM to the given
+    /// `MachineWrapper`.
+    /// Optionally, a language binding can be specified,
+    /// that will write the FSM using the given binding.
+    ///
+    /// - Parameters:
+    ///   - arrangement: The `ArrangementWrapper` to add the FSM to.
+    ///   - targetLanguage: The language to use (defaults to the original language).
+    ///   - isSuspensible: Whether the FSM code will allow suspension.
+    public func add(to arrangement: ArrangementWrapper, language targetLanguage: LanguageBinding? = nil, isSuspensible: Bool) throws {
+        guard let destination = (targetLanguage ?? language) as? OutputLanguage else {
+            throw FSMError.unsupportedOutputFormat
+        }
         try destination.addLanguage(to: arrangement)
         try destination.add(boilerplate: boilerplate, to: arrangement)
         try destination.add(windowLayout: windowLayout, to: arrangement)
@@ -151,7 +170,7 @@ public class Machine {
         for stateID in llfsm.states {
             guard let stateName = llfsm.stateMap[stateID]?.name,
                   let boilerplate = stateBoilerplate[stateID] else {
-                fputs("Orphaned state \(stateID) for \(url.lastPathComponent)\n", stderr)
+                fputs("Orphaned state \(stateID) for \(arrangement.machineName)\n", stderr)
                 continue
             }
             try destination.add(stateBoilerplate: boilerplate, to: arrangement, for: stateName)
