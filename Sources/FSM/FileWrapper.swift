@@ -190,7 +190,7 @@ open class FileWrapper: @unchecked Sendable {
     /// - Note: a non-nil `originalContentsURL` tells this method
     /// to avoid unnecessary I/O (e.g. by creating hard links) if possible.
     /// - Parameter originalContentsURL: The original URL of the file wrapper contents (or `nil`).
-    @inlinable
+    @usableFromInline
     func writeDirectory(originalContentsURL: URL? = nil) throws {
         guard let url, case let .directory(children) = content else { throw POSIXError(.EBADF) }
         let fileManager = FileManager.default
@@ -215,7 +215,8 @@ open class FileWrapper: @unchecked Sendable {
     /// - Parameters:
     ///   - url: The URL to write the data to.
     ///   - originalContentsURL: The original URL of the file wrapper contents (or `nil`).
-    @usableFromInline func writeData(to url: URL, originalContentsURL: URL? = nil) throws {
+    @usableFromInline
+    func writeData(to url: URL, originalContentsURL: URL? = nil) throws {
         if let originalContentsURL,
            let originalData = try? Data(contentsOf: originalContentsURL, options: readingOptions.contains(.withoutMapping) ? [] : .mappedIfSafe)
         {
@@ -247,6 +248,17 @@ open class FileWrapper: @unchecked Sendable {
     func writeSymbolicLink() throws {
         guard let url, case let .symbolicLink(destinationURL) = content else { throw POSIXError(.EBADF) }
         try FileManager.default.createSymbolicLink(at: url, withDestinationURL: destinationURL)
+    }
+
+    /// Add a child `FileWrapper`.
+    /// - Parameter child: The child `FileWrapper` to add.
+    /// - Returns: The filename of the added child.
+    @discardableResult @inlinable
+    open func addFileWrapper(_ child: FileWrapper) -> String {
+        guard case var .directory(children) = content else { return "" }
+        let filename = child.filename ?? child.preferredFilename ?? UUID().uuidString
+        children[filename] = child
+        return filename
     }
 }
 
