@@ -6,13 +6,16 @@
 //
 import Foundation
 
+/// Directory file wrapper wrapping an Arrangement of Machines
+public typealias ArrangementWrapper = FileWrapper
+
 /// Directory file wrapper wrapping a Machine
 public typealias MachineWrapper = FileWrapper
 
-extension MachineWrapper {
+extension FileWrapper {
     /// Machine directory name.
     @usableFromInline var directoryName: String {
-        filename ?? preferredFilename ?? FileManager.default.currentDirectoryName
+        preferredFilename ?? filename ?? FileManager.default.currentDirectoryName
     }
 
     /// Machine name without the file extension.

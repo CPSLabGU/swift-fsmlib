@@ -7,25 +7,26 @@
 import Foundation
 
 public extension CBoilerplate {
-    /// Write the machine boilerplate to the given URL.
-    /// - Parameter url: The URL to write the boilerplate to.
+    /// Add the machine boilerplate to the given `MachineWrapper`.
+    /// - Parameter wrapper: The `MachineWrapper` to add the boilerplate to.
     /// - Throws: Any error thrown by the underlying file system.
     @inlinable
-    func write(to url: URL) throws {
-        let name = url.deletingPathExtension().lastPathComponent
-        for (section, fileName) in cBoilerplateFileMappings(for: name) {
-            try url.write(content: sections[section] ?? "", to: fileName)
+    func add(to wrapper: MachineWrapper) {
+        for (section, fileName) in cBoilerplateFileMappings(for: wrapper.directoryName) {
+            let fileWrapper = fileWrapper(named: fileName, from: sections[section])
+            wrapper.addFileWrapper(fileWrapper)
         }
     }
     /// Write the boilerplate for a given state to the given URL.
     /// - Throws: Any error thrown by the underlying file system.
     /// - Parameters:
     ///   - state: The state to write the boilerplate for.
-    ///   - url: The machine URL to write to.
+    ///   - wrapper: The `MachineWrapper` to add the state to.
     @inlinable
-    func write(state: String, to url: URL) throws {
+    func add(state: String, to wrapper: MachineWrapper) {
         for (section, fileName) in cStateBoilerplateFileMappings(for: state) {
-            try url.write(content: sections[section] ?? "", to: fileName)
+            let fileWrapper = fileWrapper(named: fileName, from: sections[section])
+            wrapper.addFileWrapper(fileWrapper)
         }
     }
 }
