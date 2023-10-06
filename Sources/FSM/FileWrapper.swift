@@ -196,7 +196,14 @@ open class FileWrapper: @unchecked Sendable {
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
         for (file, fileWrapper) in children {
-            try fileWrapper.write(to: url.appending(path: file, directoryHint: fileWrapper.isDirectory ? .isDirectory : .notDirectory), options: writingOptions, originalContentsURL: originalContentsURL.map { $0.appending(path: file, directoryHint: fileWrapper.isDirectory ? .isDirectory : .notDirectory) })
+            #if canImport(Darwin)
+                let fileURL = url.appending(path: file, directoryHint: fileWrapper.isDirectory ? .isDirectory : .notDirectory)
+                let originalURL = originalContentsURL.map { $0.appending(path: file, directoryHint: .notDirectory) }
+            #else
+                let fileURL = url.appendingPathComponent(file, isDirectory: fileWrapper.isDirectory)
+                let originalURL = originalContentsURL.map { $0.appendingPathComponent(file, isDirectory: false) }
+            #endif
+            try fileWrapper.write(to: fileURL, options: writingOptions, originalContentsURL: originalURL)
         }
         if writingOptions.contains(.withNameUpdating) {
             filename = url.lastPathComponent
