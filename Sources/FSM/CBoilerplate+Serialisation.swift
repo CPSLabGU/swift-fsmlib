@@ -12,7 +12,7 @@ public extension CBoilerplate {
     /// - Throws: Any error thrown by the underlying file system.
     @inlinable
     func add(to wrapper: MachineWrapper) {
-        for (section, fileName) in cBoilerplateFileMappings(for: wrapper.directoryName) {
+        for (section, fileName) in cBoilerplateFileMappings(for: wrapper.machineName) {
             let fileWrapper = fileWrapper(named: fileName, from: sections[section])
             wrapper.addFileWrapper(fileWrapper)
         }
@@ -86,7 +86,6 @@ func cBoilerplateFileMappings(for machineName: String) -> [CBoilerplate.Boilerpl
 func cStateBoilerplateFileMappings(for state: String) -> [CBoilerplate.BoilerplateFileMapping] {
     [
         (.includes,  "State_\(state)_Includes.h"),
-        (.variables, "State_\(state)_Variables.h"),
         (.variables, "State_\(state)_Variables.h"),
         (.functions, "State_\(state)_Methods.h"),
         (.onEntry,   "State_\(state)_OnEntry.mm"),
