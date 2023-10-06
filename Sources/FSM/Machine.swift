@@ -151,31 +151,31 @@ public class Machine {
     /// that will write the FSM using the given binding.
     ///
     /// - Parameters:
-    ///   - arrangement: The `ArrangementWrapper` to add the FSM to.
+    ///   - machineWrapper: The `MachineWrapper` to add the FSM to.
     ///   - targetLanguage: The language to use (defaults to the original language).
     ///   - isSuspensible: Whether the FSM code will allow suspension.
-    public func add(to arrangement: ArrangementWrapper, language targetLanguage: LanguageBinding? = nil, isSuspensible: Bool) throws {
+    public func add(to machineWrapper: MachineWrapper, language targetLanguage: LanguageBinding? = nil, isSuspensible: Bool) throws {
         guard let destination = (targetLanguage ?? language) as? OutputLanguage else {
             throw FSMError.unsupportedOutputFormat
         }
-        try destination.addLanguage(to: arrangement)
-        try destination.add(boilerplate: boilerplate, to: arrangement)
-        try destination.add(windowLayout: windowLayout, to: arrangement)
-        try destination.add(stateNames: llfsm.states.map { llfsm.stateMap[$0]!.name }, to: arrangement)
-        try destination.addInterface(for: llfsm, to: arrangement, isSuspensible: isSuspensible)
-        try destination.addCode(for: llfsm, to: arrangement, isSuspensible: isSuspensible)
-        try destination.addStateInterface(for: llfsm, to: arrangement, isSuspensible: isSuspensible)
-        try destination.addStateCode(for: llfsm, to: arrangement, isSuspensible: isSuspensible)
-        try destination.addTransitionCode(for: llfsm, to: arrangement, isSuspensible: isSuspensible)
+        try destination.addLanguage(to: machineWrapper)
+        try destination.add(boilerplate: boilerplate, to: machineWrapper)
+        try destination.add(windowLayout: windowLayout, to: machineWrapper)
+        try destination.add(stateNames: llfsm.states.map { llfsm.stateMap[$0]!.name }, to: machineWrapper)
+        try destination.addInterface(for: llfsm, to: machineWrapper, isSuspensible: isSuspensible)
+        try destination.addCode(for: llfsm, to: machineWrapper, isSuspensible: isSuspensible)
+        try destination.addStateInterface(for: llfsm, to: machineWrapper, isSuspensible: isSuspensible)
+        try destination.addStateCode(for: llfsm, to: machineWrapper, isSuspensible: isSuspensible)
+        try destination.addTransitionCode(for: llfsm, to: machineWrapper, isSuspensible: isSuspensible)
         for stateID in llfsm.states {
             guard let stateName = llfsm.stateMap[stateID]?.name,
                   let boilerplate = stateBoilerplate[stateID] else {
-                fputs("Orphaned state \(stateID) for \(arrangement.machineName)\n", stderr)
+                fputs("Orphaned state \(stateID) for \(machineWrapper.machineName)\n", stderr)
                 continue
             }
-            try destination.add(stateBoilerplate: boilerplate, to: arrangement, for: stateName)
+            try destination.add(stateBoilerplate: boilerplate, to: machineWrapper, for: stateName)
         }
-        try destination.addCMakeFile(for: llfsm, boilerplate: boilerplate, to: arrangement, isSuspensible: isSuspensible)
+        try destination.addCMakeFile(for: llfsm, boilerplate: boilerplate, to: machineWrapper, isSuspensible: isSuspensible)
         var layouts = StateNameLayouts()
         for (stateID, layout) in stateLayout {
             guard let state = llfsm.stateMap[stateID] else { continue }
@@ -184,7 +184,7 @@ public class Machine {
             }
             layouts[state.name] = (state: layout, transitions: tl)
         }
-        try destination.add(layout: layouts, to: arrangement)
+        try destination.add(layout: layouts, to: machineWrapper)
     }
 
     /// Write the FSM to the given URL in the given format..
