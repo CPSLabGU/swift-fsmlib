@@ -265,6 +265,7 @@ open class FileWrapper: @unchecked Sendable {
         guard case var .directory(children) = content else { return "" }
         let filename = child.filename ?? child.preferredFilename ?? UUID().uuidString
         children[filename] = child
+        content = .directory(children)
         return filename
     }
 }
