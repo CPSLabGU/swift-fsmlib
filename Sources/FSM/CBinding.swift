@@ -89,15 +89,15 @@ public extension CBinding {
     ///   - boilerplate: The boilerplate to add.
     ///   - wrapper: The `MachineWrapper` to add to.
     @inlinable
-    func write(boilerplate: any Boilerplate, to wrapper: MachineWrapper) throws {
+    func add(boilerplate: any Boilerplate, to wrapper: MachineWrapper) throws {
         CBoilerplate(boilerplate).add(to: wrapper)
     }
     /// Write the given state boilerplate to the given URL
     /// - Parameters:
     ///   - stateBoilerplate: The boilerplate to add.
     ///   - wrapper: The `MachineWrapper` to add to.
-    ///   - stateName: The name of the state to write the boilerplate for.
-    func write(stateBoilerplate: any Boilerplate, to wrapper: MachineWrapper, for stateName: String) throws {
+    ///   - stateName: The name of the state to add the boilerplate for.
+    func add(stateBoilerplate: any Boilerplate, to wrapper: MachineWrapper, for stateName: String) throws {
         CBoilerplate(stateBoilerplate).add(state: stateName, to: wrapper)
     }
     /// Add the interface for the given LLFSM to the given `MachineWrapper`.
@@ -110,7 +110,7 @@ public extension CBinding {
     ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeInterface(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    func addInterface(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
         let name = wrapper.directoryName
         let machineCode = cMachineInterface(for: llfsm, named: name, isSuspensible: isSuspensible)
         let fileWrapper = fileWrapper(named: "Machine_" + name + ".h", from: machineCode)
@@ -126,7 +126,7 @@ public extension CBinding {
     ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeStateInterface(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    func addStateInterface(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
         let name = wrapper.directoryName
         for stateID in fsm.states {
             guard let state = fsm.stateMap[stateID] else {
@@ -148,7 +148,7 @@ public extension CBinding {
     ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeCode(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    func addCode(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
         let name = wrapper.directoryName
         let machineCode = cMachineCode(for: llfsm, named: name, isSuspensible: isSuspensible)
         let fileWrapper = fileWrapper(named: "Machine_" + name + ".c", from: machineCode)
@@ -164,7 +164,7 @@ public extension CBinding {
     ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeStateCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    func addStateCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
         let name = wrapper.directoryName
         for stateID in fsm.states {
             guard let state = fsm.stateMap[stateID] else {
@@ -182,11 +182,11 @@ public extension CBinding {
     /// for the given finite-state machine to the given `MachineWrapper`.
     ///
     /// - Parameters:
-    ///   - llfsm: The finite-state machine to write.
+    ///   - llfsm: The finite-state machine to add.
     ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeTransitionCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    func addTransitionCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
         let name = wrapper.directoryName
         for (i, stateID) in fsm.states.enumerated() {
             guard let state = fsm.stateMap[stateID] else {
@@ -212,12 +212,12 @@ public extension CBinding {
     /// to the given `MachineWrapper`.
     ///
     /// - Parameters:
-    ///   - llfsm: The finite-state machine to write.
+    ///   - llfsm: The finite-state machine to add.
     ///   - boilerplate: The boilerplate containing the include paths.
     ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeCMakeFile(for fsm: LLFSM, boilerplate: any Boilerplate, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    func addCMakeFile(for fsm: LLFSM, boilerplate: any Boilerplate, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
         let name = wrapper.directoryName
         let cmakeFragment = cMakeFragment(for: fsm, named: name, isSuspensible: isSuspensible)
         let fragmentWrapper = fileWrapper(named: "project.cmake", from: cmakeFragment)
@@ -240,7 +240,7 @@ public extension CBinding {
     ///   - names: The names of the FSM instances.
     ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func writeArrangementInterface(for instances: [Instance], to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    func addArrangementInterface(for instances: [Instance], to wrapper: MachineWrapper, isSuspensible: Bool) throws {
         let name = wrapper.directoryName
         let commonInterface = cArrangementMachineInterface(for: instances, named: name, isSuspensible: isSuspensible)
         let commonWrapper = fileWrapper(named: "Machine_Common.h", from: commonInterface)
@@ -254,14 +254,14 @@ public extension CBinding {
     }
     /// Add the arrangment implementation to the given .
     ///
-    /// This method writes the arrangement code
+    /// This method adds the arrangement code
     /// for the given finite-state machine instances to the given URL.
     ///
     /// - Parameters:
     ///   - instances: The FSM instances.
     ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func writeArrangementCode(for instances: [Instance], to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    func addArrangementCode(for instances: [Instance], to wrapper: MachineWrapper, isSuspensible: Bool) throws {
         let name = wrapper.directoryName
         let commonCode = cArrangementMachineCode(for: instances, named: name, isSuspensible: isSuspensible)
         let commonWrapper = fileWrapper(named: "Machine_Common.c", from: commonCode)
@@ -286,7 +286,7 @@ public extension CBinding {
     ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func writeArrangementCMakeFile(for instances: [Instance], to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    func addArrangementCMakeFile(for instances: [Instance], to wrapper: MachineWrapper, isSuspensible: Bool) throws {
         let name = wrapper.directoryName
         let cmakeFragment = cArrangementCMakeFragment(for: instances, named: name, isSuspensible: isSuspensible)
         let fragmentWrapper = fileWrapper(named: "project.cmake", from: cmakeFragment)

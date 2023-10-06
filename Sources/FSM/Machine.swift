@@ -139,24 +139,24 @@ public class Machine {
         }
         let arrangement = try destination.create(at: url)
         defer { try? destination.finalise(arrangement, writingTo: url) }
-        try destination.writeLanguage(to: arrangement)
-        try destination.write(boilerplate: boilerplate, to: arrangement)
-        try destination.write(windowLayout: windowLayout, to: arrangement)
-        try destination.write(stateNames: llfsm.states.map { llfsm.stateMap[$0]!.name }, to: arrangement)
-        try destination.writeInterface(for: llfsm, to: arrangement, isSuspensible: isSuspensible)
-        try destination.writeCode(for: llfsm, to: arrangement, isSuspensible: isSuspensible)
-        try destination.writeStateInterface(for: llfsm, to: arrangement, isSuspensible: isSuspensible)
-        try destination.writeStateCode(for: llfsm, to: arrangement, isSuspensible: isSuspensible)
-        try destination.writeTransitionCode(for: llfsm, to: arrangement, isSuspensible: isSuspensible)
+        try destination.addLanguage(to: arrangement)
+        try destination.add(boilerplate: boilerplate, to: arrangement)
+        try destination.add(windowLayout: windowLayout, to: arrangement)
+        try destination.add(stateNames: llfsm.states.map { llfsm.stateMap[$0]!.name }, to: arrangement)
+        try destination.addInterface(for: llfsm, to: arrangement, isSuspensible: isSuspensible)
+        try destination.addCode(for: llfsm, to: arrangement, isSuspensible: isSuspensible)
+        try destination.addStateInterface(for: llfsm, to: arrangement, isSuspensible: isSuspensible)
+        try destination.addStateCode(for: llfsm, to: arrangement, isSuspensible: isSuspensible)
+        try destination.addTransitionCode(for: llfsm, to: arrangement, isSuspensible: isSuspensible)
         for stateID in llfsm.states {
             guard let stateName = llfsm.stateMap[stateID]?.name,
                   let boilerplate = stateBoilerplate[stateID] else {
                 fputs("Orphaned state \(stateID) for \(url.lastPathComponent)\n", stderr)
                 continue
             }
-            try destination.write(stateBoilerplate: boilerplate, to: arrangement, for: stateName)
+            try destination.add(stateBoilerplate: boilerplate, to: arrangement, for: stateName)
         }
-        try destination.writeCMakeFile(for: llfsm, boilerplate: boilerplate, to: arrangement, isSuspensible: isSuspensible)
+        try destination.addCMakeFile(for: llfsm, boilerplate: boilerplate, to: arrangement, isSuspensible: isSuspensible)
         var layouts = StateNameLayouts()
         for (stateID, layout) in stateLayout {
             guard let state = llfsm.stateMap[stateID] else { continue }
@@ -165,7 +165,7 @@ public class Machine {
             }
             layouts[state.name] = (state: layout, transitions: tl)
         }
-        try destination.write(layout: layouts, to: arrangement)
+        try destination.add(layout: layouts, to: arrangement)
     }
 
     /// Write the FSM to the given URL in the given format..

@@ -72,10 +72,10 @@ public struct Arrangement {
         }
         let machineFiles = instances.map { $0.url.lastPathComponent }
         let arrangement = try destination.createArrangement(at: url)
-        try destination.writeLanguage(to: arrangement)
-        try destination.writeArrangementInterface(for: instances, to: arrangement, isSuspensible: isSuspensible)
-        try destination.writeArrangementCode(for: instances, to: arrangement, isSuspensible: isSuspensible)
-        try destination.writeArrangementCMakeFile(for: instances, to: arrangement, isSuspensible: isSuspensible)
+        try destination.addLanguage(to: arrangement)
+        try destination.addArrangementInterface(for: instances, to: arrangement, isSuspensible: isSuspensible)
+        try destination.addArrangementCode(for: instances, to: arrangement, isSuspensible: isSuspensible)
+        try destination.addArrangementCMakeFile(for: instances, to: arrangement, isSuspensible: isSuspensible)
         defer { try? destination.finalise(arrangement, writingTo: url) }
         return machineFiles.map {
             let machinePath = $0.hasSuffix(".machine") ? $0 : ($0 + ".machine")
