@@ -8,7 +8,14 @@
             ],
             "name": "Debug fsmconvert",
             "program": "${workspaceFolder:swift-fsmlib}/.build/debug/fsmconvert",
-            "args": [],
+            "args": [
+                "-f",
+                "c",
+                "-v",
+                "-o",
+                "/tmp/swift-fsmlib/CounterC.machine",
+                "examples/Counter.machine"
+            ],
             "cwd": "${workspaceFolder:swift-fsmlib}",
             "preLaunchTask": "swift: Build Debug fsmconvert"
         },
