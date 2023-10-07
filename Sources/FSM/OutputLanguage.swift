@@ -13,7 +13,7 @@ public protocol OutputLanguage: LanguageBinding {
     ///
     /// This is used to create the file wrapper for the
     /// given URL in preparation for writing the FSM.
-    func create(at url: URL) throws -> MachineWrapper
+    func createWrapper(at url: URL) throws -> MachineWrapper
     /// Create an arrangement at the given URL.
     ///
     /// This is used to create the file wrapper for the
@@ -21,7 +21,7 @@ public protocol OutputLanguage: LanguageBinding {
     /// arrangement.
     ///
     /// - Parameter url: The URL to create the file wrapper at.
-    func createArrangement(at url: URL) throws -> ArrangementWrapper
+    func createArrangementWrapper(at url: URL) throws -> ArrangementWrapper
     /// Finalise writing.
     ///
     /// - Parameters:
@@ -160,7 +160,7 @@ public extension OutputLanguage {
     ///
     /// - Parameter url: The URL to create the file wrapper at.
     @inlinable
-    func create(at url: URL) throws -> MachineWrapper {
+    func createWrapper(at url: URL) throws -> MachineWrapper {
         let wrapper = MachineWrapper(directoryWithFileWrappers: [:])
         wrapper.preferredFilename = url.lastPathComponent
         return wrapper
@@ -173,8 +173,8 @@ public extension OutputLanguage {
     ///
     /// - Parameter url: The URL to create the file wrapper at.
     @inlinable
-    func createArrangement(at url: URL) throws -> ArrangementWrapper {
-        try create(at: url)
+    func createArrangementWrapper(at url: URL) throws -> ArrangementWrapper {
+        try createWrapper(at: url)
     }
     /// Finalise writing.
     ///

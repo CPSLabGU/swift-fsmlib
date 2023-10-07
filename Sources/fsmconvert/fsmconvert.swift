@@ -59,8 +59,8 @@ struct FSMConvert: AsyncParsableCommand {
         }
         if arrangement || fsms.count > 1 {
             let arrangement = Arrangement(machines: fsms)
-            let wrapper = try arrangement.wrapper(for: outputURL, format: outputFormat)
-            let fsmNames: [String] = try arrangement.add(to: wrapper, in: outputFormat, machineNames: names, isSuspensible: !nonSuspensible)
+            let wrapper = try outputLanguage.createArrangementWrapper(at: outputURL)
+            let fsmNames: [String] = try arrangement.add(to: wrapper, language: outputLanguage, machineNames: names, isSuspensible: !nonSuspensible)
             try zip(fsms, fsmNames).forEach {
                 let machine = $0.0
                 let machineName = $0.1
