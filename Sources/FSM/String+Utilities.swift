@@ -3,7 +3,7 @@
 //  FSMLib
 //
 //  Created by Rene Hexel on 29/9/16.
-//
+//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
 //
 extension StringProtocol {
     /// Convenience initialiser concatenating an array of lines.
@@ -22,6 +22,12 @@ extension StringProtocol {
     /// The string with whitespace characters trimmed
     @usableFromInline var trimmed: String {
         trimmingCharacters(in: .whitespaces)
+    }
+
+    /// The string with the file extension removed
+    @usableFromInline var sansExtension: SubSequence {
+        guard let dot = lastIndex(of: ".") else { return self[...] }
+        return self[..<dot]
     }
 }
 

@@ -25,13 +25,12 @@ public struct Arrangement {
     ///
     /// - Parameters:
     ///   - url: The output URL for the arrangement.
-    ///   - inputURLs: The original URLs associated with the FSMs.
+    ///   - machineNames: The names associated with the FSMs.
     ///   - format: The format of the output URL.
     ///   - isSuspensible: Whether the output FSMs should be suspensible.
-    /// - Returns: The URLs for writing the output FSMs.
     @inlinable
-    public func write(to url: URL, inputURLs: [URL], format: Format? = nil, isSuspensible: Bool = true) throws -> [URL] {
-        try write(to: url, inputURLs: inputURLs, language: format.flatMap { formatToLanguageBinding[$0] }, isSuspensible: isSuspensible)
+    public func wrapper(for url: URL, format: Format?) throws -> ArrangementWrapper {
+        try wrapper(for: url, language: format.flatMap { formatToLanguageBinding[$0] })
     }
 
     /// Write the arrangement to the given URL.
@@ -41,49 +40,94 @@ public struct Arrangement {
     ///
     /// - Parameters:
     ///   - url: The output URL for the arrangement.
-    ///   - inputURLs: The original URLs associated with the FSMs.
+    ///   - machineNames: The names associated with the FSMs.
     ///   - language: The language to use (defaults to the original language of the first machine).
     ///   - isSuspensible: Whether the output FSMs should be suspensible.
-    /// - Returns: The URLs for writing the output FSMs.
     @inlinable
-    public func write(to url: URL, inputURLs: [URL], language: LanguageBinding? = nil, isSuspensible: Bool = true) throws -> [URL] {
+    public func wrapper(for url: URL, language: LanguageBinding? = nil) throws -> ArrangementWrapper {
         guard let destination = (language ?? machines.first?.language) as? OutputLanguage else {
             throw FSMError.unsupportedOutputFormat
         }
-        var fsmMappings = [ String : (URL, Machine) ]()
-        let instances = zip(machines, inputURLs).map {
+        let wrapper = try destination.createArrangement(at: url)
+        return wrapper
+    }
+
+    /// Add the arrangement to the given `ArrangementWrapper`.
+    ///
+    /// This method creates a file wrapper for an arrangement
+    /// of FSMs and writes it to the given `ArrangementWrapper`.
+    ///
+    /// - Parameters:
+    ///   - wrapper: The output `ArrangementWrapper` to add to.
+    ///   - format: The arrangement format to use (defaults to the original language of the first machine).
+    ///   - machineNames: The names associated with the FSMs.
+    ///   - isSuspensible: Whether the output FSMs should be suspensible.
+    /// - Returns: The filenames of the machines for adding to the arrangement.
+    @inlinable
+    public func add(to wrapper: ArrangementWrapper, in format: Format?, machineNames: [String], isSuspensible: Bool = true) throws -> [Filename] {
+        try addArrangement(for: format.flatMap {
+            formatToLanguageBinding[$0]
+        }, to: wrapper, machineNames: machineNames, isSuspensible: isSuspensible)
+    }
+
+    /// Add the arrangement to the given `ArrangementWrapper`.
+    ///
+    /// This method creates a file wrapper for an arrangement
+    /// of FSMs and writes it to the given `ArrangementWrapper`.
+    ///
+    /// - Parameters:
+    ///   - language: The language to use (defaults to the original language of the first machine).
+    ///   - wrapper: The output `ArrangementWrapper` to add to.
+    ///   - machineNames: The names associated with the FSMs.
+    ///   - isSuspensible: Whether the output FSMs should be suspensible.
+    /// - Returns: The filenames of the machines for adding to the arrangement.
+    @inlinable
+    public func addArrangement(for language: LanguageBinding? = nil, to wrapper: ArrangementWrapper, machineNames: [String], isSuspensible: Bool = true) throws -> [Filename] {
+        guard let destination = (language ?? machines.first?.language) as? OutputLanguage else {
+            throw FSMError.unsupportedOutputFormat
+        }
+        return try addArrangement(outputFormat: destination, to: wrapper, machineNames: machineNames)
+    }
+
+    /// Add the arrangement to the given `ArrangementWrapper`.
+    ///
+    /// This method creates a file wrapper for an arrangement
+    /// of FSMs and writes it to the given `ArrangementWrapper`.
+    ///
+    /// - Parameters:
+    ///   - outputFormat: The output language format to use.
+    ///   - wrapper: The output `ArrangementWrapper` to add to.
+    ///   - machineNames: The names associated with the FSMs.
+    ///   - isSuspensible: Whether the output FSMs should be suspensible.
+    /// - Returns: The filenames of the machines for adding to the arrangement.
+    @inlinable
+    public func addArrangement(outputFormat: OutputLanguage, to wrapper: ArrangementWrapper, machineNames: [String], isSuspensible: Bool = true) throws -> [Filename] {
+        var fsmMappings = [ String : (String, Machine) ]()
+        let instances = zip(machines, machineNames).map {
             let machine = $0.0
-            let url = $0.1
-            let name = url.deletingPathExtension().lastPathComponent
+            let name = $0.1
             var j = 1
             var uniqueName = name
-            var resolvedURL = url
+            var resolvedName = name
             var resolvedMachine = machine
-            while let (existingURL, existingMachine) = fsmMappings[uniqueName] {
+            while let (existingName, existingMachine) = fsmMappings[uniqueName] {
                 defer { j += 1 }
                 uniqueName = "\(name)_\(j)"
-                if url == existingURL { // avoid duplication
+                if name == existingName { // avoid duplication
                     resolvedMachine = existingMachine
-                    resolvedURL = existingURL
+                    resolvedName = existingName
                 }
             }
-            fsmMappings[uniqueName] = (resolvedURL, resolvedMachine)
-            return Instance(name: uniqueName, url: resolvedURL, fsm: resolvedMachine.llfsm)
+            fsmMappings[uniqueName] = (resolvedName, resolvedMachine)
+            return Instance(fileName: uniqueName, typeFile: resolvedName, fsm: resolvedMachine.llfsm)
         }
-        let machineFiles = instances.map { $0.url.lastPathComponent }
-        let arrangement = try destination.createArrangement(at: url)
-        try destination.addLanguage(to: arrangement)
-        try destination.addArrangementInterface(for: instances, to: arrangement, isSuspensible: isSuspensible)
-        try destination.addArrangementCode(for: instances, to: arrangement, isSuspensible: isSuspensible)
-        try destination.addArrangementCMakeFile(for: instances, to: arrangement, isSuspensible: isSuspensible)
-        defer { try? destination.finalise(arrangement, writingTo: url) }
+        let machineFiles = instances.map(\.typeFile)
+        try outputFormat.addLanguage(to: wrapper)
+        try outputFormat.addArrangementInterface(for: instances, to: wrapper, isSuspensible: isSuspensible)
+        try outputFormat.addArrangementCode(for: instances, to: wrapper, isSuspensible: isSuspensible)
+        try outputFormat.addArrangementCMakeFile(for: instances, to: wrapper, isSuspensible: isSuspensible)
         return machineFiles.map {
-            let machinePath = $0.hasSuffix(".machine") ? $0 : ($0 + ".machine")
-#if canImport(Darwin)
-            return url.appending(path: machinePath)
-#else
-            return url.appendingPathComponent(machinePath)
-#endif
+            $0.hasSuffix(".machine") ? $0 : ($0 + ".machine")
         }
     }
 }

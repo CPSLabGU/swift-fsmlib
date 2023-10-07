@@ -41,7 +41,7 @@ public func cArrangementInterface(for instances: [Instance], named name: String,
                 "struct"
                 Code.bracedBlock {
                     Code.forEach(instances) { instance in
-                        let machineName = instance.url.deletingPathExtension().lastPathComponent
+                        let machineName = instance.typeName
                         "/// An instance of the \(machineName) LLFSM."
                         "struct Machine_\(machineName) *fsm_\(instance.name.lowercased());"
                     }
@@ -82,7 +82,7 @@ public func cArrangementCode(for instances: [Instance], named name: String, isSu
     #include \"Arrangement_\(name).h\"
 
     """ + Code.forEach(instances) { instance in
-        "#include \"" + instance.name + ".machine/Machine_" + instance.name + ".h\""
+        "#include \"" + instance.fileName + ".machine/Machine_" + instance.fileName + ".h\""
     } + """
 
     #pragma clang diagnostic push
@@ -101,7 +101,7 @@ public func cArrangementCode(for instances: [Instance], named name: String, isSu
         Code.bracedBlock {
             "arrangement->number_of_instances = ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES;"
             Code.forEach(instances) { instance in
-                let lowerInstance = instance.name.lowercased()
+                let lowerInstance = instance.fileName.lowercased()
                 "fsm_" + lowerInstance + "_init(arrangement->fsm_" + lowerInstance + ");"
             }
         }
@@ -113,7 +113,7 @@ public func cArrangementCode(for instances: [Instance], named name: String, isSu
         Code.bracedBlock {
             "return arrangement->number_of_instances == ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES &&"
             Code.enumerating(array: instances) { (i, instance) in
-                let lowerInstance = instance.name.lowercased()
+                let lowerInstance = instance.fileName.lowercased()
                 "    fsm_" + lowerInstance + "_validate(arrangement->fsm_" + lowerInstance + (i < instances.count - 1 ? ") &&" : ");")
             }
         }
@@ -159,7 +159,7 @@ public func cStaticArrangementInterface(for instances: [Instance], named name: S
         "struct LLFSMArrangement;"
         ""
         Code.forEach(instances) { instance in
-            let machineName = instance.url.deletingPathExtension().lastPathComponent
+            let machineName = instance.typeName
             "/// Static instantiation of a \(machineName) LLFSM."
             "extern struct Machine_\(machineName) static_fsm_\(instance.name.lowercased());"
             Code.forEach(instance.fsm.states.compactMap {
@@ -212,7 +212,7 @@ public func cStaticArrangementCode(for instances: [Instance], named name: String
         "#include <stdbool.h>"
         ""
         Code.forEach(instances) { instance in
-            let machineName = instance.url.deletingPathExtension().lastPathComponent
+            let machineName = instance.typeName
             let lowerMachine = machineName.lowercased()
             "/// Static instantiation of a \(machineName) LLFSM."
             "struct Machine_\(machineName) static_fsm_\(instance.name.lowercased()) = "
@@ -231,7 +231,7 @@ public func cStaticArrangementCode(for instances: [Instance], named name: String
                         instance.fsm.stateMap[$0]
                     }) { (i, state) in
                         "(struct LLFSMState *) &static_\(instance.name.lowercased())_state_\(state.name)" +
-                            (i == instance.fsm.states.count - 1 ? "" : ",")
+                        (i == instance.fsm.states.count - 1 ? "" : ",")
                     }
                 }
             } + ";"
@@ -262,7 +262,7 @@ public func cStaticArrangementCode(for instances: [Instance], named name: String
                 Code.enumerating(array: instances) { (i, instance) in
                     let lowerInstance = instance.name.lowercased()
                     ".fsm_\(lowerInstance) = &static_fsm_\(lowerInstance)" +
-                        (i < instances.count - 1 ? "," : "")
+                    (i < instances.count - 1 ? "," : "")
                 }
             } + ","
         } + ";"
@@ -368,11 +368,11 @@ public func cArrangementMachineInterface(for instances: [Instance], named name: 
             }
         } + ";"
         "#endif // STRUCT_LLFSMSTATE_"
-//        "/// Validate an LLFSM arrangement."
-//        "///"
-//        "/// - Parameter arrangement: The machine arrangement to validate."
-//        "bool fsm_arrangement_validate(struct LLFSMArrangement * const arrangement);"
-//        ""
+        //        "/// Validate an LLFSM arrangement."
+        //        "///"
+        //        "/// - Parameter arrangement: The machine arrangement to validate."
+        //        "bool fsm_arrangement_validate(struct LLFSMArrangement * const arrangement);"
+        //        ""
         "/// Run a ringlet of a C-language LLFSM Arrangement."
         "///"
         "/// This runs one ringlet of the machines of the given LLFSM arrangement."
@@ -472,20 +472,20 @@ public func cArrangementMachineCode(for instances: [Instance], named name: Strin
     #endif
 
     """ + .block {
-//        "/// Validate an LLFSM arrangement."
-//        "///"
-//        "/// - Parameter arrangement: The machine arrangement to validate."
-//        "bool fsm_arrangement_validate(struct LLFSMArrangement * const arrangement)"
-//        Code.bracedBlock {
-//            "const uintptr_t n = arrangement->number_of_instances;"
-//            "unsigned i;"
-//            "for (i = 0; i < n; i++)"
-//            Code.bracedBlock {
-//                "struct LLFSMachine * const machine = arrangement->machines[i];"
-//                "llfsm_validate(machine);"
-//            }
-//        }
-//        ""
+        //        "/// Validate an LLFSM arrangement."
+        //        "///"
+        //        "/// - Parameter arrangement: The machine arrangement to validate."
+        //        "bool fsm_arrangement_validate(struct LLFSMArrangement * const arrangement)"
+        //        Code.bracedBlock {
+        //            "const uintptr_t n = arrangement->number_of_instances;"
+        //            "unsigned i;"
+        //            "for (i = 0; i < n; i++)"
+        //            Code.bracedBlock {
+        //                "struct LLFSMachine * const machine = arrangement->machines[i];"
+        //                "llfsm_validate(machine);"
+        //            }
+        //        }
+        //        ""
         "/// Run a ringlet of a C-language LLFSM Arrangement."
         "///"
         "/// This runs one ringlet of the machines of the given LLFSM arrangement."
@@ -704,6 +704,7 @@ public func cStaticArrangementMainCode(for instances: [Instance], named name: St
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The CMakeLists.txt code.
 public func cArrangementCMakeFragment(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
+    let directories = Array(Set(instances.map(\.fileName)))
     return .block {
         "# Sources for the \(name) LLFSM arrangement."
         "set(\(name)_ARRANGEMENT_SOURCES"
@@ -722,7 +723,7 @@ public func cArrangementCMakeFragment(for instances: [Instance], named name: Str
         "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
         "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
         "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
-        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
+        Code.forEach(directories) { directory in
             "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/" + directory + "/include>"
             "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/" + directory + ">"
         }
@@ -730,7 +731,7 @@ public func cArrangementCMakeFragment(for instances: [Instance], named name: Str
         ""
         "# Subdirectories for building \(name)."
         "set(\(name)_ARRANGEMENT_SUBDIRS"
-        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
+        Code.forEach(directories) { directory in
             "    \"" + directory + "\""
         }
         ")"
@@ -738,7 +739,7 @@ public func cArrangementCMakeFragment(for instances: [Instance], named name: Str
         "# Build directories for \(name)."
         "set(\(name)_ARRANGEMENT_BUILD_DIRS"
         "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
-        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
+        Code.forEach(directories) { directory in
             "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/" + directory + ">"
         }
         ")"
@@ -747,15 +748,15 @@ public func cArrangementCMakeFragment(for instances: [Instance], named name: Str
         "set(\(name)_ARRANGEMENT_INSTALL_INCDIRS"
         "  $<INSTALL_INTERFACE:include/fsms/\(name).arrangement> "
         "  $<INSTALL_INTERFACE:fsms/\(name).arrangement> "
-        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
+        Code.forEach(directories) { directory in
             "  $<INSTALL_INTERFACE:include/fsms/\(name).arrangement/" + directory + ">"
             "  $<INSTALL_INTERFACE:fsms/\(name).arrangement/" + directory + ">"
         }
         ")"
         ""
-        Code.forEach(Array(Set(instances.map(\.url)))) { url in
-            let directory = url.lastPathComponent
-            let fsm = url.deletingPathExtension().lastPathComponent
+        Code.forEach(instances) { instance in
+            let directory = instance.fileName
+            let fsm = instance.name
             "include(${CMAKE_CURRENT_LIST_DIR}/" + directory + "/project.cmake)"
             "foreach(src ${\(fsm)_FSM_SOURCES})"
             "  list(APPEND \(name)_ARRANGEMENT_FSMS \"\(fsm)\")"
@@ -800,7 +801,7 @@ public func cArrangementCMakeLists(for instances: [Instance], named name: String
         "  ${\(name)_ARRANGEMENT_INCDIRS}"
         "  ${\(name)_ARRANGEMENT_INSTALL_INCDIRS}"
         ")"
-        Code.forEach(Array(Set(instances.map(\.url.lastPathComponent)))) { directory in
+        Code.forEach(Array(Set(instances.map(\.fileName)))) { directory in
             "add_subdirectory(" + directory + ")"
         }
         "target_link_libraries(run_\(name)_arrangement"

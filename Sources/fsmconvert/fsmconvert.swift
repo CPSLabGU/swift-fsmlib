@@ -48,20 +48,32 @@ struct FSMConvert: AsyncParsableCommand {
             return (fsm, url)
         }
         let fsms = fsmURLs.map { $0.0 }
-        let urls = fsmURLs.map { $0.1 }
+        let names = fsmURLs.map { $0.1.lastPathComponent }
         if verbose {
             print("\(fsms.count) FSMs with \(fsms.reduce(0) { $0 + $1.llfsm.states.count }) states and \(fsms.reduce(0) { $0 + $1.llfsm.transitions.count }) transitions\n")
         }
         let outputURL = URL(fileURLWithPath: output)
+        let outputFormat = format.isEmpty ? nil : Format(rawValue: format)
+        guard let outputLanguage = outputLanguage(for: outputFormat, default: fsms.first?.language) else {
+            FSMConvert.exit(withError: "No output language for format '\(format)'\n")
+        }
         if arrangement || fsms.count > 1 {
             let arrangement = Arrangement(machines: fsms)
-            let fsmURLs: [URL] = try arrangement.write(to: outputURL, inputURLs: urls, format: format.isEmpty ? nil : Format(rawValue: format), isSuspensible: !nonSuspensible)
-            try zip(fsms, fsmURLs).forEach {
-                try $0.0.write(to: $0.1, format: format.isEmpty ? nil : Format(rawValue: format), isSuspensible: !nonSuspensible)
+            let wrapper = try arrangement.wrapper(for: outputURL, format: outputFormat)
+            let fsmNames: [String] = try arrangement.add(to: wrapper, in: outputFormat, machineNames: names, isSuspensible: !nonSuspensible)
+            try zip(fsms, fsmNames).forEach {
+                let machine = $0.0
+                let machineName = $0.1
+                let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:])
+                machineWrapper.preferredFilename = machineName
+                wrapper.addFileWrapper(machineWrapper)
+                try machine.add(to: machineWrapper, language: outputLanguage, isSuspensible: !nonSuspensible)
             }
+            try outputLanguage.finalise(wrapper, writingTo: outputURL)
         } else {
-            try fsms.first?.write(to: outputURL, format: format.isEmpty ? nil : Format(rawValue: format), isSuspensible: !nonSuspensible)
+            try fsms.first?.write(to: outputURL, language: outputLanguage, isSuspensible: !nonSuspensible)
         }
     }
 }
 
+extension String: Error {}

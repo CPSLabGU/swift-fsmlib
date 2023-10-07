@@ -37,7 +37,21 @@ public enum Format: String, RawRepresentable, Hashable, CaseIterable, Codable {
     .objC: ObjCPPBinding(),
     .objCX: ObjCPPBinding(),
     .objCPP: ObjCPPBinding(),
-//    .swift: SwiftBinding(),
-//    .verilog: VerilogBinding(),
-//    .vhdl: VHDLBinding(),
+    //    .swift: SwiftBinding(),
+    //    .verilog: VerilogBinding(),
+    //    .vhdl: VHDLBinding(),
 ]
+
+/// Return the output language associated with the given format.
+/// 
+/// - Parameter format: T
+/// Return the output language associated with the given format.
+///
+/// - Parameters:
+///   - format: The desired language format.
+///   - default: The default format if `format` is `nil`
+/// - Returns: The output language associated with the given format, or `nil` if there is none.
+@inlinable
+public func outputLanguage(for format: Format?, default: LanguageBinding? = nil) -> OutputLanguage? {
+    (format.flatMap { formatToLanguageBinding[$0] } ?? `default`) as? OutputLanguage
+}
