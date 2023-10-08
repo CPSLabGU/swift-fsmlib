@@ -30,24 +30,25 @@ public struct Arrangement {
     /// - Returns: The filenames of the machines for adding to the arrangement.
     @inlinable
     public func add(to wrapper: ArrangementWrapper, language: OutputLanguage, machineNames: [String], isSuspensible: Bool = true) throws -> [Filename] {
-        var fsmMappings = [ String : (String, Machine) ]()
+        var instanceMappings = [ String : (String, Machine) ]()
         let instances = zip(machines, machineNames).map {
             let machine = $0.0
-            let name = $0.1
+            let fileName = $0.1
+            let instanceName = String(fileName.sansExtension)
             var j = 1
-            var uniqueName = name
-            var resolvedName = name
+            var uniqueName = instanceName
+            var resolvedFile = fileName
             var resolvedMachine = machine
-            while let (existingName, existingMachine) = fsmMappings[uniqueName] {
+            while let (existingName, existingMachine) = instanceMappings[uniqueName] {
                 defer { j += 1 }
-                uniqueName = "\(name)_\(j)"
-                if name == existingName { // avoid duplication
+                uniqueName = "\(instanceName)_\(j)"
+                if fileName == existingName { // avoid duplication
                     resolvedMachine = existingMachine
-                    resolvedName = existingName
+                    resolvedFile = existingName
                 }
             }
-            fsmMappings[uniqueName] = (resolvedName, resolvedMachine)
-            return Instance(fileName: uniqueName, typeFile: resolvedName, fsm: resolvedMachine.llfsm)
+            instanceMappings[uniqueName] = (resolvedFile, resolvedMachine)
+            return Instance(name: uniqueName, typeFile: resolvedFile, fsm: resolvedMachine.llfsm)
         }
         let machineFiles = instances.map(\.typeFile)
         try language.addLanguage(to: wrapper)

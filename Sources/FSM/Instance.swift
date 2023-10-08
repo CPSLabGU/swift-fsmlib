@@ -11,7 +11,7 @@ public struct Instance: Equatable, Hashable {
     /// The name of the machine instance.
     ///
     /// This name needs to be unique within an arrangement.
-    public let fileName: Filename
+    public let name: String
     /// The name of the machine.
     ///
     /// This represents the typename of the machine.
@@ -26,21 +26,14 @@ public struct Instance: Equatable, Hashable {
     ///   - typeFile: The file name of the machine (type).
     ///   - fsm: The underlying finite-state machine.
     @inlinable
-    public init(fileName: Filename, typeFile: String, fsm: LLFSM) {
-        self.fileName = fileName
+    public init(name: String, typeFile: String, fsm: LLFSM) {
+        self.name = name
         self.typeFile = typeFile
         self.fsm = fsm
     }
 }
 
 public extension Instance {
-    /// Return the name of the instance.
-    ///
-    /// This returns the name of the instance
-    /// without the trailing file extension.
-    @inlinable var name: Substring {
-        fileName.sansExtension
-    }
     /// Return the type name of the machine.
     ///
     /// This returns the name of the type

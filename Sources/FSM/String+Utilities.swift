@@ -29,6 +29,12 @@ extension StringProtocol {
         guard let dot = lastIndex(of: ".") else { return self[...] }
         return self[..<dot]
     }
+
+    /// The file extension from the string
+    @usableFromInline var dottedExtension: SubSequence {
+        guard let dot = lastIndex(of: ".") else { return self[...] }
+        return self[dot...]
+    }
 }
 
 extension String {

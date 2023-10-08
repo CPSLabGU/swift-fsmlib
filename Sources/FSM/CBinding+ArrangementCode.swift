@@ -72,6 +72,7 @@ public func cArrangementInterface(for instances: [Instance], named name: String,
 public func cArrangementCode(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
     let upperName = name.uppercased()
     let lowerName = name.lowercased()
+    let machineTypes = Array(Set(instances.map(\.typeName)))
     return """
     //
     // Arrangement_\(name).c
@@ -81,8 +82,8 @@ public func cArrangementCode(for instances: [Instance], named name: String, isSu
     #include \"Machine_Common.h\"
     #include \"Arrangement_\(name).h\"
 
-    """ + Code.forEach(instances) { instance in
-        "#include \"" + instance.fileName + ".machine/Machine_" + instance.fileName + ".h\""
+    """ + Code.forEach(machineTypes) { machine in
+        "#include \"" + machine + ".machine/Machine_" + machine + ".h\""
     } + """
 
     #pragma clang diagnostic push
@@ -101,8 +102,9 @@ public func cArrangementCode(for instances: [Instance], named name: String, isSu
         Code.bracedBlock {
             "arrangement->number_of_instances = ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES;"
             Code.forEach(instances) { instance in
-                let lowerInstance = instance.fileName.lowercased()
-                "fsm_" + lowerInstance + "_init(arrangement->fsm_" + lowerInstance + ");"
+                let lowerInstance = instance.name.lowercased()
+                let lowerType = instance.typeName.lowercased()
+                "fsm_" + lowerType + "_init(arrangement->fsm_" + lowerInstance + ");"
             }
         }
         ""
@@ -113,8 +115,9 @@ public func cArrangementCode(for instances: [Instance], named name: String, isSu
         Code.bracedBlock {
             "return arrangement->number_of_instances == ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES &&"
             Code.enumerating(array: instances) { (i, instance) in
-                let lowerInstance = instance.fileName.lowercased()
-                "    fsm_" + lowerInstance + "_validate(arrangement->fsm_" + lowerInstance + (i < instances.count - 1 ? ") &&" : ");")
+                let lowerInstance = instance.name.lowercased()
+                let lowerType = instance.typeName.lowercased()
+                "    fsm_" + lowerType + "_validate(arrangement->fsm_" + lowerInstance + (i < instances.count - 1 ? ") &&" : ");")
             }
         }
         ""
@@ -131,6 +134,7 @@ public func cArrangementCode(for instances: [Instance], named name: String, isSu
 public func cStaticArrangementInterface(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
     let upperName = name.uppercased()
     let lowerName = name.lowercased()
+    let machineTypes = Array(Set(instances.map(\.typeName)))
     return """
     //
     // Static_Arrangement_\(name).h
@@ -140,8 +144,8 @@ public func cStaticArrangementInterface(for instances: [Instance], named name: S
 
     """ + .includeFile(named: "LLFSM_STATIC_ARRANGEMENT_" + upperName + "_H") {
         "#include \"Arrangement_" + name + ".h\""
-        Code.forEach(instances) { instance in
-            "#include \"" + instance.name + ".machine/Machine_" + instance.name + ".h\""
+        Code.forEach(machineTypes) { machine in
+            "#include \"" + machine + ".machine/Machine_" + machine + ".h\""
         }
         ""
         "#define STATIC_ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES \(instances.count)"
@@ -160,13 +164,14 @@ public func cStaticArrangementInterface(for instances: [Instance], named name: S
         ""
         Code.forEach(instances) { instance in
             let machineName = instance.typeName
+            let lowerInstance = instance.name.lowercased()
             "/// Static instantiation of a \(machineName) LLFSM."
-            "extern struct Machine_\(machineName) static_fsm_\(instance.name.lowercased());"
+            "extern struct Machine_" + machineName + " static_fsm_" + lowerInstance + ";"
             Code.forEach(instance.fsm.states.compactMap {
                 instance.fsm.stateMap[$0]
             }) { state in
                 "/// Static instantiation of the \(machineName) LLFSM state \(state.name)."
-                "extern struct FSM\(machineName)_State_\(state.name) static_\(instance.name.lowercased())_state_\(state.name);"
+                "extern struct FSM\(machineName)_State_\(state.name) static_\(lowerInstance)_state_\(state.name);"
             }
         }
         "/// Static instantiation of the \(name) LLFSM Arrangement."
@@ -182,7 +187,8 @@ public func cStaticArrangementInterface(for instances: [Instance], named name: S
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The LLFSM arrangement interface code.
 public func cStaticArrangementCode(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
-    """
+    let machines = Dictionary(instances.map { ($0.typeName, $0) }, uniquingKeysWith: { a,_ in a })
+    return """
     //
     // Static_Arrangement_\(name).c
     //
@@ -193,12 +199,12 @@ public func cStaticArrangementCode(for instances: [Instance], named name: String
     #include \"Arrangement_\(name).h\"
     #include \"Static_Arrangement_\(name).h\"
 
-    """ + Code.forEach(instances) { instance in
-        "#include \"" + instance.name + ".machine/Machine_" + instance.name + ".h\""
+    """ + Code.forEach(machines) { (machine, instance) in
+        "#include \"" + machine + ".machine/Machine_" + machine + ".h\""
         Code.forEach(instance.fsm.states.compactMap {
             instance.fsm.stateMap[$0]
         }) { state in
-            "#include \"" + instance.name + ".machine/State_" + state.name + ".h\""
+            "#include \"" + machine + ".machine/State_" + state.name + ".h\""
         }
     } + "\n\n" + """
     #pragma clang diagnostic push
@@ -214,23 +220,24 @@ public func cStaticArrangementCode(for instances: [Instance], named name: String
         Code.forEach(instances) { instance in
             let machineName = instance.typeName
             let lowerMachine = machineName.lowercased()
+            let lowerInstance = instance.name.lowercased()
             "/// Static instantiation of a \(machineName) LLFSM."
-            "struct Machine_\(machineName) static_fsm_\(instance.name.lowercased()) = "
+            "struct Machine_" + machineName + " static_fsm_" + lowerInstance + " = "
             Code.bracedBlock {
                 if let initialState = instance.fsm.stateMap[instance.fsm.initialState] {
-                    ".current_state = (struct LLFSMState *) &static_\(instance.name.lowercased())_state_\(initialState.name),"
+                    ".current_state = (struct LLFSMState *) &static_" + lowerInstance + "_state_" + initialState.name + ","
                 }
                 if isSuspensible,
                    let suspendStateID = instance.fsm.suspendState,
                    let suspendState = instance.fsm.stateMap[suspendStateID] {
-                    ".suspend_state = (struct LLFSMState *) &static_\(instance.name.lowercased())_state_\(suspendState.name),"
+                    ".suspend_state = (struct LLFSMState *) &static_" + lowerInstance + "_state_" + suspendState.name + ","
                 }
                 ".states ="
                 Code.bracedBlock {
                     Code.enumerating(array: instance.fsm.states.compactMap {
                         instance.fsm.stateMap[$0]
                     }) { (i, state) in
-                        "(struct LLFSMState *) &static_\(instance.name.lowercased())_state_\(state.name)" +
+                        "(struct LLFSMState *) &static_" + lowerInstance + "_state_" + state.name +
                         (i == instance.fsm.states.count - 1 ? "" : ",")
                     }
                 }
@@ -241,7 +248,7 @@ public func cStaticArrangementCode(for instances: [Instance], named name: String
             }) { state in
                 let lowerState = state.name.lowercased()
                 "/// Static instantiation of the \(machineName) LLFSM state \(state.name)."
-                "struct FSM\(machineName)_State_\(state.name) static_\(instance.name.lowercased())_state_\(state.name) = "
+                "struct FSM" + machineName + "_State_" + state.name + " static_" + lowerInstance + "_state_\(state.name) = "
                 Code.bracedBlock {
                     ".check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *)) fsm_" + lowerMachine + "_" + lowerState + "_check_transitions,"
                     ".on_entry = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_" + lowerMachine + "_" + lowerState + "_on_entry,"
@@ -704,7 +711,7 @@ public func cStaticArrangementMainCode(for instances: [Instance], named name: St
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The CMakeLists.txt code.
 public func cArrangementCMakeFragment(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
-    let directories = Array(Set(instances.map(\.fileName)))
+    let machines = Array(Set(instances.map(\.typeName)))
     return .block {
         "# Sources for the \(name) LLFSM arrangement."
         "set(\(name)_ARRANGEMENT_SOURCES"
@@ -723,24 +730,24 @@ public func cArrangementCMakeFragment(for instances: [Instance], named name: Str
         "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
         "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
         "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
-        Code.forEach(directories) { directory in
-            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/" + directory + "/include>"
-            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/" + directory + ">"
+        Code.forEach(machines) { machine in
+            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/" + machine + ".machine/include>"
+            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/" + machine + ".machine>"
         }
         ")"
         ""
         "# Subdirectories for building \(name)."
         "set(\(name)_ARRANGEMENT_SUBDIRS"
-        Code.forEach(directories) { directory in
-            "    \"" + directory + "\""
+        Code.forEach(machines) { machine in
+            "    \"" + machine + ".machine\""
         }
         ")"
         ""
         "# Build directories for \(name)."
         "set(\(name)_ARRANGEMENT_BUILD_DIRS"
         "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
-        Code.forEach(directories) { directory in
-            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/" + directory + ">"
+        Code.forEach(machines) { machine in
+            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/" + machine + ".machine>"
         }
         ")"
         ""
@@ -748,19 +755,18 @@ public func cArrangementCMakeFragment(for instances: [Instance], named name: Str
         "set(\(name)_ARRANGEMENT_INSTALL_INCDIRS"
         "  $<INSTALL_INTERFACE:include/fsms/\(name).arrangement> "
         "  $<INSTALL_INTERFACE:fsms/\(name).arrangement> "
-        Code.forEach(directories) { directory in
-            "  $<INSTALL_INTERFACE:include/fsms/\(name).arrangement/" + directory + ">"
-            "  $<INSTALL_INTERFACE:fsms/\(name).arrangement/" + directory + ">"
+        Code.forEach(machines) { machine in
+            "  $<INSTALL_INTERFACE:include/fsms/\(name).arrangement/" + machine + ".machine>"
+            "  $<INSTALL_INTERFACE:fsms/\(name).arrangement/" + machine + ".machine>"
         }
         ")"
         ""
-        Code.forEach(instances) { instance in
-            let directory = instance.fileName
-            let fsm = instance.name
+        Code.forEach(machines) { machine in
+            let directory = machine + ".machine"
             "include(${CMAKE_CURRENT_LIST_DIR}/" + directory + "/project.cmake)"
-            "foreach(src ${\(fsm)_FSM_SOURCES})"
-            "  list(APPEND \(name)_ARRANGEMENT_FSMS \"\(fsm)\")"
-            "  list(APPEND \(name)_ARRANGEMENT_FSM_\(fsm)_SOURCES \(directory)/${src})"
+            "foreach(src ${\(machine)_FSM_SOURCES})"
+            "  list(APPEND \(name)_ARRANGEMENT_FSMS \"\(machine)\")"
+            "  list(APPEND \(name)_ARRANGEMENT_FSM_\(machine)_SOURCES \(directory)/${src})"
             "  list(APPEND \(name)_ARRANGEMENT_SOURCES \(directory)/${src})"
             "endforeach()"
         }
@@ -776,6 +782,7 @@ public func cArrangementCMakeFragment(for instances: [Instance], named name: Str
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The CMakeLists.txt code.
 public func cArrangementCMakeLists(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
+    let machines = Array(Set(instances.map(\.typeName)))
     return .block {
         "cmake_minimum_required(VERSION 3.21)"
         ""
@@ -801,14 +808,14 @@ public func cArrangementCMakeLists(for instances: [Instance], named name: String
         "  ${\(name)_ARRANGEMENT_INCDIRS}"
         "  ${\(name)_ARRANGEMENT_INSTALL_INCDIRS}"
         ")"
-        Code.forEach(Array(Set(instances.map(\.fileName)))) { directory in
-            "add_subdirectory(" + directory + ")"
+        Code.forEach(Array(Set(instances.map(\.typeName)))) { machine in
+            "add_subdirectory(" + machine + ".machine)"
         }
         "target_link_libraries(run_\(name)_arrangement"
         "    \(name)_static_arrangement"
         "    \(name)_arrangement"
-        Code.enumerating(array: instances) { i, instance in
-            "    \(instance.name)_fsm"
+        Code.enumerating(array: machines) { i, machine in
+            "    \(machine)_fsm"
         }
         ")"
         ""
