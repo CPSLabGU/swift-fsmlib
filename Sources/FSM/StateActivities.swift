@@ -45,9 +45,13 @@ public struct StateActivitiesSourceCode: StateActivities {
     public typealias StateAction = String
     /// The array of actions associated with the state.
     public typealias StateActions = [StateAction]
-    
+
     /// Mapping of states to their actions.
     public var actions = StateActionsMapping()
+
+    /// Designated initialiser.
+    @inlinable
+    public init() {}
 }
 
 /// Name of a state activity.

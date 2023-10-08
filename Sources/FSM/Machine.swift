@@ -43,7 +43,7 @@ public class Machine {
     public var stateBoilerplate: [StateID : any Boilerplate]
     /// Source code of OnEntry/OnExit/Internal actions of states
     public var activities: StateActivitiesSourceCode
-
+    
     /// Constructor for reading an FSM from a given URL.
     ///
     /// This initialiser will read the states and transitions from
@@ -55,7 +55,7 @@ public class Machine {
         let wrapper = try MachineWrapper(url: url)
         try self.init(from: wrapper)
     }
-
+    
     /// Constructor for reading an FSM from a given MachineWrapper.
     ///
     /// This initialiser will read the states and transitions from
@@ -121,6 +121,19 @@ public class Machine {
             }
         }
     }
+    
+    /// Create a default, empty machine.
+    @inlinable
+    public init() {
+        language = CBinding()
+        llfsm = LLFSM(states: [], transitions: [], suspendState: nil)
+        stateLayout = [:]
+        transitionLayout = [:]
+        windowLayout = nil
+        boilerplate = CBoilerplate()
+        stateBoilerplate = [:]
+        activities = StateActivitiesSourceCode()
+    }
 
     /// Write the FSM to the given URL.
     ///
@@ -140,7 +153,7 @@ public class Machine {
         }
         try write(to: url, language: outputLanguage, isSuspensible: isSuspensible)
     }
-
+    
     /// Write the FSM in the given language to the given URL.
     ///
     /// This method will write the FSM to the
@@ -156,7 +169,7 @@ public class Machine {
         try add(to: arrangement, language: destination, isSuspensible: isSuspensible)
         try destination.finalise(arrangement, writingTo: url)
     }
-
+    
     /// Add the FSM to the given `MachineWrapper`.
     ///
     /// This method will add the FSM to the given
@@ -216,10 +229,10 @@ public func stateNames(from url: URL) throws -> StateNames {
 }
 
 /// Read the names of states from the given MachineWrapper.
-/// 
+///
 /// This reads the content of the given MachineWrapper and interprets
 /// each line as a state name.
-/// 
+///
 /// - Parameters:
 ///   - wrapper: The machine wrapper to examine.
 ///   - statesFile: The name of the states file.

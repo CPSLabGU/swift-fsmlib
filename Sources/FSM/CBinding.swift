@@ -11,6 +11,10 @@ public struct CBinding: OutputLanguage {
     /// The canonical name of the language binding.
     public let name = Format.c.rawValue
 
+    /// Designated initialiser.
+    @inlinable
+    public init() {}
+
     /// C binding from URL and state name to number of transitions.
     ///
     /// - Parameters:
