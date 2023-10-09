@@ -356,6 +356,35 @@ extension FileWrapper {
 @usableFromInline let urlKeys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey, .isRegularFileKey]
 #endif
 
+extension FileWrapper {
+    /// Machine directory name.
+    @usableFromInline var directoryName: String {
+        preferredFilename ?? filename ?? FileManager.default.currentDirectoryName
+    }
+
+    /// Machine name without the file extension.
+    @usableFromInline var machineName: String {
+        let dirName = directoryName
+        return dirName.lastIndex(of: ".").map {
+            String(dirName[dirName.startIndex..<$0])
+        } ?? dirName
+    }
+
+    /// Return the contents of the given file as a String.
+    ///
+    /// - Parameter fileName: Name of the file inside the receiver.
+    /// - Returns: The contents of the file as a String.
+    @usableFromInline
+    func stringContents(of fileName: String) -> String? {
+        fileWrappers?[fileName]?.stringContents
+    }
+
+    /// Return the regular file contents as a String.
+    @usableFromInline var stringContents: String? {
+        regularFileContents.flatMap { String(data: $0, encoding: .utf8) }
+    }
+}
+
 /// Create a file wrapper for a given String.
 ///
 /// This function will convert the given String
