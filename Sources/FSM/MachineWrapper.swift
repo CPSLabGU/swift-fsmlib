@@ -1,16 +1,15 @@
 //
 //  MachineWrapper.swift
 //
-//
 //  Created by Rene Hexel on 30/9/2023.
+//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
 //
 import Foundation
 
-/// Directory file wrapper wrapping an Arrangement of Machines
-public typealias ArrangementWrapper = FileWrapper
-
 /// Directory file wrapper wrapping a Machine
-public typealias MachineWrapper = FileWrapper
+open class MachineWrapper: FileWrapper {
+
+}
 
 extension FileWrapper {
     /// Machine directory name.

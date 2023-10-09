@@ -25,12 +25,12 @@ public protocol OutputLanguage: LanguageBinding {
     /// Finalise writing.
     ///
     /// - Parameters:
-    ///   - wrapper: The `MachineWrapper` to write to.
+    ///   - wrapper: The `FileWrapper` to write to.
     ///   - url: The `URL` to write to.
-    func finalise(_ wrapper: MachineWrapper, writingTo url: URL) throws
+    func finalise(_ wrapper: FileWrapper, writingTo url: URL) throws
     /// Write the language information to the given URL
-    /// - Parameter wrapper: The `MachineWrapper` to add to.
-    func addLanguage(to wrapper: MachineWrapper) throws
+    /// - Parameter wrapper: The `FileWrapper` to add to.
+    func addLanguage(to wrapper: FileWrapper) throws
     /// Write the FSM layout.
     ///
     /// - Parameters:
@@ -88,7 +88,7 @@ public protocol OutputLanguage: LanguageBinding {
     ///   - instances: The FSM instances to arrange.
     ///   - wrapper: The `ArrangementWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func addArrangementInterface(for instances: [Instance], to wrapper: MachineWrapper, isSuspensible: Bool) throws
+    func addArrangementInterface(for instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws
     /// Write the code for the given LLFSM to the given URL.
     ///
     /// This method adds the implementation code
@@ -128,7 +128,7 @@ public protocol OutputLanguage: LanguageBinding {
     ///   - names: The names of the FSM instances.
     ///   - wrapper: The `ArrangementWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func addArrangementCode(for instances: [Instance], to wrapper: MachineWrapper, isSuspensible: Bool) throws
+    func addArrangementCode(for instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws
     /// Write a CMakefile for the given LLFSM to the given URL.
     ///
     /// This method creates a CMakefile to compile the
@@ -149,7 +149,7 @@ public protocol OutputLanguage: LanguageBinding {
     ///   - instances: The FSM instances.
     ///   - wrapper: The `ArrangementWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func addArrangementCMakeFile(for instances: [Instance], to wrapper: MachineWrapper, isSuspensible: Bool) throws
+    func addArrangementCMakeFile(for instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws
 }
 
 public extension OutputLanguage {
@@ -174,15 +174,17 @@ public extension OutputLanguage {
     /// - Parameter url: The URL to create the file wrapper at.
     @inlinable
     func createArrangementWrapper(at url: URL) throws -> ArrangementWrapper {
-        try createWrapper(at: url)
+        let wrapper = ArrangementWrapper(directoryWithFileWrappers: [:])
+        wrapper.preferredFilename = url.lastPathComponent
+        return wrapper
     }
     /// Finalise writing.
     ///
     /// - Parameters:
-    ///   - wrapper: The `MachineWrapper` to write out.
+    ///   - wrapper: The `FileWrapper` to write out.
     ///   - url: The `URL` to write to.
     @inlinable
-    func finalise(_ wrapper: MachineWrapper, writingTo url: URL) throws {
+    func finalise(_ wrapper: FileWrapper, writingTo url: URL) throws {
         try wrapper.write(to: url, options: .atomic, originalContentsURL: nil)
     }
     /// Create a `FileWrapper` with language information.
@@ -191,7 +193,7 @@ public extension OutputLanguage {
     /// file inside the file wrapper denoted by the given URL.
     /// - Parameter wrapper: The `MachineWrapper` to create the file wrapper at.
     @inlinable
-    func addLanguage(to wrapper: MachineWrapper) throws {
+    func addLanguage(to wrapper: FileWrapper) throws {
         guard let data = name.data(using: .utf8) else { throw POSIXError(.EINVAL) }
         let fileWrapper = FileWrapper(regularFileWithContents: data)
         fileWrapper.preferredFilename = .language

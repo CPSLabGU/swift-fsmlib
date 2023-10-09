@@ -244,7 +244,7 @@ public extension CBinding {
     ///   - names: The names of the FSM instances.
     ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func addArrangementInterface(for instances: [Instance], to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    func addArrangementInterface(for instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws {
         let name = wrapper.machineName
         let commonInterface = cArrangementMachineInterface(for: instances, named: name, isSuspensible: isSuspensible)
         let commonWrapper = fileWrapper(named: "Machine_Common.h", from: commonInterface)
@@ -265,7 +265,7 @@ public extension CBinding {
     ///   - instances: The FSM instances.
     ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func addArrangementCode(for instances: [Instance], to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    func addArrangementCode(for instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws {
         let name = wrapper.machineName
         let commonCode = cArrangementMachineCode(for: instances, named: name, isSuspensible: isSuspensible)
         let commonWrapper = fileWrapper(named: "Machine_Common.c", from: commonCode)
@@ -290,7 +290,7 @@ public extension CBinding {
     ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func addArrangementCMakeFile(for instances: [Instance], to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    func addArrangementCMakeFile(for instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws {
         let name = wrapper.machineName
         let cmakeFragment = cArrangementCMakeFragment(for: instances, named: name, isSuspensible: isSuspensible)
         let fragmentWrapper = fileWrapper(named: "project.cmake", from: cmakeFragment)

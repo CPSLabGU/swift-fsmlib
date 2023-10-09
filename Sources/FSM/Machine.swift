@@ -278,7 +278,7 @@ public func stateNameLayouts(from url: URL) throws -> StateNameLayouts {
 /// - Throws: `NSError` if the file cannot be read.
 /// - Returns: A mapping from state names to state layouts.
 @inlinable
-public func stateNameLayouts(from layoutWrapper: MachineWrapper) -> StateNameLayouts {
+public func stateNameLayouts(from layoutWrapper: FileWrapper) -> StateNameLayouts {
     layoutWrapper.regularFileContents.flatMap {
         try? PropertyListSerialization.propertyList(from: $0, options: [], format: nil) as? NSDictionary
     }.flatMap {
