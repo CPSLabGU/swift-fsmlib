@@ -64,8 +64,7 @@ struct FSMConvert: AsyncParsableCommand {
             try zip(fsms, fsmNames).forEach {
                 let machine = $0.0
                 let machineName = $0.1
-                let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:])
-                machineWrapper.preferredFilename = machineName
+                let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: machineName)
                 wrapper.addFileWrapper(machineWrapper)
                 try machine.add(to: machineWrapper, language: outputLanguage, isSuspensible: !nonSuspensible)
             }

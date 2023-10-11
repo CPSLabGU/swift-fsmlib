@@ -169,7 +169,7 @@ public class Machine {
         try add(to: arrangement, language: destination, isSuspensible: isSuspensible)
         try destination.finalise(arrangement, writingTo: url)
     }
-    
+
     /// Add the FSM to the given `MachineWrapper`.
     ///
     /// This method will add the FSM to the given

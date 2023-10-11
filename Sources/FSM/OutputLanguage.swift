@@ -161,7 +161,7 @@ public extension OutputLanguage {
     /// - Parameter url: The URL to create the file wrapper at.
     @inlinable
     func createWrapper(at url: URL) throws -> MachineWrapper {
-        let wrapper = MachineWrapper(directoryWithFileWrappers: [:])
+        let wrapper = MachineWrapper(directoryWithFileWrappers: [:], for: Machine())
         wrapper.preferredFilename = url.lastPathComponent
         return wrapper
     }
