@@ -23,9 +23,10 @@ open class MachineWrapper: FileWrapper {
     ///   - options: The reading options to use.
     /// - Throws: Any error thrown by the underlying file system.
     public override init(url: URL, options: ReadingOptions = []) throws {
+        let temporaryWrapper = try FileWrapper(url: url, options: options)
         machine = Machine()
         language = machine.language
-        try super.init(url: url, options: options)
+        super.init(directoryWithFileWrappers: temporaryWrapper.fileWrappers ?? [:])
         machine = try Machine(from: self)
         language = machine.language
     }
