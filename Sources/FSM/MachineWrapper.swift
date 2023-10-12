@@ -9,7 +9,7 @@ import Foundation
 /// Directory file wrapper wrapping a Machine
 open class MachineWrapper: FileWrapper {
     /// The machine wrapped by this class.
-    @usableFromInline var machine: Machine
+    public var machine: Machine
     /// The language the machine is written in.
     public var language: LanguageBinding
     /// Whether or onot the machine is suspensible
@@ -73,7 +73,7 @@ open class MachineWrapper: FileWrapper {
     ///   - url: The URL of the location to write to.
     ///   - options: The writing options to use.
     ///   - originalContentsURL: The original URL of the file wrapper.
-    override open func write(to url: URL, options: FileWrapper.WritingOptions = [], originalContentsURL: URL?) throws {
+    override open func write(to url: URL, options: FileWrapper.WritingOptions = [], originalContentsURL: URL? = nil) throws {
         guard let destination = language as? OutputLanguage else {
             throw FSMError.unsupportedOutputFormat
         }

@@ -33,7 +33,7 @@ struct FSMConvert: AsyncParsableCommand {
 
     mutating func run() async throws {
         let fileManager = FileManager.default
-        let fsmURLs = try inputMachines.map {
+        let wrapperNames = try inputMachines.map {
             let path: String
             if fileManager.fileExists(atPath: $0) {
                 path = $0
@@ -43,34 +43,26 @@ struct FSMConvert: AsyncParsableCommand {
                     throw ValidationError("File '\($0)' does not exist")
                 }
             }
-            let url = URL(fileURLWithPath: path)
-            let fsm = try Machine(from: url)
-            return (fsm, url)
+            let machineURL = URL(fileURLWithPath: path)
+            let wrapper = try MachineWrapper(url: machineURL)
+            return (machineURL.lastPathComponent, wrapper)
         }
-        let fsms = fsmURLs.map { $0.0 }
-        let names = fsmURLs.map { $0.1.lastPathComponent }
-        if verbose {
-            print("\(fsms.count) FSMs with \(fsms.reduce(0) { $0 + $1.llfsm.states.count }) states and \(fsms.reduce(0) { $0 + $1.llfsm.transitions.count }) transitions\n")
-        }
-        let outputURL = URL(fileURLWithPath: output)
+        let machineArrangement = Arrangement(machines: wrapperNames.map { $0.1.machine })
         let outputFormat = format.isEmpty ? nil : Format(rawValue: format)
-        guard let outputLanguage = outputLanguage(for: outputFormat, default: fsms.first?.language) else {
+        guard let outputLanguage = outputLanguage(for: outputFormat, default: wrapperNames.first?.1.machine.language) else {
             FSMConvert.exit(withError: "No output language for format '\(format)'\n")
         }
-        if arrangement || fsms.count > 1 {
-            let arrangement = Arrangement(machines: fsms)
-            let wrapper = try outputLanguage.createArrangementWrapper(at: outputURL)
-            let fsmNames: [String] = try arrangement.add(to: wrapper, language: outputLanguage, machineNames: names, isSuspensible: !nonSuspensible)
-            try zip(fsms, fsmNames).forEach {
-                let machine = $0.0
-                let machineName = $0.1
-                let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: machineName)
-                wrapper.addFileWrapper(machineWrapper)
-                try machine.add(to: machineWrapper, language: outputLanguage, isSuspensible: !nonSuspensible)
-            }
-            try outputLanguage.finalise(wrapper, writingTo: outputURL)
-        } else {
-            try fsms.first?.write(to: outputURL, language: outputLanguage, isSuspensible: !nonSuspensible)
+        let outputURL = URL(fileURLWithPath: output)
+        let wrapperMappings = Dictionary(wrapperNames, uniquingKeysWith: { a, _ in a })
+        let arrangementWrapper = ArrangementWrapper(directoryWithFileWrappers: wrapperMappings, for: machineArrangement, named: outputURL.lastPathComponent, language: outputLanguage)
+        if verbose {
+            print("\(wrapperNames.count) FSMs with \(wrapperNames.reduce(0) { $0 + $1.1.machine.llfsm.states.count }) states and \(wrapperNames.reduce(0) { $0 + $1.1.machine.llfsm.transitions.count }) transitions\n")
+        }
+        if arrangement || wrapperNames.count > 1 {
+            try arrangementWrapper.write(to: outputURL)
+        } else if let machineWrapper = wrapperNames.first?.1 {
+            machineWrapper.language = outputLanguage
+            try machineWrapper.write(to: outputURL)
         }
     }
 }

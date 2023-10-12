@@ -10,7 +10,7 @@ import Foundation
 /// Directory file wrapper wrapping an arrangement of Machines
 open class ArrangementWrapper: FileWrapper {
     /// The arrangement wrapped by this class.
-    @usableFromInline var arrangement: Arrangement
+    public var arrangement: Arrangement
     /// The language the arrangement is written in.
     public var language: LanguageBinding
     /// Whether or onot the arrangement supports suspension
@@ -46,7 +46,7 @@ open class ArrangementWrapper: FileWrapper {
     ///   - url: The URL of the location to write to.
     ///   - options: The writing options to use.
     ///   - originalContentsURL: The original URL of the file wrapper.
-    override open func write(to url: URL, options: FileWrapper.WritingOptions = [], originalContentsURL: URL?) throws {
+    override open func write(to url: URL, options: FileWrapper.WritingOptions = [], originalContentsURL: URL? = nil) throws {
         guard let destination = language as? OutputLanguage else {
             throw FSMError.unsupportedOutputFormat
         }
