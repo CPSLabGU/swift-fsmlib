@@ -8,7 +8,7 @@
 import Foundation
 
 /// Directory file wrapper wrapping an arrangement of Machines
-open class ArrangementWrapper: FileWrapper {
+open class ArrangementWrapper: DirectoryWrapper {
     /// The arrangement wrapped by this class.
     public var arrangement: Arrangement
     /// The language the arrangement is written in.

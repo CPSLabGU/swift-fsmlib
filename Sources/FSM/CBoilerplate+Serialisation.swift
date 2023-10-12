@@ -12,7 +12,7 @@ public extension CBoilerplate {
     /// - Throws: Any error thrown by the underlying file system.
     @inlinable
     func add(to wrapper: MachineWrapper) {
-        for (section, fileName) in cBoilerplateFileMappings(for: wrapper.machineName) {
+        for (section, fileName) in cBoilerplateFileMappings(for: wrapper.name) {
             let fileWrapper = fileWrapper(named: fileName, from: sections[section])
             wrapper.addFileWrapper(fileWrapper)
         }
@@ -37,7 +37,7 @@ public extension CBoilerplate {
 @inlinable
 public func boilerplateOfCMachine(at machineWrapper: MachineWrapper) -> any Boilerplate {
     var boilerplate = CBoilerplate()
-    for (section, fileName) in cBoilerplateFileMappings(for: machineWrapper.machineName) {
+    for (section, fileName) in cBoilerplateFileMappings(for: machineWrapper.name) {
         boilerplate.sections[section] = machineWrapper.stringContents(of: fileName)
     }
     return boilerplate

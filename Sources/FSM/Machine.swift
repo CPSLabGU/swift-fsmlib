@@ -197,7 +197,7 @@ public class Machine {
         for stateID in llfsm.states {
             guard let stateName = llfsm.stateMap[stateID]?.name,
                   let boilerplate = stateBoilerplate[stateID] else {
-                fputs("Orphaned state \(stateID) for \(machineWrapper.machineName)\n", stderr)
+                fputs("Orphaned state \(stateID) for \(machineWrapper.name)\n", stderr)
                 continue
             }
             try destination.add(stateBoilerplate: boilerplate, to: machineWrapper, for: stateName)

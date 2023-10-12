@@ -7,7 +7,7 @@
 import Foundation
 
 /// Directory file wrapper wrapping a Machine
-open class MachineWrapper: FileWrapper {
+open class MachineWrapper: DirectoryWrapper {
     /// The machine wrapped by this class.
     public var machine: Machine
     /// The language the machine is written in.
@@ -78,7 +78,7 @@ open class MachineWrapper: FileWrapper {
         guard let destination = language as? OutputLanguage else {
             throw FSMError.unsupportedOutputFormat
         }
-        preferredFilename = url.lastPathComponent
+        directoryName = url.lastPathComponent
         try machine.add(to: self, language: destination, isSuspensible: isSuspensible)
         try destination.finalise(self, writingTo: url)
         filename = url.lastPathComponent

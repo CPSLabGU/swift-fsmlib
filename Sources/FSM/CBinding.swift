@@ -115,7 +115,7 @@ public extension CBinding {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
     func addInterface(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
-        let name = wrapper.machineName
+        let name = wrapper.name
         let machineCode = cMachineInterface(for: llfsm, named: name, isSuspensible: isSuspensible)
         let fileWrapper = fileWrapper(named: "Machine_" + name + ".h", from: machineCode)
         wrapper.addFileWrapper(fileWrapper)
@@ -131,7 +131,7 @@ public extension CBinding {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
     func addStateInterface(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
-        let name = wrapper.machineName
+        let name = wrapper.name
         for stateID in fsm.states {
             guard let state = fsm.stateMap[stateID] else {
                 fputs("Warning: orphaned state ID \(stateID) for \(name)\n", stderr)
@@ -153,7 +153,7 @@ public extension CBinding {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
     func addCode(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
-        let name = wrapper.machineName
+        let name = wrapper.name
         let machineCode = cMachineCode(for: llfsm, named: name, isSuspensible: isSuspensible)
         let fileWrapper = fileWrapper(named: "Machine_" + name + ".c", from: machineCode)
         wrapper.addFileWrapper(fileWrapper)
@@ -169,7 +169,7 @@ public extension CBinding {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
     func addStateCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
-        let name = wrapper.machineName
+        let name = wrapper.name
         for stateID in fsm.states {
             guard let state = fsm.stateMap[stateID] else {
                 fputs("Warning: orphaned state ID \(stateID) for \(name)\n", stderr)
@@ -191,7 +191,7 @@ public extension CBinding {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
     func addTransitionCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
-        let name = wrapper.machineName
+        let name = wrapper.name
         for (i, stateID) in fsm.states.enumerated() {
             guard let state = fsm.stateMap[stateID] else {
                 fputs("Warning: orphaned state \(i) ID \(stateID) for \(name)\n", stderr)
@@ -222,7 +222,7 @@ public extension CBinding {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
     func addCMakeFile(for fsm: LLFSM, boilerplate: any Boilerplate, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
-        let name = wrapper.machineName
+        let name = wrapper.name
         let cmakeFragment = cMakeFragment(for: fsm, named: name, isSuspensible: isSuspensible)
         let fragmentWrapper = fileWrapper(named: "project.cmake", from: cmakeFragment)
         wrapper.addFileWrapper(fragmentWrapper)
@@ -245,7 +245,7 @@ public extension CBinding {
     ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     func addArrangementInterface(for instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws {
-        let name = wrapper.machineName
+        let name = wrapper.name
         let commonInterface = cArrangementMachineInterface(for: instances, named: name, isSuspensible: isSuspensible)
         let commonWrapper = fileWrapper(named: "Machine_Common.h", from: commonInterface)
         wrapper.addFileWrapper(commonWrapper)
@@ -266,7 +266,7 @@ public extension CBinding {
     ///   - wrapper: The `MachineWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     func addArrangementCode(for instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws {
-        let name = wrapper.machineName
+        let name = wrapper.name
         let commonCode = cArrangementMachineCode(for: instances, named: name, isSuspensible: isSuspensible)
         let commonWrapper = fileWrapper(named: "Machine_Common.c", from: commonCode)
         wrapper.addFileWrapper(commonWrapper)
@@ -291,7 +291,7 @@ public extension CBinding {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
     func addArrangementCMakeFile(for instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws {
-        let name = wrapper.machineName
+        let name = wrapper.name
         let cmakeFragment = cArrangementCMakeFragment(for: instances, named: name, isSuspensible: isSuspensible)
         let fragmentWrapper = fileWrapper(named: "project.cmake", from: cmakeFragment)
         wrapper.addFileWrapper(fragmentWrapper)
@@ -389,7 +389,7 @@ public func targetOfCTransition(_ number: Int, state name: StateName, for machin
 /// - Parameter machineWrapper: The MachineWrapper.
 /// - Returns: The content of the machine, or `nil` if not found.
 public func contentOfCImplementation(for machineWrapper: MachineWrapper) -> String? {
-    let file = "Machine_\(machineWrapper.machineName).c"
+    let file = "Machine_\(machineWrapper.name).c"
     guard let content = machineWrapper.stringContents(of: file) else {
         fputs("Error: cannot read '\(file)'\n", stderr)
         return nil
