@@ -167,7 +167,7 @@ public class Machine {
     public func write(to url: URL, language destination: OutputLanguage, isSuspensible: Bool) throws {
         let arrangement = try destination.createWrapper(at: url)
         try add(to: arrangement, language: destination, isSuspensible: isSuspensible)
-        try destination.finalise(arrangement, writingTo: url)
+        try arrangement.write(to: url)
     }
 
     /// Add the FSM to the given `MachineWrapper`.

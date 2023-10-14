@@ -65,7 +65,7 @@ open class ArrangementWrapper: DirectoryWrapper {
             machineWrapper.preferredFilename = machineName
             try machineWrapper.machine.add(to: machineWrapper, language: destination, isSuspensible: isSuspensible)
         }
-        try destination.finalise(self, writingTo: url)
+        try super.write(to: url, options: options, originalContentsURL: originalContentsURL)
         filename = url.lastPathComponent
     }
 }

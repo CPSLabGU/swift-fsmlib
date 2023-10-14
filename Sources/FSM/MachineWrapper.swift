@@ -85,7 +85,7 @@ open class MachineWrapper: DirectoryWrapper {
         }
         directoryName = url.lastPathComponent
         try machine.add(to: self, language: destination, isSuspensible: isSuspensible)
-        try destination.finalise(self, writingTo: url)
+        try super.write(to: url, options: options, originalContentsURL: originalContentsURL)
         filename = url.lastPathComponent
     }
 }

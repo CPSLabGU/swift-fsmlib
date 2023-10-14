@@ -22,12 +22,6 @@ public protocol OutputLanguage: LanguageBinding {
     ///
     /// - Parameter url: The URL to create the file wrapper at.
     func createArrangementWrapper(at url: URL) throws -> ArrangementWrapper
-    /// Finalise writing.
-    ///
-    /// - Parameters:
-    ///   - wrapper: The `FileWrapper` to write to.
-    ///   - url: The `URL` to write to.
-    func finalise(_ wrapper: FileWrapper, writingTo url: URL) throws
     /// Write the language information to the given URL
     /// - Parameter wrapper: The `FileWrapper` to add to.
     func addLanguage(to wrapper: FileWrapper) throws
@@ -177,15 +171,6 @@ public extension OutputLanguage {
         let wrapper = ArrangementWrapper(directoryWithFileWrappers: [:], for: Arrangement(machines: []))
         wrapper.preferredFilename = url.lastPathComponent
         return wrapper
-    }
-    /// Finalise writing.
-    ///
-    /// - Parameters:
-    ///   - wrapper: The `FileWrapper` to write out.
-    ///   - url: The `URL` to write to.
-    @inlinable
-    func finalise(_ wrapper: FileWrapper, writingTo url: URL) throws {
-        try wrapper.write(to: url, options: .atomic, originalContentsURL: nil)
     }
     /// Create a `FileWrapper` with language information.
     ///
