@@ -85,7 +85,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "/Users/rh/Downloads/Output.arrangement"
+            argument = "/Users/rh/Downloads/Output"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -106,11 +106,11 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "/Users/rh/Downloads/SuspendCounter.machine"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "/Users/rh/Downloads/Counter.machine"
-            isEnabled = "NO">
+            argument = "/Users/rh/src/swift/rh/swift-fsmlib/examples/Counter.machine"
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "/Users/rh/Downloads/Meter.machine"
