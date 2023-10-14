@@ -27,6 +27,8 @@ open class MachineWrapper: DirectoryWrapper {
         machine = Machine()
         language = machine.language
         super.init(directoryWithFileWrappers: temporaryWrapper.fileWrappers ?? [:])
+        preferredFilename = url.lastPathComponent
+        filename = url.lastPathComponent
         machine = try Machine(from: self)
         language = machine.language
     }
@@ -40,9 +42,12 @@ open class MachineWrapper: DirectoryWrapper {
     /// - Throws: Any error thrown by the underlying file system.
     @inlinable
     public init(for machine: Machine, url: URL, options: ReadingOptions = []) throws {
+        let temporaryWrapper = try FileWrapper(url: url, options: options)
         self.machine = machine
         self.language = machine.language
-        try super.init(url: url, options: options)
+        super.init(directoryWithFileWrappers: temporaryWrapper.fileWrappers ?? [:])
+        preferredFilename = url.lastPathComponent
+        filename = url.lastPathComponent
     }
 
     /// Create a file wrapper for a directory with the given children.
