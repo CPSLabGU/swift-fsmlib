@@ -196,13 +196,13 @@ open class FileWrapper: @unchecked Sendable {
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
         for (file, fileWrapper) in children {
-            #if canImport(Darwin)
-                let fileURL = url.appending(path: file, directoryHint: fileWrapper.isDirectory ? .isDirectory : .notDirectory)
-                let originalURL = originalContentsURL.map { $0.appending(path: file, directoryHint: .notDirectory) }
-            #else
-                let fileURL = url.appendingPathComponent(file, isDirectory: fileWrapper.isDirectory)
-                let originalURL = originalContentsURL.map { $0.appendingPathComponent(file, isDirectory: false) }
-            #endif
+#if canImport(Darwin)
+            let fileURL = url.appending(path: file, directoryHint: fileWrapper.isDirectory ? .isDirectory : .notDirectory)
+            let originalURL = originalContentsURL.map { $0.appending(path: file, directoryHint: .notDirectory) }
+#else
+            let fileURL = url.appendingPathComponent(file, isDirectory: fileWrapper.isDirectory)
+            let originalURL = originalContentsURL.map { $0.appendingPathComponent(file, isDirectory: false) }
+#endif
             try fileWrapper.write(to: fileURL, options: writingOptions, originalContentsURL: originalURL)
         }
         if writingOptions.contains(.withNameUpdating) {
@@ -373,7 +373,7 @@ extension FileWrapper {
     }
 
     /// Replace a child `FileWrapper`.
-    /// 
+    ///
     /// This method checks wether the given child
     /// file wrapper already exists, and if so, removes
     /// the existing wrapper before adding the new one.
@@ -385,6 +385,15 @@ extension FileWrapper {
             removeFileWrapper(existingChild)
         }
         addFileWrapper(child)
+    }
+
+    /// Remove all child FileWrappers.
+    @usableFromInline
+    func removeFileWrappers() {
+        let wrappers = fileWrappers?.map { $0.value } ?? []
+        for fileWrapper in wrappers {
+            removeFileWrapper(fileWrapper)
+        }
     }
 }
 
