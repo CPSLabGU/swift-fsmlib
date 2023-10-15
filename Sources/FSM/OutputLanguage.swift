@@ -182,7 +182,7 @@ public extension OutputLanguage {
         guard let data = name.data(using: .utf8) else { throw POSIXError(.EINVAL) }
         let fileWrapper = FileWrapper(regularFileWithContents: data)
         fileWrapper.preferredFilename = .language
-        wrapper.addFileWrapper(fileWrapper)
+        wrapper.replaceFileWrapper(fileWrapper)
     }
     /// Create a `FileWrapper` with layout information.
     ///
@@ -195,7 +195,7 @@ public extension OutputLanguage {
         let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
         let fileWrapper = FileWrapper(regularFileWithContents: data)
         fileWrapper.preferredFilename = .layout
-        wrapper.addFileWrapper(fileWrapper)
+        wrapper.replaceFileWrapper(fileWrapper)
     }
     /// Create a `FileWrapper` with window layout information.
     ///
@@ -207,7 +207,7 @@ public extension OutputLanguage {
         guard let windowLayout else { return }
         let fileWrapper = FileWrapper(regularFileWithContents: windowLayout)
         fileWrapper.preferredFilename = .windowLayout
-        wrapper.addFileWrapper(fileWrapper)
+        wrapper.replaceFileWrapper(fileWrapper)
     }
     /// Create a `FileWrapper` with the names of the states.
     ///
@@ -222,7 +222,7 @@ public extension OutputLanguage {
         guard let data = stateNames.joined(separator: "\n").data(using: .utf8) else { throw POSIXError(.EINVAL) }
         let fileWrapper = FileWrapper(regularFileWithContents: data)
         fileWrapper.preferredFilename = .states
-        wrapper.addFileWrapper(fileWrapper)
+        wrapper.replaceFileWrapper(fileWrapper)
     }
     /// Default do-nothing CMakefile creator.
     ///

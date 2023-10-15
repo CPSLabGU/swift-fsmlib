@@ -118,7 +118,7 @@ public extension CBinding {
         let name = wrapper.name
         let machineCode = cMachineInterface(for: llfsm, named: name, isSuspensible: isSuspensible)
         let fileWrapper = fileWrapper(named: "Machine_" + name + ".h", from: machineCode)
-        wrapper.addFileWrapper(fileWrapper)
+        wrapper.replaceFileWrapper(fileWrapper)
     }
     /// Add the state interface for the given LLFSM to the given `MachineWrapper`.
     ///
@@ -139,7 +139,7 @@ public extension CBinding {
             }
             let stateCode = cStateInterface(for: state, llfsm: fsm, named: name, isSuspensible: isSuspensible)
             let fileWrapper = fileWrapper(named: "State_" + state.name + ".h", from: stateCode)
-            wrapper.addFileWrapper(fileWrapper)
+            wrapper.replaceFileWrapper(fileWrapper)
         }
     }
     /// Add the code for the given LLFSM to the given `MachineWrapper`.
@@ -156,7 +156,7 @@ public extension CBinding {
         let name = wrapper.name
         let machineCode = cMachineCode(for: llfsm, named: name, isSuspensible: isSuspensible)
         let fileWrapper = fileWrapper(named: "Machine_" + name + ".c", from: machineCode)
-        wrapper.addFileWrapper(fileWrapper)
+        wrapper.replaceFileWrapper(fileWrapper)
     }
     /// Add the state code for the given LLFSM to the given `MachineWrapper`.
     ///
@@ -177,7 +177,7 @@ public extension CBinding {
             }
             let stateCode = cStateCode(for: state, llfsm: fsm, named: name, isSuspensible: isSuspensible)
             let fileWrapper = fileWrapper(named: "State_" + state.name + ".c", from: stateCode)
-            wrapper.addFileWrapper(fileWrapper)
+            wrapper.replaceFileWrapper(fileWrapper)
         }
     }
     /// Add the transition expressions for the given LLFSM to the given `MachineWrapper`.
@@ -205,7 +205,7 @@ public extension CBinding {
                 }
                 let file = "State_\(state.name)_Transition_\(number).expr"
                 let fileWrapper = fileWrapper(named: file, from: transition.label + "\n")
-                wrapper.addFileWrapper(fileWrapper)
+                wrapper.replaceFileWrapper(fileWrapper)
             }
         }
     }
@@ -225,10 +225,10 @@ public extension CBinding {
         let name = wrapper.name
         let cmakeFragment = cMakeFragment(for: fsm, named: name, isSuspensible: isSuspensible)
         let fragmentWrapper = fileWrapper(named: "project.cmake", from: cmakeFragment)
-        wrapper.addFileWrapper(fragmentWrapper)
+        wrapper.replaceFileWrapper(fragmentWrapper)
         let cmakeLists = cMakeLists(for: fsm, named: name, boilerplate: boilerplate, isSuspensible: isSuspensible)
         let cmakeWrapper = fileWrapper(named: "CMakeLists.txt", from: cmakeLists)
-        wrapper.addFileWrapper(cmakeWrapper)
+        wrapper.replaceFileWrapper(cmakeWrapper)
     }
 }
 
@@ -248,13 +248,13 @@ public extension CBinding {
         let name = wrapper.name
         let commonInterface = cArrangementMachineInterface(for: instances, named: name, isSuspensible: isSuspensible)
         let commonWrapper = fileWrapper(named: "Machine_Common.h", from: commonInterface)
-        wrapper.addFileWrapper(commonWrapper)
+        wrapper.replaceFileWrapper(commonWrapper)
         let arrangementInterface = cArrangementInterface(for: instances, named: name, isSuspensible: isSuspensible)
         let arrangementWrapper = fileWrapper(named: "Arrangement_\(name).h", from: arrangementInterface)
-        wrapper.addFileWrapper(arrangementWrapper)
+        wrapper.replaceFileWrapper(arrangementWrapper)
         let staticInterface = cStaticArrangementInterface(for: instances, named: name, isSuspensible: isSuspensible)
         let staticWrapper = fileWrapper(named: "Static_Arrangement_\(name).h", from: staticInterface)
-        wrapper.addFileWrapper(staticWrapper)
+        wrapper.replaceFileWrapper(staticWrapper)
     }
     /// Add the arrangment implementation to the given .
     ///
@@ -269,16 +269,16 @@ public extension CBinding {
         let name = wrapper.name
         let commonCode = cArrangementMachineCode(for: instances, named: name, isSuspensible: isSuspensible)
         let commonWrapper = fileWrapper(named: "Machine_Common.c", from: commonCode)
-        wrapper.addFileWrapper(commonWrapper)
+        wrapper.replaceFileWrapper(commonWrapper)
         let arrangementCode = cArrangementCode(for: instances, named: name, isSuspensible: isSuspensible)
         let arrangementWrapper = fileWrapper(named: "Arrangement_\(name).c", from: arrangementCode)
-        wrapper.addFileWrapper(arrangementWrapper)
+        wrapper.replaceFileWrapper(arrangementWrapper)
         let staticCode = cStaticArrangementCode(for: instances, named: name, isSuspensible: isSuspensible)
         let staticWrapper = fileWrapper(named: "Static_Arrangement_\(name).c", from: staticCode)
-        wrapper.addFileWrapper(staticWrapper)
+        wrapper.replaceFileWrapper(staticWrapper)
         let mainCode = cStaticArrangementMainCode(for: instances, named: name, isSuspensible: isSuspensible)
         let mainWrapper = fileWrapper(named: "static_main.c", from: mainCode)
-        wrapper.addFileWrapper(mainWrapper)
+        wrapper.replaceFileWrapper(mainWrapper)
     }
     /// Add a CMakefile for the given LLFSM arrangement to the given `MachineWrapper`.
     ///
@@ -294,10 +294,10 @@ public extension CBinding {
         let name = wrapper.name
         let cmakeFragment = cArrangementCMakeFragment(for: instances, named: name, isSuspensible: isSuspensible)
         let fragmentWrapper = fileWrapper(named: "project.cmake", from: cmakeFragment)
-        wrapper.addFileWrapper(fragmentWrapper)
+        wrapper.replaceFileWrapper(fragmentWrapper)
         let cmakeLists = cArrangementCMakeLists(for: instances, named: name, isSuspensible: isSuspensible)
         let cmakeWrapper = fileWrapper(named: "CMakeLists.txt", from: cmakeLists)
-        wrapper.addFileWrapper(cmakeWrapper)
+        wrapper.replaceFileWrapper(cmakeWrapper)
     }
 }
 

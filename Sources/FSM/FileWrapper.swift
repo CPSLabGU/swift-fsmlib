@@ -261,7 +261,7 @@ open class FileWrapper: @unchecked Sendable {
     /// - Parameter child: The child `FileWrapper` to add.
     /// - Returns: The filename of the added child.
     @discardableResult @inlinable
-    open func addFileWrapper(_ child: FileWrapper) -> String {
+    open func replaceFileWrapper(_ child: FileWrapper) -> String {
         guard case var .directory(children) = content else { return "" }
         let filename = child.filename ?? child.preferredFilename ?? UUID().uuidString
         children[filename] = child
@@ -370,6 +370,21 @@ extension FileWrapper {
     /// Return the regular file contents as a String.
     @usableFromInline var stringContents: String? {
         regularFileContents.flatMap { String(data: $0, encoding: .utf8) }
+    }
+
+    /// Replace a child `FileWrapper`.
+    /// 
+    /// This method checks wether the given child
+    /// file wrapper already exists, and if so, removes
+    /// the existing wrapper before adding the new one.
+    ///
+    /// - Parameter child: The child fileWrapper to replace.
+    @usableFromInline
+    func replaceFileWrapper(_ child: FileWrapper) {
+        if let existingChild = (child.preferredFilename ?? child.filename).flatMap({ fileWrappers?[$0] }) {
+            removeFileWrapper(existingChild)
+        }
+        addFileWrapper(child)
     }
 }
 

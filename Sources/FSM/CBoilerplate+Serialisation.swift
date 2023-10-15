@@ -14,7 +14,7 @@ public extension CBoilerplate {
     func add(to wrapper: MachineWrapper) {
         for (section, fileName) in cBoilerplateFileMappings(for: wrapper.name) {
             let fileWrapper = fileWrapper(named: fileName, from: sections[section])
-            wrapper.addFileWrapper(fileWrapper)
+            wrapper.replaceFileWrapper(fileWrapper)
         }
     }
     /// Write the boilerplate for a given state to the given URL.
@@ -26,7 +26,7 @@ public extension CBoilerplate {
     func add(state: String, to wrapper: MachineWrapper) {
         for (section, fileName) in cStateBoilerplateFileMappings(for: state) {
             let fileWrapper = fileWrapper(named: fileName, from: sections[section])
-            wrapper.addFileWrapper(fileWrapper)
+            wrapper.replaceFileWrapper(fileWrapper)
         }
     }
 }
