@@ -29,7 +29,7 @@ public struct Arrangement {
     ///   - isSuspensible: Whether the output FSMs should be suspensible.
     /// - Returns: The filenames of the machines for adding to the arrangement.
     @inlinable
-    public func add(to wrapper: ArrangementWrapper, language: OutputLanguage, machineNames: [String], isSuspensible: Bool = true) throws -> [Filename] {
+    public func add(to wrapper: ArrangementWrapper, language: any OutputLanguage, machineNames: [String], isSuspensible: Bool = true) throws -> [Filename] {
         var instanceMappings = [ String : (String, Machine) ]()
         let instances = zip(machines, machineNames).map {
             let machine = $0.0

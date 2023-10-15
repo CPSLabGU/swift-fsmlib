@@ -11,7 +11,7 @@ open class MachineWrapper: DirectoryWrapper {
     /// The machine wrapped by this class.
     public var machine: Machine
     /// The language the machine is written in.
-    public var language: LanguageBinding
+    public var language: any LanguageBinding
     /// Whether or onot the machine is suspensible
     public var isSuspensible = true
 
@@ -80,7 +80,7 @@ open class MachineWrapper: DirectoryWrapper {
     ///   - options: The writing options to use.
     ///   - originalContentsURL: The original URL of the file wrapper.
     override open func write(to url: URL, options: FileWrapper.WritingOptions = [], originalContentsURL: URL? = nil) throws {
-        guard let destination = language as? OutputLanguage else {
+        guard let destination = language as? (any OutputLanguage) else {
             throw FSMError.unsupportedOutputFormat
         }
         directoryName = url.lastPathComponent

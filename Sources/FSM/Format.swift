@@ -29,7 +29,7 @@ public enum Format: String, RawRepresentable, Hashable, CaseIterable, Codable {
 }
 
 /// Format to language binding mapping.
-@usableFromInline let formatToLanguageBinding: [Format: LanguageBinding] = [
+@usableFromInline let formatToLanguageBinding: [Format: any LanguageBinding] = [
     .c: CBinding(),
     .cx: ObjCPPBinding(),
     .cpp: ObjCPPBinding(),
@@ -52,6 +52,6 @@ public enum Format: String, RawRepresentable, Hashable, CaseIterable, Codable {
 ///   - default: The default format if `format` is `nil`
 /// - Returns: The output language associated with the given format, or `nil` if there is none.
 @inlinable
-public func outputLanguage(for format: Format?, default: LanguageBinding? = nil) -> OutputLanguage? {
-    (format.flatMap { formatToLanguageBinding[$0] } ?? `default`) as? OutputLanguage
+public func outputLanguage(for format: Format?, default: (any LanguageBinding)? = nil) -> (any OutputLanguage)? {
+    (format.flatMap { formatToLanguageBinding[$0] } ?? `default`) as? (any OutputLanguage)
 }

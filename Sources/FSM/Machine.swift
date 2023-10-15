@@ -28,7 +28,7 @@ public typealias StateNameLayouts = [StateName : (state: StateLayout, transition
 /// This class represents a finite-state machine in a given language.
 public class Machine {
     /// Programming language binding
-    public var language: LanguageBinding
+    public var language: any LanguageBinding
     /// The actual finite state machine
     public var llfsm: LLFSM
     /// Graphical layout of the states
@@ -148,7 +148,7 @@ public class Machine {
     ///   - isSuspensible: Whether the FSM code will allow suspension.
     @inlinable
     public func write(to url: URL, isSuspensible: Bool) throws {
-        guard let outputLanguage = language as? OutputLanguage else {
+        guard let outputLanguage = language as? (any OutputLanguage) else {
             throw FSMError.unsupportedOutputFormat
         }
         try write(to: url, language: outputLanguage, isSuspensible: isSuspensible)
@@ -164,7 +164,7 @@ public class Machine {
     ///   - language: The language to use.
     ///   - isSuspensible: Whether the FSM code will allow suspension.
     @inlinable
-    public func write(to url: URL, language destination: OutputLanguage, isSuspensible: Bool) throws {
+    public func write(to url: URL, language destination: any OutputLanguage, isSuspensible: Bool) throws {
         let arrangement = try destination.createWrapper(at: url)
         try add(to: arrangement, language: destination, isSuspensible: isSuspensible)
         try arrangement.write(to: url)
@@ -181,8 +181,8 @@ public class Machine {
     ///   - machineWrapper: The `MachineWrapper` to add the FSM to.
     ///   - targetLanguage: The language to use (defaults to the original language).
     ///   - isSuspensible: Whether the FSM code will allow suspension.
-    public func add(to machineWrapper: MachineWrapper, language targetLanguage: LanguageBinding? = nil, isSuspensible: Bool) throws {
-        guard let destination = (targetLanguage ?? language) as? OutputLanguage else {
+    public func add(to machineWrapper: MachineWrapper, language targetLanguage: (any LanguageBinding)? = nil, isSuspensible: Bool) throws {
+        guard let destination = (targetLanguage ?? language) as? (any OutputLanguage) else {
             throw FSMError.unsupportedOutputFormat
         }
         try destination.addLanguage(to: machineWrapper)
@@ -354,7 +354,7 @@ public func dictionary(from layouts: StateNameLayouts) -> NSDictionary {
 ///   - language: The language binding to use (defaults to ObjCPPBinding).
 /// - Returns: A function that returns an array of transitions for a given source state.
 @inlinable
-func transitions(for machineWrapper: MachineWrapper, with states: [State], using language: LanguageBinding = ObjCPPBinding()) -> (State) -> [Transition] {
+func transitions(for machineWrapper: MachineWrapper, with states: [State], using language: any LanguageBinding = ObjCPPBinding()) -> (State) -> [Transition] {
     return { (state: State) -> [Transition] in
         let sourceID = state.id
         let n = language.numberOfTransitions(for: machineWrapper, stateName: state.name)

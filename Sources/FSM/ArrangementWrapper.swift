@@ -12,7 +12,7 @@ open class ArrangementWrapper: DirectoryWrapper {
     /// The arrangement wrapped by this class.
     public var arrangement: Arrangement
     /// The language the arrangement is written in.
-    public var language: LanguageBinding
+    public var language: any LanguageBinding
     /// Whether or onot the arrangement supports suspension
     public var isSuspensible = true
 
@@ -23,7 +23,7 @@ open class ArrangementWrapper: DirectoryWrapper {
     ///   - name: The preferred file name for the arrangement to wrap.
     ///   - language: The language the arrangement is written in.
     @inlinable
-    public init(directoryWithFileWrappers childrenByPreferredName: [String : FileWrapper] = [:], for arrangement: Arrangement, named name: String? = nil, language: LanguageBinding? = nil) {
+    public init(directoryWithFileWrappers childrenByPreferredName: [String : FileWrapper] = [:], for arrangement: Arrangement, named name: String? = nil, language: (any LanguageBinding)? = nil) {
         self.arrangement = arrangement
         self.language = language ?? arrangement.machines.first?.language ?? CBinding()
         super.init(directoryWithFileWrappers: childrenByPreferredName)
@@ -47,7 +47,7 @@ open class ArrangementWrapper: DirectoryWrapper {
     ///   - options: The writing options to use.
     ///   - originalContentsURL: The original URL of the file wrapper.
     override open func write(to url: URL, options: FileWrapper.WritingOptions = [], originalContentsURL: URL? = nil) throws {
-        guard let destination = language as? OutputLanguage else {
+        guard let destination = language as? (any OutputLanguage) else {
             throw FSMError.unsupportedOutputFormat
         }
         preferredFilename = url.lastPathComponent
