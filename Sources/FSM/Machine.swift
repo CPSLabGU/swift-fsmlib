@@ -185,6 +185,9 @@ public class Machine {
         guard let destination = (targetLanguage ?? language) as? (any OutputLanguage) else {
             throw FSMError.unsupportedOutputFormat
         }
+        if destination != language {
+            machineWrapper.removeFileWrappers()
+        }
         try destination.addLanguage(to: machineWrapper)
         try destination.add(boilerplate: boilerplate, to: machineWrapper)
         try destination.add(windowLayout: windowLayout, to: machineWrapper)

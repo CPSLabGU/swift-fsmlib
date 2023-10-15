@@ -7,7 +7,7 @@
 import Foundation
 
 /// Import/Export binding for a particular programming language
-public protocol LanguageBinding {
+public protocol LanguageBinding: Equatable {
     /// The canonical name of the language binding.
     var name: String { get }
     /// Return the number of transitions for the given state.
@@ -64,6 +64,15 @@ public protocol LanguageBinding {
 
 /// Default implementations
 public extension LanguageBinding {
+    /// Compare two language bindings for equality.
+    /// - Parameters:
+    ///   - lhs: The left-hand side language binding to compare.
+    ///   - rhs: The right-hand side language binding to compare.
+    /// - Returns: `true` if the two language bindings are equal.
+    @inlinable static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.name == rhs.name
+    }
+
     /// Return the window layout for the given machine.
     /// - Parameter machineWrapper: The MachineWrapper.
     /// - Returns: The window layout for the given machine (or `nil`).
@@ -103,4 +112,26 @@ public func languageBinding(for languageName: String?) -> any LanguageBinding {
         return ObjCPPBinding()
     }
     return binding
+}
+
+/// Compare two optional language bindings for equality.
+///
+/// - Parameters:
+///   - lhs: The left-hand side language binding to compare.
+///   - rhs: The right-hand side language binding to compare.
+/// - Returns: `true` if the two language bindings are equal or both `nil`.
+@inlinable
+public func == (lhs: (any LanguageBinding)?, rhs: (any LanguageBinding)?) -> Bool {
+    lhs?.name == rhs?.name
+}
+
+/// Compare two optional language bindings for inequality.
+///
+/// - Parameters:
+///   - lhs: The left-hand side language binding to compare.
+///   - rhs: The right-hand side language binding to compare.
+/// - Returns: `true` if the two language bindings are different.
+@inlinable
+public func != (lhs: (any LanguageBinding)?, rhs: (any LanguageBinding)?) -> Bool {
+    !(lhs == rhs)
 }
