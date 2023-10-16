@@ -51,9 +51,10 @@ open class ArrangementWrapper: DirectoryWrapper {
             throw FSMError.unsupportedOutputFormat
         }
         preferredFilename = url.lastPathComponent
-        let wrapperNames = fileWrappers?.keys as? [String] ?? []
+        let wrapperNames = fileWrappers?.keys.map {$0} ?? []
         let wrappersAndNames: [(MachineWrapper, Filename)] = wrapperNames.compactMap {
             guard let wrapper = fileWrappers?[$0] as? MachineWrapper else { return nil }
+            wrapper.language = language
             return (wrapper, $0)
         }
         let names = wrappersAndNames.map { $0.1 }
