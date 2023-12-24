@@ -9,11 +9,11 @@ import Foundation
 /// Directory file wrapper wrapping a Machine
 open class MachineWrapper: DirectoryWrapper {
     /// The machine wrapped by this class.
-    public var machine: Machine
+    open var machine: Machine
     /// The language the machine is written in.
-    public var language: any LanguageBinding
+    open var language: any LanguageBinding
     /// Whether or onot the machine is suspensible
-    public var isSuspensible = true
+    open var isSuspensible = true
 
     /// Initialiser for reading from a URL.
     ///
@@ -22,15 +22,11 @@ open class MachineWrapper: DirectoryWrapper {
     ///   - url: The URL to read from.
     ///   - options: The reading options to use.
     /// - Throws: Any error thrown by the underlying file system.
-    public override init(url: URL, options: ReadingOptions = []) throws {
+    public override convenience init(url: URL, options: ReadingOptions = []) throws {
         let temporaryWrapper = try FileWrapper(url: url, options: options)
-        machine = Machine()
-        language = machine.language
-        super.init(directoryWithFileWrappers: temporaryWrapper.fileWrappers ?? [:])
+        try self.init(fileWrapper: temporaryWrapper)
         preferredFilename = url.lastPathComponent
         filename = url.lastPathComponent
-        machine = try Machine(from: self)
-        language = machine.language
     }
 
     /// Designated initialiser for reading from a URL.
@@ -63,6 +59,35 @@ open class MachineWrapper: DirectoryWrapper {
         if let name { self.preferredFilename = name }
     }
 
+    /// Initialise from an existing directory wrapper.
+    ///
+    /// This initialiser sets up a machine wrapper from an existing
+    /// directory wrapper.
+    ///
+    /// - Parameter fileWrapper: The original FileWrapper to initialise from.
+    @inlinable
+    public init(fileWrapper: FileWrapper) throws {
+        guard fileWrapper.isDirectory else { throw FSMError.notADirectory }
+        machine = Machine()
+        language = machine.language
+        super.init(directoryWithFileWrappers: fileWrapper.fileWrappers ?? [:])
+        machine = try Machine(from: self)
+        language = machine.language
+    }
+    /// Failable initialiser from a file Wrapper.
+    ///
+    /// This initialiser sets up a machine wrapper from an existing
+    /// directory wrapper.  It fails if a `Machine` cannot be
+    /// created from the wrapper or `FileWrapper` is not a
+    /// directory wrapper.
+    /// - Parameter fileWrapper: The original FileWrapper to initialise from.
+    public convenience init?(_ fileWrapper: FileWrapper) {
+        do {
+            try self.init(fileWrapper: fileWrapper)
+        } catch {
+            return nil
+        }
+    }
     /// Initialise from a decoder.
     /// - Note: this is not implemented.
     /// - Parameter inCoder: The coder to initialise from.

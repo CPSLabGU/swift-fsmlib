@@ -62,7 +62,7 @@ public class Machine {
     /// the given MachineWrapper.
     ///
     /// - Note: The MachineWrapper is expected to point to a directory containing the machine.
-    /// - Parameter wrapper: The MachineWrapper to read the FSM from.
+    /// - Parameter machineWrapper: The MachineWrapper to read the FSM from.
     public init(from machineWrapper: MachineWrapper) throws {
         language = languageBinding(for: machineWrapper)
         boilerplate = language.boilerplate(for: machineWrapper)

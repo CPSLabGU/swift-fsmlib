@@ -93,10 +93,10 @@ public func languageBinding(for url: URL) -> any LanguageBinding {
 
 /// Return the language binding for the given MachineWrapper.
 ///
-/// - Parameter wrapper: The machine wrapper.
+/// - Parameter wrapper: The directory wrapper containing the language file.
 /// - Returns: The language binding for the given wrapper..
 @inlinable
-public func languageBinding(for wrapper: MachineWrapper) -> any LanguageBinding {
+public func languageBinding(for wrapper: DirectoryWrapper) -> any LanguageBinding {
     languageBinding(for: wrapper.stringContents(of: .language))
 }
 

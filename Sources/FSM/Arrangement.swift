@@ -12,10 +12,28 @@ public struct Arrangement {
     public var machines: [Machine]
 
     /// Designated initialiser.
+    ///
+    /// This initialiser creates an arrangement of FSMs
+    /// from the given array of machines.
+    ///
     /// - Parameter machines: The machines in this arrangement.
     @inlinable
     public init(machines: [Machine]) {
         self.machines = machines
+    }
+    /// Constructor for reading an arrangement from a file wrapper.
+    ///
+    /// This initialiser creates an arrangement of FSMs
+    /// from the given file wrapper.
+    ///
+    /// - Note: The `ArrangementWrapper` is expected to point to a directory containing the machines.
+    /// - Parameter arrangementWrapper: The `ArrangementWrapper` to read from.
+    public init(from arrangementWrapper: ArrangementWrapper) throws {
+//        let language = languageBinding(for: arrangementWrapper)
+        let machineWrappers = arrangementWrapper.fileWrappers?.values.compactMap {
+            MachineWrapper($0)
+        } ?? []
+        machines = machineWrappers.map(\.machine)
     }
     /// Add the arrangement to the given `ArrangementWrapper`.
     ///
