@@ -21,6 +21,17 @@ public struct Arrangement {
     public init(machines: [Machine]) {
         self.machines = machines
     }
+    /// Constructor for reading an arrangement from a given URL.
+    ///
+    /// This initialiser will read the machines from
+    /// the `ArrangementWrapper` at the given URL.
+    ///
+    /// - Note: The URL is expected to point to a directory containing the arrangement.
+    /// - Parameter url: The URL to read the arrangement from.
+    public init(from url: URL) throws {
+        let wrapper = try ArrangementWrapper(url: url)
+        try self.init(from: wrapper)
+    }
     /// Constructor for reading an arrangement from a file wrapper.
     ///
     /// This initialiser creates an arrangement of FSMs
@@ -29,11 +40,11 @@ public struct Arrangement {
     /// - Note: The `ArrangementWrapper` is expected to point to a directory containing the machines.
     /// - Parameter arrangementWrapper: The `ArrangementWrapper` to read from.
     public init(from arrangementWrapper: ArrangementWrapper) throws {
-//        let language = languageBinding(for: arrangementWrapper)
         let machineWrappers = arrangementWrapper.fileWrappers?.values.compactMap {
             MachineWrapper($0)
         } ?? []
-        machines = machineWrappers.map(\.machine)
+        let wrappedMachines = machineWrappers.map(\.machine)
+        self.init(machines: wrappedMachines)
     }
     /// Add the arrangement to the given `ArrangementWrapper`.
     ///

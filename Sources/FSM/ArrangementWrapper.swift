@@ -37,6 +37,28 @@ open class ArrangementWrapper: DirectoryWrapper {
         fatalError("init(coder:) has not been implemented")
     }
 
+    /// Initialiser for reading from a URL.
+    ///
+    ///This initialiser sets up an arrangement file wrapper
+    ///for reading from the given URL.
+    ///
+    /// - Parameters:
+    ///   - url: The URL to read from.
+    ///   - options: The reading options to use.
+    /// - Throws: Any error thrown by the underlying file system.
+    public override init(url: URL, options: ReadingOptions = []) throws {
+        let directoryWrapper = try DirectoryWrapper(url: url, options: options)
+        let machineWrappers = directoryWrapper.fileWrappers?.values.compactMap {
+            MachineWrapper($0)
+        } ?? []
+        let wrappedMachines = machineWrappers.map(\.machine)
+        language = languageBinding(for: directoryWrapper)
+        arrangement = Arrangement(machines: wrappedMachines)
+        try super.init(url: url, options: options)
+        preferredFilename = url.lastPathComponent
+        filename = url.lastPathComponent
+    }
+
     /// Write the content of the arrangement to the specified location.
     ///
     /// Recursively writes the entire arrangement to the specified location.
