@@ -2,7 +2,7 @@
 //  Machine.swift
 //
 //  Created by Rene Hexel on 23/9/2016.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2024 Rene Hexel. All rights reserved.
 //
 import Foundation
 import SystemPackage
@@ -10,6 +10,9 @@ import SystemPackage
 #if !canImport(Darwin)
 public let UUID_NULL: uuid_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 #endif
+
+/// Type for storing machine names.
+public typealias MachineName = String
 
 /// Array of state names
 public typealias StateNames = [StateName]

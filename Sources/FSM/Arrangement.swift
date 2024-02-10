@@ -6,6 +6,9 @@
 //
 import Foundation
 
+/// Array of machine names.
+public typealias MachineNames = [MachineName]
+
 /// Arrangement of multiple FSMs.
 public struct Arrangement {
     /// The FSMs in this arrangement.
@@ -28,6 +31,7 @@ public struct Arrangement {
     ///
     /// - Note: The URL is expected to point to a directory containing the arrangement.
     /// - Parameter url: The URL to read the arrangement from.
+    @inlinable
     public init(from url: URL) throws {
         let wrapper = try ArrangementWrapper(url: url)
         try self.init(from: wrapper)
@@ -39,6 +43,7 @@ public struct Arrangement {
     ///
     /// - Note: The `ArrangementWrapper` is expected to point to a directory containing the machines.
     /// - Parameter arrangementWrapper: The `ArrangementWrapper` to read from.
+    @inlinable
     public init(from arrangementWrapper: ArrangementWrapper) throws {
         let machineWrappers = arrangementWrapper.fileWrappers?.values.compactMap {
             MachineWrapper($0)
@@ -46,6 +51,9 @@ public struct Arrangement {
         let wrappedMachines = machineWrappers.map(\.machine)
         self.init(machines: wrappedMachines)
     }
+}
+
+public extension Arrangement {
     /// Add the arrangement to the given `ArrangementWrapper`.
     ///
     /// This method creates a file wrapper for an arrangement
@@ -58,7 +66,7 @@ public struct Arrangement {
     ///   - isSuspensible: Whether the output FSMs should be suspensible.
     /// - Returns: The filenames of the machines for adding to the arrangement.
     @inlinable
-    public func add(to wrapper: ArrangementWrapper, language: any OutputLanguage, machineNames: [String], isSuspensible: Bool = true) throws -> [Filename] {
+    func add(to wrapper: ArrangementWrapper, language: any OutputLanguage, machineNames: [String], isSuspensible: Bool = true) throws -> [Filename] {
         var instanceMappings = [ String : (String, Machine) ]()
         let instances = zip(machines, machineNames).map {
             let machine = $0.0
@@ -89,5 +97,28 @@ public struct Arrangement {
             $0.hasSuffix(".machine") ? $0 : ($0 + ".machine")
         }
     }
+    /// Read the names of machines from the given ``ArrangementWrapper``.
+    ///
+    /// This reads the content of the given ``ArrangementWrapper`` and interprets
+    /// each line as a state name.
+    ///
+    /// - Parameters:
+    ///   - wrapper: The machine wrapper to examine.
+    ///   - machinesFilename: The name of the states file.
+    /// - Throws: `NSError` if the file cannot be read.
+    /// - Returns: An array of state names.
+    @inlinable
+    func machineInstanceNames(for wrapper: ArrangementWrapper, machinesFilename: Filename) -> MachineNames {
+        machineNames(from: wrapper.fileWrappers?[machinesFilename]?.stringContents ?? "")
+    }
+    /// Read the names of machines from the given string.
+    ///
+    /// This  interprets each line as a machine instance name.
+    ///
+    /// - Parameter content: content of the machine names file.
+    /// - Returns: An array of machine names.
+    @inlinable
+    func machineNames(from content: String) -> MachineNames {
+        content.lines.map(trimmed).filter(nonempty)
+    }
 }
-
