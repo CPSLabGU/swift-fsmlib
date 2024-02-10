@@ -2,7 +2,7 @@
 //  ArrangementWrapper.swift
 //
 //  Created by Rene Hexel on 9/10/2023.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2024 Rene Hexel. All rights reserved.
 //
 
 import Foundation
@@ -16,6 +16,24 @@ open class ArrangementWrapper: DirectoryWrapper {
     /// Whether or onot the arrangement supports suspension
     public var isSuspensible = true
 
+    /// Clone a FileWrapper.
+    ///
+    /// This initialiser sets up an arrangement wrapper for reading from the given file wrapper.
+    /// The existing file wrapper must be a directory.
+    /// - Parameter fileWrapper: The `FileWrapper` to clone.
+    @inlinable
+    public init(fileWrapper: FileWrapper) throws {
+        guard fileWrapper.isDirectory else {
+            throw FSMError.notADirectory
+        }
+        let namesAndMachineWrappers = fileWrapper.fileWrappers?.compactMap { element in
+            MachineWrapper(element.value).map { (element.key, $0) }
+        } ?? []
+        let machineWrappers = [String : MachineWrapper](uniqueKeysWithValues: namesAndMachineWrappers)
+        arrangement = Arrangement(machines: machineWrappers.values.map(\.machine))
+        language = arrangement.machines.first?.language ?? CBinding()
+        super.init(directoryWithFileWrappers: machineWrappers)
+    }
     /// Create a file wrapper for a directory with the given children.
     /// - Parameters:
     ///   - childrenByPreferredName: Child file wrappers by preferred name.
