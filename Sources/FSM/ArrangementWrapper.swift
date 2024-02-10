@@ -11,6 +11,11 @@ import Foundation
 open class ArrangementWrapper: DirectoryWrapper {
     /// The arrangement wrapped by this class.
     public var arrangement: Arrangement
+    /// The instance names wrapped by this class.
+    ///
+    /// This array determines the names and order of
+    /// instances in the arrangement.
+    public var instanceNames: MachineNames
     /// The language the arrangement is written in.
     public var language: any LanguageBinding
     /// Whether or onot the arrangement supports suspension
@@ -30,19 +35,25 @@ open class ArrangementWrapper: DirectoryWrapper {
             MachineWrapper(element.value).map { (element.key, $0) }
         } ?? []
         let machineWrappers = [String : MachineWrapper](uniqueKeysWithValues: namesAndMachineWrappers)
+        instanceNames = Arrangement.machineNames(from: fileWrapper.fileWrappers?[Filename.machines]?.stringContents ?? "")
         arrangement = Arrangement(machines: machineWrappers.values.map(\.machine))
+        if instanceNames.isEmpty {
+            instanceNames = machineWrappers.map(\.key)
+        }
         language = arrangement.machines.first?.language ?? CBinding()
         super.init(directoryWithFileWrappers: machineWrappers)
     }
     /// Create a file wrapper for a directory with the given children.
     /// - Parameters:
     ///   - childrenByPreferredName: Child file wrappers by preferred name.
-    ///   - machine: The arrangement to wrap.
+    ///   - arrangement: The arrangement to wrap.
+    ///   - instanceNames: The names of the instances in the order in which they should be arranged.
     ///   - name: The preferred file name for the arrangement to wrap.
     ///   - language: The language the arrangement is written in.
     @inlinable
-    public init(directoryWithFileWrappers childrenByPreferredName: [String : FileWrapper] = [:], for arrangement: Arrangement, named name: String? = nil, language: (any LanguageBinding)? = nil) {
+    public init(directoryWithFileWrappers childrenByPreferredName: [MachineName : FileWrapper] = [:], for arrangement: Arrangement, of instanceNames: MachineNames, named name: String? = nil, language: (any LanguageBinding)? = nil) {
         self.arrangement = arrangement
+        self.instanceNames = instanceNames
         self.language = language ?? arrangement.machines.first?.language ?? CBinding()
         super.init(directoryWithFileWrappers: childrenByPreferredName)
         if let name { self.preferredFilename = name }
@@ -66,12 +77,16 @@ open class ArrangementWrapper: DirectoryWrapper {
     /// - Throws: Any error thrown by the underlying file system.
     public override init(url: URL, options: ReadingOptions = []) throws {
         let directoryWrapper = try DirectoryWrapper(url: url, options: options)
-        let machineWrappers = directoryWrapper.fileWrappers?.values.compactMap {
-            MachineWrapper($0)
-        } ?? []
+        instanceNames = Arrangement.machineNames(from: directoryWrapper.fileWrappers?[Filename.machines]?.stringContents ?? "")
+        let machineWrappers = instanceNames.compactMap {
+            directoryWrapper.fileWrappers?[$0].flatMap { MachineWrapper($0) }
+        }
         let wrappedMachines = machineWrappers.map(\.machine)
         language = languageBinding(for: directoryWrapper)
         arrangement = Arrangement(machines: wrappedMachines)
+        if instanceNames.isEmpty {
+            instanceNames = machineWrappers.compactMap(\.preferredFilename)
+        }
         try super.init(url: url, options: options)
         preferredFilename = url.lastPathComponent
         filename = url.lastPathComponent
@@ -91,7 +106,7 @@ open class ArrangementWrapper: DirectoryWrapper {
             throw FSMError.unsupportedOutputFormat
         }
         preferredFilename = url.lastPathComponent
-        let wrapperNames = fileWrappers?.keys.map {$0} ?? []
+        let wrapperNames = instanceNames.isEmpty ? fileWrappers?.keys.map {$0} ?? instanceNames : instanceNames
         let wrappersAndNames: [(MachineWrapper, Filename)] = wrapperNames.compactMap {
             guard let wrapper = fileWrappers?[$0] as? MachineWrapper else { return nil }
             wrapper.language = language
@@ -101,9 +116,14 @@ open class ArrangementWrapper: DirectoryWrapper {
         let fsmNames: [String] = try arrangement.add(to: self, language: destination, machineNames: names, isSuspensible: isSuspensible)
         let wrappers = wrappersAndNames.map { $0.0 }
         try zip(wrappers, fsmNames).forEach {
-            let machineWrapper = $0.0
             let machineName = $0.1
-            machineWrapper.preferredFilename = machineName
+            let machineWrapper: MachineWrapper
+            if $0.0.preferredFilename == machineName {
+                machineWrapper = $0.0
+            } else {
+                machineWrapper = try! MachineWrapper(fileWrapper: $0.0)
+                machineWrapper.preferredFilename = machineName
+            }
             try machineWrapper.machine.add(to: machineWrapper, language: destination, isSuspensible: isSuspensible)
         }
         try super.write(to: url, options: options, originalContentsURL: originalContentsURL)

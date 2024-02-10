@@ -54,7 +54,7 @@ struct FSMConvert: AsyncParsableCommand {
         }
         let outputURL = URL(fileURLWithPath: output)
         let wrapperMappings = Dictionary(wrapperNames, uniquingKeysWith: { a, _ in a })
-        let arrangementWrapper = ArrangementWrapper(directoryWithFileWrappers: wrapperMappings, for: machineArrangement, named: outputURL.lastPathComponent, language: outputLanguage)
+        let arrangementWrapper = ArrangementWrapper(directoryWithFileWrappers: wrapperMappings, for: machineArrangement, of: wrapperNames.map(\.0), named: outputURL.lastPathComponent, language: outputLanguage)
         if verbose {
             print("\(wrapperNames.count) FSMs with \(wrapperNames.reduce(0) { $0 + $1.1.machine.llfsm.states.count }) states and \(wrapperNames.reduce(0) { $0 + $1.1.machine.llfsm.transitions.count }) transitions\n")
         }

@@ -109,7 +109,7 @@ public extension Arrangement {
     /// - Returns: An array of state names.
     @inlinable
     func machineInstanceNames(for wrapper: ArrangementWrapper, machinesFilename: Filename) -> MachineNames {
-        machineNames(from: wrapper.fileWrappers?[machinesFilename]?.stringContents ?? "")
+        Arrangement.machineNames(from: wrapper.fileWrappers?[machinesFilename]?.stringContents ?? "")
     }
     /// Read the names of machines from the given string.
     ///
@@ -118,7 +118,7 @@ public extension Arrangement {
     /// - Parameter content: content of the machine names file.
     /// - Returns: An array of machine names.
     @inlinable
-    func machineNames(from content: String) -> MachineNames {
+    static func machineNames(from content: String) -> MachineNames {
         content.lines.map(trimmed).filter(nonempty)
     }
 }
