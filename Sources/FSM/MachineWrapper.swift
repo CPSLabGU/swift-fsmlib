@@ -2,7 +2,7 @@
 //  MachineWrapper.swift
 //
 //  Created by Rene Hexel on 30/9/2023.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2024 Rene Hexel. All rights reserved.
 //
 import Foundation
 
@@ -71,6 +71,7 @@ open class MachineWrapper: DirectoryWrapper {
         machine = Machine()
         language = machine.language
         super.init(directoryWithFileWrappers: fileWrapper.fileWrappers ?? [:])
+        preferredFilename = fileWrapper.preferredFilename
         machine = try Machine(from: self)
         language = machine.language
     }
