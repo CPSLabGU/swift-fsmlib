@@ -84,6 +84,7 @@ public struct Arrangement {
         try language.addArrangementInterface(for: instances, to: wrapper, isSuspensible: isSuspensible)
         try language.addArrangementCode(for: instances, to: wrapper, isSuspensible: isSuspensible)
         try language.addArrangementCMakeFile(for: instances, to: wrapper, isSuspensible: isSuspensible)
+        try language.addArrangementMachine(instances: instances, to: wrapper, isSuspensible: isSuspensible)
         return machineFiles.map {
             $0.hasSuffix(".machine") ? $0 : ($0 + ".machine")
         }

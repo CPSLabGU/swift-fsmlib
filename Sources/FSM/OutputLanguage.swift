@@ -144,6 +144,12 @@ public protocol OutputLanguage: LanguageBinding {
     ///   - wrapper: The `ArrangementWrapper` to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     func addArrangementCMakeFile(for instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws
+    /// Write a `Machines` file containing the names of the FSM instances.
+    ///
+    /// This method creates a file containing the names of the
+    /// FSM instances used by the arrangement in the order
+    /// in which they are arranged
+    func addArrangementMachine(instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws
 }
 
 public extension OutputLanguage {
@@ -232,4 +238,22 @@ public extension OutputLanguage {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
     func addCMakeFile(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {}
+    /// Default `Machines` file creator.
+    /// 
+    /// This method creates a file containing the names of the
+    /// FSM instances used by the arrangement in the order
+    /// in which they are arranged.  Each line contains the
+    /// name of an instance.
+    ///
+    /// - Parameters:
+    ///   - instances: The arranged machine instances.
+    ///   - wrapper: The arrangement wrapper to write to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    @inlinable
+    func addArrangementMachine(instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws {
+        guard let data = instances.map(\.name).joined(separator: "\n").data(using: .utf8) else { throw POSIXError(.EINVAL) }
+        let fileWrapper = FileWrapper(regularFileWithContents: data)
+        fileWrapper.preferredFilename = .machines
+        wrapper.replaceFileWrapper(fileWrapper)
+    }
 }
