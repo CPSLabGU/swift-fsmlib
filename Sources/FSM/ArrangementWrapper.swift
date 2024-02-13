@@ -39,6 +39,7 @@ open class ArrangementWrapper: DirectoryWrapper {
         language = arrangement.namedInstances.lazy.compactMap { $0.machine.language }.first ?? CBinding()
         let machineWrappers = [ String : MachineWrapper ](uniqueKeysWithValues: namedWrappers)
         super.init(directoryWithFileWrappers: machineWrappers)
+        preferredFilename = fileWrapper.preferredFilename
     }
     /// Create a file wrapper for a directory with the given children.
     /// - Parameters:
