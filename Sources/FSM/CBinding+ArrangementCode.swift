@@ -165,10 +165,11 @@ public func cStaticArrangementInterface(for instances: [Instance], named name: S
         Code.forEach(instances) { instance in
             let machineName = instance.typeName
             let lowerInstance = instance.name.lowercased()
+            let fsm = instance.machine.llfsm
             "/// Static instantiation of a \(machineName) LLFSM."
             "extern struct Machine_" + machineName + " static_fsm_" + lowerInstance + ";"
-            Code.forEach(instance.fsm.states.compactMap {
-                instance.fsm.stateMap[$0]
+            Code.forEach(fsm.states.compactMap {
+                fsm.stateMap[$0]
             }) { state in
                 "/// Static instantiation of the \(machineName) LLFSM state \(state.name)."
                 "extern struct FSM\(machineName)_State_\(state.name) static_\(lowerInstance)_state_\(state.name);"
@@ -200,9 +201,10 @@ public func cStaticArrangementCode(for instances: [Instance], named name: String
     #include \"Static_Arrangement_\(name).h\"
 
     """ + Code.forEach(machines) { (machine, instance) in
+        let fsm = instance.machine.llfsm
         "#include \"" + machine + ".machine/Machine_" + machine + ".h\""
-        Code.forEach(instance.fsm.states.compactMap {
-            instance.fsm.stateMap[$0]
+        Code.forEach(fsm.states.compactMap {
+            fsm.stateMap[$0]
         }) { state in
             "#include \"" + machine + ".machine/State_" + state.name + ".h\""
         }
@@ -221,30 +223,31 @@ public func cStaticArrangementCode(for instances: [Instance], named name: String
             let machineName = instance.typeName
             let lowerMachine = machineName.lowercased()
             let lowerInstance = instance.name.lowercased()
+            let fsm = instance.machine.llfsm
             "/// Static instantiation of a \(machineName) LLFSM."
             "struct Machine_" + machineName + " static_fsm_" + lowerInstance + " = "
             Code.bracedBlock {
-                if let initialState = instance.fsm.stateMap[instance.fsm.initialState] {
+                if let initialState = fsm.stateMap[fsm.initialState] {
                     ".current_state = (struct LLFSMState *) &static_" + lowerInstance + "_state_" + initialState.name + ","
                 }
                 if isSuspensible,
-                   let suspendStateID = instance.fsm.suspendState,
-                   let suspendState = instance.fsm.stateMap[suspendStateID] {
+                   let suspendStateID = fsm.suspendState,
+                   let suspendState = fsm.stateMap[suspendStateID] {
                     ".suspend_state = (struct LLFSMState *) &static_" + lowerInstance + "_state_" + suspendState.name + ","
                 }
                 ".states ="
                 Code.bracedBlock {
-                    Code.enumerating(array: instance.fsm.states.compactMap {
-                        instance.fsm.stateMap[$0]
+                    Code.enumerating(array: fsm.states.compactMap {
+                        fsm.stateMap[$0]
                     }) { (i, state) in
                         "(struct LLFSMState *) &static_" + lowerInstance + "_state_" + state.name +
-                        (i == instance.fsm.states.count - 1 ? "" : ",")
+                        (i == fsm.states.count - 1 ? "" : ",")
                     }
                 }
             } + ";"
             ""
-            Code.forEach(instance.fsm.states.compactMap {
-                instance.fsm.stateMap[$0]
+            Code.forEach(fsm.states.compactMap {
+                fsm.stateMap[$0]
             }) { state in
                 let lowerState = state.name.lowercased()
                 "/// Static instantiation of the \(machineName) LLFSM state \(state.name)."

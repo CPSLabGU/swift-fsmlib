@@ -2,27 +2,27 @@
 //  Arrangement.swift
 //
 //  Created by Rene Hexel on 17/08/2023.
-//  Copyright © 2015, 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2015, 2016, 2023, 2024 Rene Hexel. All rights reserved.
 //
 import Foundation
 
-/// Array of machine names.
-public typealias MachineNames = [MachineName]
-
 /// Arrangement of multiple FSMs.
 public struct Arrangement {
-    /// The FSMs in this arrangement.
-    public var machines: [Machine]
+    /// The FSMs in the arrangement and their names.
+    public var namedInstances: [Instance]
+
+//    /// The FSMs in this arrangement.
+//    public var machines: [Machine]
 
     /// Designated initialiser.
     ///
     /// This initialiser creates an arrangement of FSMs
     /// from the given array of machines.
     ///
-    /// - Parameter machines: The machines in this arrangement.
+    /// - Parameter namedInstances: The machines in this arrangement.
     @inlinable
-    public init(machines: [Machine]) {
-        self.machines = machines
+    public init(namedInstances: [Instance]) {
+        self.namedInstances = namedInstances
     }
     /// Constructor for reading an arrangement from a given URL.
     ///
@@ -45,11 +45,10 @@ public struct Arrangement {
     /// - Parameter arrangementWrapper: The `ArrangementWrapper` to read from.
     @inlinable
     public init(from arrangementWrapper: ArrangementWrapper) throws {
-        let machineWrappers = arrangementWrapper.fileWrappers?.values.compactMap {
-            MachineWrapper($0)
+        let instances = arrangementWrapper.fileWrappers?.compactMap { element in
+            MachineWrapper(element.value).map { Instance(name: element.key, typeFile: arrangementWrapper.name, machine: $0.machine) }
         } ?? []
-        let wrappedMachines = machineWrappers.map(\.machine)
-        self.init(machines: wrappedMachines)
+        self.init(namedInstances: instances)
     }
 }
 
@@ -68,9 +67,9 @@ public extension Arrangement {
     @inlinable
     func add(to wrapper: ArrangementWrapper, language: any OutputLanguage, machineNames: [String], isSuspensible: Bool = true) throws -> [Filename] {
         var instanceMappings = [ String : (String, Machine) ]()
-        let instances = zip(machines, machineNames).map {
-            let machine = $0.0
-            let fileName = $0.1
+        let instances = namedInstances.map {
+            let machine = $0.machine
+            let fileName = $0.name
             let instanceName = String(fileName.sansExtension)
             var j = 1
             var uniqueName = instanceName
@@ -85,7 +84,7 @@ public extension Arrangement {
                 }
             }
             instanceMappings[uniqueName] = (resolvedFile, resolvedMachine)
-            return Instance(name: uniqueName, typeFile: resolvedFile, fsm: resolvedMachine.llfsm)
+            return Instance(name: uniqueName, typeFile: resolvedFile, machine: resolvedMachine)
         }
         let machineFiles = instances.map(\.typeFile)
         try language.addLanguage(to: wrapper)
@@ -108,7 +107,7 @@ public extension Arrangement {
     /// - Throws: `NSError` if the file cannot be read.
     /// - Returns: An array of state names.
     @inlinable
-    func machineInstanceNames(for wrapper: ArrangementWrapper, machinesFilename: Filename) -> MachineNames {
+    func machineInstanceNames(for wrapper: ArrangementWrapper, machinesFilename: Filename) -> [MachineName] {
         Arrangement.machineNames(from: wrapper.fileWrappers?[machinesFilename]?.stringContents ?? "")
     }
     /// Read the names of machines from the given string.
@@ -118,7 +117,7 @@ public extension Arrangement {
     /// - Parameter content: content of the machine names file.
     /// - Returns: An array of machine names.
     @inlinable
-    static func machineNames(from content: String) -> MachineNames {
+    static func machineNames(from content: String) -> [MachineName] {
         content.lines.map(trimmed).filter(nonempty)
     }
 }

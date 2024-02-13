@@ -47,14 +47,14 @@ struct FSMConvert: AsyncParsableCommand {
             let wrapper = try MachineWrapper(url: machineURL)
             return (machineURL.lastPathComponent, wrapper)
         }
-        let machineArrangement = Arrangement(machines: wrapperNames.map { $0.1.machine })
+        let machineArrangement = Arrangement(namedInstances: wrapperNames.map { Instance(name: $0.0, typeFile: $0.0, machine: $0.1.machine) })
         let outputFormat = format.isEmpty ? nil : Format(rawValue: format)
         guard let outputLanguage = outputLanguage(for: outputFormat, default: wrapperNames.first?.1.machine.language) else {
             FSMConvert.exit(withError: "No output language for format '\(format)'\n")
         }
         let outputURL = URL(fileURLWithPath: output)
         let wrapperMappings = Dictionary(wrapperNames, uniquingKeysWith: { a, _ in a })
-        let arrangementWrapper = ArrangementWrapper(directoryWithFileWrappers: wrapperMappings, for: machineArrangement, of: wrapperNames.map(\.0), named: outputURL.lastPathComponent, language: outputLanguage)
+        let arrangementWrapper = ArrangementWrapper(directoryWithFileWrappers: wrapperMappings, for: machineArrangement, named: outputURL.lastPathComponent, language: outputLanguage)
         if verbose {
             print("\(wrapperNames.count) FSMs with \(wrapperNames.reduce(0) { $0 + $1.1.machine.llfsm.states.count }) states and \(wrapperNames.reduce(0) { $0 + $1.1.machine.llfsm.transitions.count }) transitions\n")
         }
