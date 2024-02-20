@@ -9,10 +9,10 @@ on:
 jobs:
   build_macos:
     strategy:
-    matrix:
-      os: [macos-13]
-      build_mode: ["debug", "release"]
-    name: Swift CI for ${{ matrix.os }}
+      matrix:
+        os: [macos-13]
+        build_mode: ["debug", "release"]
+    name: Swift ${{ matrix.build_mode }} CI for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -33,8 +33,8 @@ jobs:
       #- name: Reconfigure Private Repo URLs
       #  run: sed -i 's/git@github.com:/https:\/\/${{ secrets.ACCESS_TOKEN }}@github.com\//g' Package.swift
 
-      - name: Release build
+      - name: build
         run: swift build -c ${{ matrix.build_mode }}
 
-      - name: Release Test
+      - name: Test
         run: swift test -c ${{ matrix.build_mode }}
