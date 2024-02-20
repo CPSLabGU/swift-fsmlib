@@ -9,27 +9,27 @@ on:
 jobs:
   build_linux:
     strategy:
-    matrix:
-      os: [ubuntu-latest, ubuntu-22.04, ubuntu-20.04]
-      swift: ["5.9", "5.8"]
-      build_mode: ["debug", "release"]
+      matrix:
+        os: [ubuntu-latest, ubuntu-22.04, ubuntu-20.04]
+        swift: ["5.9", "5.8"]
+        build_mode: ["debug", "release"]
     name: Swift ${{ matrix.swift }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: swift-actions/setup-swift@v1
         with:
-            swift-version: ${{ matrix.swift }}
+          swift-version: ${{ matrix.swift }}
 
       - name: Setup SSH Key
         run: | 
-            rm -rf ~/.ssh
-            mkdir -m 0700 ~/.ssh
-            echo "${{ secrets.WORKFLOWS_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-            echo "${{ secrets.WORKFLOWS_SSH_PUBLIC_KEY }}" > ~/.ssh/id_ed25519.pub
-            chmod 0600 ~/.ssh/id_ed25519
-            eval "$(ssh-agent -s)"
-            ssh-add ~/.ssh/id_ed25519
+          rm -rf ~/.ssh
+          mkdir -m 0700 ~/.ssh
+          echo "${{ secrets.WORKFLOWS_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          echo "${{ secrets.WORKFLOWS_SSH_PUBLIC_KEY }}" > ~/.ssh/id_ed25519.pub
+          chmod 0600 ~/.ssh/id_ed25519
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_ed25519
 
       - name: Checkout repo
         uses: actions/checkout@v2
