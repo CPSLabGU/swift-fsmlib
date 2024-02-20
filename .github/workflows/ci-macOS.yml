@@ -1,0 +1,40 @@
+name: MacOS CI
+
+on:
+  push:
+    branches: [development, main]
+  pull_request:
+    branches: [development, main]
+
+jobs:
+  build_macos:
+    strategy:
+      matrix:
+        os: [macos-13]
+        build_mode: ["debug", "release"]
+    name: Swift ${{ matrix.build_mode }} CI for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest
+      #- name: Install guunits
+      #  uses: mipalgu/install-guunits@main
+
+      - name: Setup SSH Key
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.WORKFLOWS_SSH_PRIVATE_KEY }} 
+
+      - name: Checkout repo
+        uses: actions/checkout@v2
+      
+      #- name: Reconfigure Private Repo URLs
+      #  run: sed -i 's/git@github.com:/https:\/\/${{ secrets.ACCESS_TOKEN }}@github.com\//g' Package.swift
+
+      - name: build
+        run: swift build -c ${{ matrix.build_mode }}
+
+      - name: Test
+        run: swift test -c ${{ matrix.build_mode }}
