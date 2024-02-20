@@ -13,7 +13,7 @@ jobs:
         os: [ubuntu-latest, ubuntu-22.04, ubuntu-20.04]
         swift: ["5.9", "5.8"]
         build_mode: ["debug", "release"]
-    name: Swift ${{ matrix.swift }} on ${{ matrix.os }}
+    name: Swift ${{ matrix.swift }} ${{ matrix.build_mode }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
     steps:
