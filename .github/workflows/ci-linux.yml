@@ -37,8 +37,8 @@ jobs:
       #- name: Reconfigure Private Repo URLs
       #  run: sed -i 's/git@github.com:/https:\/\/${{ secrets.ACCESS_TOKEN }}@github.com\//g' Package.swift
 
-      - name: Release build
+      - name: build
         run: swift build -c ${{ matrix.build_mode }}
 
-      - name: Release Test
+      - name: Test
         run: swift test -c ${{ matrix.build_mode }}
