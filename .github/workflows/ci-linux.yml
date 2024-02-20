@@ -1,20 +1,25 @@
-name: Ubuntu 22.04 Swift Debug CI
+name: Linux CI
 
 on:
   push:
-    branches: [develop, main]
+    branches: [development, main]
   pull_request:
-    branches: [develop, main]
+    branches: [development, main]
 
 jobs:
-
-  exec-ci-debug-22_04:
-    runs-on: ubuntu-22.04
+  build_linux:
+    strategy:
+    matrix:
+      os: [ubuntu-latest, ubuntu-22.04, ubuntu-20.04]
+      swift: ["5.9", "5.8"]
+      build_mode: ["debug", "release"]
+  name: Swift ${{ matrix.swift }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: swift-actions/setup-swift@v1
         with:
-            swift-version: "5.8"
+            swift-version: ${{ matrix.swift }}
 
       - name: Setup SSH Key
         run: | 
@@ -32,15 +37,8 @@ jobs:
       #- name: Reconfigure Private Repo URLs
       #  run: sed -i 's/git@github.com:/https:\/\/${{ secrets.ACCESS_TOKEN }}@github.com\//g' Package.swift
 
-      - name: Debug Build
-        run: swift build -c debug
+      - name: Release build
+        run: swift build -c ${{ matrix.build_mode }}
 
-      - name: Debug Test
-        run: swift test --enable-code-coverage
-
-      - name: Coverage Report
-        uses: mattpolzin/swift-codecov-action@0.7.3
-        id: cov
-        with:
-          MINIMUM_COVERAGE: 0
-
+      - name: Release Test
+        run: swift test -c ${{ matrix.build_mode }}
