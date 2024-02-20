@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: swift-actions/setup-swift@v1
         with:
-            swift-version: "5.7"
+            swift-version: "5.8"
 
       - name: Setup SSH Key
         run: | 
