@@ -261,12 +261,31 @@ open class FileWrapper: @unchecked Sendable {
     /// - Parameter child: The child `FileWrapper` to add.
     /// - Returns: The filename of the added child.
     @discardableResult @inlinable
-    open func replaceFileWrapper(_ child: FileWrapper) -> String {
+    open func addFileWrapper(_ child: FileWrapper) -> String {
         guard case var .directory(children) = content else { return "" }
         let filename = child.filename ?? child.preferredFilename ?? UUID().uuidString
         children[filename] = child
         content = .directory(children)
         return filename
+    }
+
+    /// Remove a child `FileWrapper`.
+    /// - Parameter child: The child `FileWrapper` to remove.
+    @inlinable
+    open func removeFileWrapper(_ child: FileWrapper) {
+        guard case var .directory(children) = content else { return }
+        for (filename, fileWrapper) in children where fileWrapper === child {
+            child.removeFileWrappers()
+            if let url = child.url {
+                try? FileManager.default.removeItem(at: url)
+            } else if let url = url {
+                let filename = url.appendingPathComponent(filename)
+                try? FileManager.default.removeItem(at: filename)
+            }
+            children[filename] = nil
+            content = .directory(children)
+            break
+        }
     }
 }
 
