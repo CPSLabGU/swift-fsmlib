@@ -279,8 +279,8 @@ open class FileWrapper: @unchecked Sendable {
             if let url = child.url {
                 try? FileManager.default.removeItem(at: url)
             } else if let url = url {
-                let filename = url.appendingPathComponent(filename)
-                try? FileManager.default.removeItem(at: filename)
+                let fileURL = url.appendingPathComponent(filename)
+                try? FileManager.default.removeItem(at: fileURL)
             }
             children[filename] = nil
             content = .directory(children)
