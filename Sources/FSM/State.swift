@@ -2,7 +2,7 @@
 //  State.swift
 //
 //  Created by Rene Hexel on 30/06/2015.
-//  Copyright © 2015, 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2015, 2016, 2023, 2024 Rene Hexel. All rights reserved.
 //
 import Foundation
 
@@ -35,6 +35,13 @@ public struct State: StateNode, Equatable, Hashable {
 
     /// Name of the state
     public var name: String
+
+    /// Designated initialiser.
+    @inlinable
+    public init(id: StateID = StateID(), name: String) {
+        self.id = id
+        self.name = name
+    }
 }
 
 /// Array of FSM states
