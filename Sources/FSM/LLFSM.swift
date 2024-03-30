@@ -33,7 +33,7 @@ public struct LLFSM: SuspensibleFSM, Equatable, Hashable {
     /// This returns the name of the given state,
     /// or the `nil` if the state is not found.
     /// - Parameter stateID: the ID of the state
-    /// - Returns:
+    /// - Returns: The name of the state, or `nil` if the state is not found.
     @inlinable
     public func stateName(for stateID: StateID) -> StateName? {
         return stateMap[stateID]?.name
@@ -50,7 +50,45 @@ public struct LLFSM: SuspensibleFSM, Equatable, Hashable {
             state.name = name
             stateMap[stateID] = state
         } else {
+            states.append(stateID)
             stateMap[stateID] = State(id: stateID, name: name)
+        }
+    }
+
+    /// Get the label of the given transition.
+    ///
+    /// This returns the label of the given transition,
+    /// or the `nil` if the transition is not found.
+    ///
+    /// - Parameter transitionID: the ID of the transition
+    /// - Returns: The label of the transition, or `nil` if the transition is not found.
+    @inlinable
+    public func label(for transitionID: TransitionID) -> Expression? {
+        return transitionMap[transitionID]?.label
+    }
+
+    /// Set the label of a given transition.
+    ///
+    /// - Parameters:
+    ///   - label: The label to set.
+    ///   - transitionID: The ID of the transition whose label should be set.
+    @inlinable
+    mutating public func set(label: Expression, for transitionID: TransitionID) {
+        if var transition = transitionMap[transitionID] {
+            transition.label = label
+            transitionMap[transitionID] = transition
+        } else {
+            transitions.append(transitionID)
+            let stateID: StateID
+            if let lastStateID = states.last {
+                stateID = lastStateID
+            } else {
+                let state = State(name: "Initial")
+                stateID = state.id
+                states.append(stateID)
+                stateMap[stateID] = state
+            }
+            transitionMap[transitionID] = Transition(id: transitionID, label: label, source: stateID)
         }
     }
 }
