@@ -50,7 +50,7 @@ struct FSMConvert: AsyncParsableCommand {
         let machineArrangement = Arrangement(namedInstances: wrapperNames.map { Instance(name: $0.0, typeFile: $0.0, machine: $0.1.machine) })
         let outputFormat = format.isEmpty ? nil : Format(rawValue: format)
         guard let outputLanguage = outputLanguage(for: outputFormat, default: wrapperNames.first?.1.machine.language) else {
-            FSMConvert.exit(withError: "No output language for format '\(format)'\n")
+            FSMConvert.exit(withError: ValidationError("No output language for format '\(format)'\n"))
         }
         let outputURL = URL(fileURLWithPath: output)
         let wrapperMappings = Dictionary(wrapperNames, uniquingKeysWith: { a, _ in a })
@@ -66,5 +66,3 @@ struct FSMConvert: AsyncParsableCommand {
         }
     }
 }
-
-extension String: Error {}
