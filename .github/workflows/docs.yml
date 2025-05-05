@@ -7,15 +7,15 @@ on:
 jobs:
 
   exec-jazzy:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: swift-actions/setup-swift@v1
         with:
-            swift-version: "5.8"
+            swift-version: "6.1"
 
       - name: Setup SSH Key
-        run: | 
+        run: |
             rm -rf ~/.ssh
             mkdir -m 0700 ~/.ssh
             echo "${{ secrets.WORKFLOWS_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
@@ -24,13 +24,13 @@ jobs:
             eval "$(ssh-agent -s)"
             ssh-add ~/.ssh/id_ed25519
 
-      - name: Clone Repo 
+      - name: Clone Repo
         uses: actions/checkout@v2
 
       - name: Generate Documentation
         uses: mipalgu/swiftpm-generate-documentation@main
         with:
-            swift-version: "5.8"
+            swift-version: "6.1"
 
       - name: Pages Deployment
         uses: peaceiris/actions-gh-pages@v3

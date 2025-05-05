@@ -11,7 +11,7 @@ on:
 jobs:
 
   exec-cov:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: swift-actions/setup-swift@v1
@@ -19,7 +19,7 @@ jobs:
             swift-version: "5.8"
 
       - name: Setup SSH Key
-        run: | 
+        run: |
             rm -rf ~/.ssh
             mkdir -m 0700 ~/.ssh
             echo "${{ secrets.WORKFLOWS_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
@@ -38,7 +38,7 @@ jobs:
         run: swift test --enable-code-coverage
 
       - name: Coverage Test
-        uses: mattpolzin/swift-codecov-action@0.7.3
+        uses: mattpolzin/swift-codecov-action@0.7.5
         id: cov
         with:
           MINIMUM_COVERAGE: 98
