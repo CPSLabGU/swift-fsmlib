@@ -50,4 +50,76 @@ final class FSMTests: XCTestCase {
         XCTAssertNotEqual(fsm.suspendState, t.id)
         XCTAssertEqual(fsm.suspendState, s.id)
     }
+
+    func testLLFSMStateAndTransitionManipulation() {
+        var llfsm = LLFSM(states: [], transitions: [], suspendState: nil)
+
+        // Add states
+        let state1ID = StateID()
+        llfsm.set(name: "State1", for: state1ID)
+
+        let state2ID = StateID()
+        llfsm.set(name: "State2", for: state2ID)
+
+        XCTAssertEqual(llfsm.states.count, 2)
+        XCTAssertEqual(llfsm.stateName(for: state1ID), "State1")
+        XCTAssertEqual(llfsm.stateName(for: state2ID), "State2")
+
+        // Add transition
+        let trans1ID = TransitionID()
+        llfsm.set(label: "goToState2", for: trans1ID)
+
+        XCTAssertEqual(llfsm.transitions.count, 1)
+        XCTAssertEqual(llfsm.label(for: trans1ID), "goToState2")
+
+        // Update state name
+        llfsm.set(name: "RenamedState1", for: state1ID)
+        XCTAssertEqual(llfsm.stateName(for: state1ID), "RenamedState1")
+
+        // Update transition label
+        llfsm.set(label: "updatedTransition", for: trans1ID)
+        XCTAssertEqual(llfsm.label(for: trans1ID), "updatedTransition")
+    }
+
+    func testInitialStateHandling() {
+        // Test default initial state
+        let state1 = State(name: "First")
+        let state2 = State(name: "Second")
+        let llfsm = LLFSM(states: [state1, state2], transitions: [], suspendState: nil)
+
+        XCTAssertEqual(llfsm.initialState, state1.id)
+
+        // Test empty FSM
+        var emptyFSM = LLFSM(states: [], transitions: [], suspendState: nil)
+        let newStateID = StateID()
+        emptyFSM.initialState = newStateID
+
+        XCTAssertEqual(emptyFSM.states.count, 1)
+        XCTAssertEqual(emptyFSM.initialState, newStateID)
+    }
+
+    func testStateDictionaryOperations() {
+        let state1 = State(name: "First")
+        let state2 = State(name: "Second")
+
+        let dict = dictionary([state1, state2])
+
+        XCTAssertEqual(dict.count, 2)
+        XCTAssertEqual(dict[state1.id]?.name, "First")
+        XCTAssertEqual(dict[state2.id]?.name, "Second")
+    }
+
+    func testTransitionDictionaryOperations() {
+        let state1ID = StateID()
+        let state2ID = StateID()
+
+        let transition1 = Transition(label: "go", source: state1ID, target: state2ID)
+        let transition2 = Transition(label: "back", source: state2ID, target: state1ID)
+
+        let dict = dictionary([transition1, transition2])
+
+        XCTAssertEqual(dict.count, 2)
+        XCTAssertEqual(dict[transition1.id]?.label, "go")
+        XCTAssertEqual(dict[transition2.id]?.label, "back")
+    }
 }
