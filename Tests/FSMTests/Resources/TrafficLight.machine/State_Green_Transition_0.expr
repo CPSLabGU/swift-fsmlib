@@ -1,0 +1,2 @@
+// Transition from Green to Yellow after timer expires
+timer_expired(10000)  // 10 seconds

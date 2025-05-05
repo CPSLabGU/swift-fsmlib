@@ -1,0 +1,2 @@
+// Transition from Yellow to YellowToRed after short timer expires
+timer_expired(2000)  // 2 seconds

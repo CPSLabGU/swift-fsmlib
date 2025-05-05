@@ -1,0 +1,2 @@
+// Transition from Red to Green after timer expires
+timer_expired(5000)  // 5 seconds
