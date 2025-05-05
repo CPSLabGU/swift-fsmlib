@@ -10,8 +10,8 @@ jobs:
   build_linux:
     strategy:
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04, ubuntu-22.04]
-        swift: ["6.1", "6.0", "5.9", "5.8"]
+        os: [ubuntu-24.04, ubuntu-22.04]
+        swift: ["6.1", "6.0", "5.10.1"]
         build_mode: ["debug", "release"]
     name: Swift ${{ matrix.swift }} ${{ matrix.build_mode }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
