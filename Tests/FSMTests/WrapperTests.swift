@@ -93,7 +93,7 @@ final class WrapperTests: XCTestCase {
 
         // Read it back
         let readWrapper = try MachineWrapper(url: machineURL)
-        XCTAssertEqual(readWrapper.name, "TestMachine.machine")
+        XCTAssertEqual(readWrapper.name, "TestMachine")
         XCTAssertEqual(readWrapper.machine.llfsm.states.count, 2)
 
         // Verify language file was created

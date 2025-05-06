@@ -136,6 +136,9 @@ final class InstanceArrangementTests: XCTestCase {
         // Create wrapper
         let wrapper = ArrangementWrapper(directoryWithFileWrappers: [:], for: arrangement, named: "TestArrangement")
 
+        // Verify arrangement (just check count)
+        XCTAssertEqual(wrapper.arrangement.namedInstances.count, 1)
+
         // Write arrangement to disk
         let arrangementURL = tempDirectoryURL.appendingPathComponent("TestArrangement.arrangement")
         try wrapper.write(to: arrangementURL)
@@ -178,16 +181,12 @@ final class InstanceArrangementTests: XCTestCase {
         
         // Verify files were created
         XCTAssertTrue(FileManager.default.fileExists(atPath: arrangementURL.path))
-        
-        // Create a new wrapper directly for verification instead of loading from URL
-        // This avoids potential loading issues
-        let verificationWrapper = ArrangementWrapper(directoryWithFileWrappers: [:], for: arrangement, named: "FromURLArrangement")
-        
+
         // Test the add method which is what we're really trying to verify
         // This is a better test than checking if instances loaded correctly
         XCTAssertTrue(FileManager.default.fileExists(atPath: arrangementURL.appendingPathComponent(Filename.machines).path))
         
-        // If we want to test loading, just verify it doesn't throw
+        // We want to test loading, just verify it doesn't throw
         _ = try ArrangementWrapper(url: arrangementURL)
         // Test passes if no exception is thrown
     }
