@@ -126,40 +126,43 @@ final class InstanceArrangementTests: XCTestCase {
         let state1 = State(name: "State1")
         machine1.llfsm = LLFSM(states: [state1], transitions: [], suspendState: nil)
         machine1.language = CBinding()
-
-        // Create instances - using just one instance to simplify test
-        let instance1 = Instance(name: "instance1", typeFile: "Machine1.machine", machine: machine1)
-
+        
+        // Create machine wrapper that will be serialized
+        let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine1, named: "Machine1.machine")
+        
+        // Create instance with the same typeFile name as the machine wrapper
+        let instance1 = Instance(name: "Machine1", typeFile: "Machine1.machine", machine: machine1)
+        
         // Create arrangement
         let arrangement = Arrangement(namedInstances: [instance1])
-
-        // Create wrapper
-        let wrapper = ArrangementWrapper(directoryWithFileWrappers: [:], for: arrangement, named: "TestArrangement")
-
-        // Verify arrangement (just check count)
-        XCTAssertEqual(wrapper.arrangement.namedInstances.count, 1)
-
+        
+        // Create arrangement wrapper with the machine wrapper added
+        // The key must match the instance typeFile for proper deserialization
+        let wrappers = ["Machine1.machine": machineWrapper]
+        let wrapper = ArrangementWrapper(directoryWithFileWrappers: wrappers, for: arrangement, named: "TestArrangement")
+        
         // Write arrangement to disk
         let arrangementURL = tempDirectoryURL.appendingPathComponent("TestArrangement.arrangement")
         try wrapper.write(to: arrangementURL)
-
+        
         // Verify files were created
         XCTAssertTrue(FileManager.default.fileExists(atPath: arrangementURL.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: arrangementURL.appendingPathComponent(Filename.machines).path))
-
+        XCTAssertTrue(FileManager.default.fileExists(atPath: arrangementURL.appendingPathComponent("Machine1.machine").path))
+        
         // Check machine names file
         let machinesContent = try String(contentsOf: arrangementURL.appendingPathComponent(Filename.machines))
-        XCTAssertTrue(machinesContent.contains("instance1"))
-
+        XCTAssertTrue(machinesContent.contains("Machine1"))
+        
         // Read arrangement back
         let readWrapper = try ArrangementWrapper(url: arrangementURL)
-
+        
         // Verify loaded arrangement (just check count)
         XCTAssertEqual(readWrapper.arrangement.namedInstances.count, 1)
         
         // If there is at least one instance, verify its name
         if readWrapper.arrangement.namedInstances.count > 0 {
-            XCTAssertEqual(readWrapper.arrangement.namedInstances[0].name, "instance1")
+            XCTAssertEqual(readWrapper.arrangement.namedInstances[0].name, "Machine1")
         }
     }
 
@@ -169,11 +172,16 @@ final class InstanceArrangementTests: XCTestCase {
         let state = State(name: "State")
         machine.llfsm = LLFSM(states: [state], transitions: [], suspendState: nil)
         machine.language = CBinding()
-
-        // Create arrangement wrapper
+        
+        // Create machine wrapper
+        let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: "Machine.machine")
+        
+        // Create instance with matching typeFile
         let instance = Instance(name: "Machine", typeFile: "Machine.machine", machine: machine)
         let arrangement = Arrangement(namedInstances: [instance])
-        let wrapper = ArrangementWrapper(directoryWithFileWrappers: [:], for: arrangement, named: "FromURLArrangement")
+        
+        // Create wrapper with the machine wrapper
+        let wrapper = ArrangementWrapper(directoryWithFileWrappers: ["Machine.machine": machineWrapper], for: arrangement, named: "FromURLArrangement")
         
         // Write arrangement to disk
         let arrangementURL = tempDirectoryURL.appendingPathComponent("FromURLArrangement.arrangement")
@@ -198,14 +206,17 @@ final class InstanceArrangementTests: XCTestCase {
         machine.llfsm = LLFSM(states: [state], transitions: [], suspendState: nil)
         machine.language = CBinding()
 
-        // Create an instance
+        // Create an instance with the machine
         let instance = Instance(name: "instance", typeFile: "Machine.machine", machine: machine)
 
-        // Create arrangement
+        // Create arrangement with instance
         let arrangement = Arrangement(namedInstances: [instance])
 
-        // Create wrapper
-        let wrapper = ArrangementWrapper(directoryWithFileWrappers: [:], for: arrangement, named: "TestArrangement")
+        // Create a machine wrapper with the same name as instance typeFile
+        let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: "Machine.machine")
+        
+        // Create arrangement wrapper with the machine wrapper
+        let wrapper = ArrangementWrapper(directoryWithFileWrappers: ["Machine.machine": machineWrapper], for: arrangement, named: "TestArrangement")
 
         // Write arrangement to disk
         let arrangementURL = tempDirectoryURL.appendingPathComponent("TestArrangement.arrangement")

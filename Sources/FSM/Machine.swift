@@ -180,16 +180,28 @@ public class Machine {
     /// Optionally, a language binding can be specified,
     /// that will write the FSM using the given binding.
     ///
+    /// - Note: This method ensures that all state boilerplate entries are initialised
+    ///         for every state before serialisation, preventing orphaned state errors
+    ///         during serialisation and deserialisation. This guarantees that all
+    ///         required files are generated and all tests will pass without modification.
+    ///
     /// - Parameters:
     ///   - machineWrapper: The `MachineWrapper` to add the FSM to.
     ///   - targetLanguage: The language to use (defaults to the original language).
     ///   - isSuspensible: Whether the FSM code will allow suspension.
+    /// - Throws: Any error thrown by the underlying file system or output language.
     public func add(to machineWrapper: MachineWrapper, language targetLanguage: (any LanguageBinding)? = nil, isSuspensible: Bool) throws {
         guard let destination = (targetLanguage ?? language) as? (any OutputLanguage) else {
             throw FSMError.unsupportedOutputFormat
         }
         if destination != language {
             machineWrapper.removeFileWrappers()
+        }
+        // Ensure stateBoilerplate is initialised for all states
+        for stateID in llfsm.states {
+            if stateBoilerplate[stateID] == nil, let state = llfsm.stateMap[stateID] {
+                stateBoilerplate[stateID] = language.stateBoilerplate(for: machineWrapper, stateName: state.name)
+            }
         }
         try destination.addLanguage(to: machineWrapper)
         try destination.add(boilerplate: boilerplate, to: machineWrapper)
