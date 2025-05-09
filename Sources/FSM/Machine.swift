@@ -168,9 +168,9 @@ public class Machine {
     ///   - isSuspensible: Whether the FSM code will allow suspension.
     @inlinable
     public func write(to url: URL, language destination: any OutputLanguage, isSuspensible: Bool) throws {
-        let arrangement = try destination.createWrapper(at: url, for: self)
-        try add(to: arrangement, language: destination, isSuspensible: isSuspensible)
-        try arrangement.write(to: url)
+        let machineWrapper = try destination.createWrapper(at: url, for: self)
+        try add(to: machineWrapper, language: destination, isSuspensible: isSuspensible)
+        try machineWrapper.write(to: url)
     }
 
     /// Add the FSM to the given `MachineWrapper`.

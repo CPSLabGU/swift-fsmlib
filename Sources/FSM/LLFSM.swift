@@ -94,6 +94,20 @@ public struct LLFSM: SuspensibleFSM, Equatable, Hashable {
 }
 
 public extension LLFSM {
+    /// Return the state names of this LLFSM.
+    ///
+    /// This function returns an array of strings
+    /// reprsesenting the names of the machine's states
+    /// in the order these states appear in the machine.
+    ///
+    /// - Note: if a state has no name, a uuidString will be inserted instead.
+    ///
+    var stateNames: [String] {
+        states.map {
+            stateMap[$0]?.name ?? $0.uuidString
+        }
+    }
+
     init(states: [State], transitions: [Transition], suspendState: StateID?) {
         self.states = states.map { $0.id }
         self.transitions = transitions.map { $0.id }

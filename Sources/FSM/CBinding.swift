@@ -2,7 +2,7 @@
 //  CBinding.swift
 //
 //  Created by Rene Hexel on 12/08/2023.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 import Foundation
 
@@ -204,7 +204,8 @@ public extension CBinding {
                     return
                 }
                 let file = "State_\(state.name)_Transition_\(number).expr"
-                let fileWrapper = fileWrapper(named: file, from: transition.label + "\n")
+                let labelExpression = transition.label.hasSuffix("\n") ? transition.label : transition.label + "\n"
+                let fileWrapper = fileWrapper(named: file, from: labelExpression)
                 wrapper.replaceFileWrapper(fileWrapper)
             }
         }
@@ -306,6 +307,10 @@ public extension CBinding {
 /// - Returns: The number of transitions in the given state.
 @inlinable
 public func numberOfCTransitionsIn(header content: String) -> Int {
+    if let numString = string(containedIn: content, matching: #/#define.*MACHINE_NUMBER_OF_TRANSITIONS[^0-9]*([0-9][0-9]*)/#),
+       let numberOfTransitions = Int(numString) {
+        return numberOfTransitions
+    }
     guard let numString = string(containedIn: content, matching: #/numberOfTransitions.*return[^0-9]*([0-9][0-9]*)/#),
           let numberOfTransitions = Int(numString) else { return 0 }
     return numberOfTransitions
@@ -403,6 +408,10 @@ public func contentOfCImplementation(for machineWrapper: MachineWrapper) -> Stri
 /// - Returns: The target state index.
 @inlinable
 public func suspendStateIndexOfCMachine(inImplementation content: String) -> Int? {
+    if let numString = string(containedIn: content, matching: #/suspend_state = [^0-9]*([0-9]*)/#),
+       let targetStateIndex = Int(numString) {
+        return targetStateIndex
+    }
     guard let numString = string(containedIn: content, matching: #/setSuspendState[^0-9]*([0-9]*)/#),
         let targetStateIndex = Int(numString) else { return nil }
     return targetStateIndex

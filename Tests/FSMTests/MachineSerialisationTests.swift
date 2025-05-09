@@ -2,7 +2,7 @@ import XCTest
 import Foundation
 @testable import FSM
 
-final class MachineSerializationTests: XCTestCase {
+final class MachineSerialisationTests: XCTestCase {
 
     let tempDirectoryURL: URL = {
         let tempDir = FileManager.default.temporaryDirectory
@@ -21,17 +21,25 @@ final class MachineSerializationTests: XCTestCase {
         let state1 = State(name: "Initial")
         let state2 = State(name: "Running")
         let state3 = State(name: "Final")
+        let states = [state1, state2, state3]
 
         let transition1 = Transition(label: "start", source: state1.id, target: state2.id)
         let transition2 = Transition(label: "finish", source: state2.id, target: state3.id)
+        let transitions = [transition1, transition2]
 
-        let llfsm = LLFSM(states: [state1, state2, state3],
-                         transitions: [transition1, transition2],
+        let llfsm = LLFSM(states: states,
+                         transitions: transitions,
                          suspendState: nil)
+
+        XCTAssertEqual(llfsm.states.count, states.count)
+        XCTAssertEqual(llfsm.transitions.count, transitions.count)
 
         let machine = Machine()
         machine.llfsm = llfsm
         machine.language = CBinding()
+
+        XCTAssertEqual(machine.llfsm.states.count, states.count)
+        XCTAssertEqual(machine.llfsm.transitions.count, transitions.count)
 
         // Create state layouts
         var stateLayouts = StateLayouts()
@@ -62,17 +70,17 @@ final class MachineSerializationTests: XCTestCase {
         // Deserialize and verify
         let loadedMachine = try Machine(from: machineURL)
 
-        XCTAssertEqual(loadedMachine.llfsm.states.count, 3)
-        XCTAssertEqual(loadedMachine.llfsm.transitions.count, 2)
+        XCTAssertEqual(loadedMachine.llfsm.states.count, states.count)
+        XCTAssertEqual(loadedMachine.llfsm.transitions.count, transitions.count)
 
         // Verify state names
         let stateNames = loadedMachine.llfsm.states.compactMap { loadedMachine.llfsm.stateName(for: $0) }
-        XCTAssertTrue(stateNames.contains("Initial"))
-        XCTAssertTrue(stateNames.contains("Running"))
-        XCTAssertTrue(stateNames.contains("Final"))
+        XCTAssertTrue(stateNames.contains(state1.name))
+        XCTAssertTrue(stateNames.contains(state2.name))
+        XCTAssertTrue(stateNames.contains(state3.name))
     }
 
-    func testLayoutSerialization() throws {
+    func testLayoutSerialisation() throws {
         // Create a machine with specific layout
         let state = State(name: "TestState")
         let llfsm = LLFSM(states: [state], transitions: [], suspendState: nil)
@@ -97,7 +105,6 @@ final class MachineSerializationTests: XCTestCase {
             zoomedOnSuspendHeight: 40,
             zoomedOnResumeHeight: 40
         )
-
         machine.stateLayout = [state.id: stateLayout]
 
         // Serialize to disk
@@ -107,23 +114,26 @@ final class MachineSerializationTests: XCTestCase {
         // Deserialize and verify layout
         let loadedMachine = try Machine(from: machineURL)
 
-        guard let loadedLayout = loadedMachine.stateLayout[state.id] else {
+        XCTAssertEqual(loadedMachine.llfsm.states.count, 1)
+
+        guard let stateID = loadedMachine.llfsm.states.first,
+              let loadedLayout = loadedMachine.stateLayout[stateID] else {
             XCTFail("State layout not found after deserialization")
             return
         }
 
         // Verify layout properties
         XCTAssertEqual(loadedLayout.isOpen, true)
-        XCTAssertEqual(loadedLayout.openLayout.dimensions.w, 200)
-        XCTAssertEqual(loadedLayout.openLayout.dimensions.h, 150)
-        XCTAssertEqual(loadedLayout.closedLayout.dimensions.w, 100)
-        XCTAssertEqual(loadedLayout.closedLayout.dimensions.h, 80)
-        XCTAssertEqual(loadedLayout.onEntryHeight, 30)
-        XCTAssertEqual(loadedLayout.onExitHeight, 25)
-        XCTAssertEqual(loadedLayout.internalHeight, 50)
+        XCTAssertEqual(loadedLayout.openLayout.dimensions.w, stateLayout.openLayout.dimensions.w)
+        XCTAssertEqual(loadedLayout.openLayout.dimensions.h, stateLayout.openLayout.dimensions.h)
+        XCTAssertEqual(loadedLayout.closedLayout.dimensions.w, stateLayout.closedLayout.dimensions.w)
+        XCTAssertEqual(loadedLayout.closedLayout.dimensions.h, stateLayout.closedLayout.dimensions.h)
+        XCTAssertEqual(loadedLayout.onEntryHeight, stateLayout.onEntryHeight)
+        XCTAssertEqual(loadedLayout.onExitHeight, stateLayout.onExitHeight)
+        XCTAssertEqual(loadedLayout.internalHeight, stateLayout.internalHeight)
     }
 
-    func testTransitionLayoutSerialization() throws {
+    func testTransitionLayoutSerialisation() throws {
         // Create a machine with transition layout
         let state1 = State(name: "Source")
         let state2 = State(name: "Target")
@@ -135,6 +145,24 @@ final class MachineSerializationTests: XCTestCase {
         let machine = Machine()
         machine.llfsm = llfsm
         machine.language = CBinding()
+
+        // Create a state layout as we cannot have orphaned transition layouts
+        let stateLayout = StateLayout(
+            isOpen: true,
+            openLayout: Rectangle(topLeft: Coordinate2D(100, 100), dimensions: Dimensions2D(200, 150)),
+            closedLayout: Ellipse(topLeft: Coordinate2D(120, 120), dimensions: Dimensions2D(100, 80)),
+            onEntryHeight: 30,
+            onExitHeight: 25,
+            onSuspendHeight: 20,
+            onResumeHeight: 20,
+            internalHeight: 50,
+            zoomedOnEntryHeight: 60,
+            zoomedOnExitHeight: 50,
+            zoomedInternalHeight: 100,
+            zoomedOnSuspendHeight: 40,
+            zoomedOnResumeHeight: 40
+        )
+        machine.stateLayout = [state1.id: stateLayout]
 
         // Create specific bezier path for transition
         let srcPoint = Point2D(10, 20)
@@ -154,24 +182,27 @@ final class MachineSerializationTests: XCTestCase {
         // Deserialize and verify layout
         let loadedMachine = try Machine(from: machineURL)
 
-        guard let loadedLayout = loadedMachine.transitionLayout[transition.id] else {
+        XCTAssertEqual(loadedMachine.llfsm.transitions.count, 1)
+
+        guard let transitionID = loadedMachine.llfsm.transitions.first,
+              let loadedLayout = loadedMachine.transitionLayout[transitionID] else {
             XCTFail("Transition layout not found after deserialization")
             return
         }
 
         // Verify transition path points
         XCTAssertEqual(loadedLayout.path.points.count, 4)
-        XCTAssertEqual(loadedLayout.path.beg.x, 10)
-        XCTAssertEqual(loadedLayout.path.beg.y, 20)
-        XCTAssertEqual(loadedLayout.path.cp1.x, 50)
-        XCTAssertEqual(loadedLayout.path.cp1.y, 60)
-        XCTAssertEqual(loadedLayout.path.cp2.x, 80)
-        XCTAssertEqual(loadedLayout.path.cp2.y, 90)
-        XCTAssertEqual(loadedLayout.path.end.x, 100)
-        XCTAssertEqual(loadedLayout.path.end.y, 50)
+        XCTAssertEqual(loadedLayout.path.beg.x, srcPoint.x)
+        XCTAssertEqual(loadedLayout.path.beg.y, srcPoint.y)
+        XCTAssertEqual(loadedLayout.path.cp1.x, cp1.x)
+        XCTAssertEqual(loadedLayout.path.cp1.y, cp1.y)
+        XCTAssertEqual(loadedLayout.path.cp2.x, cp2.x)
+        XCTAssertEqual(loadedLayout.path.cp2.y, cp2.y)
+        XCTAssertEqual(loadedLayout.path.end.x, dstPoint.x)
+        XCTAssertEqual(loadedLayout.path.end.y, dstPoint.y)
     }
 
-    func testWindowLayoutSerialization() throws {
+    func testWindowLayoutSerialisation() throws {
         // Create a machine with window layout
         let state = State(name: "TestState")
         let llfsm = LLFSM(states: [state], transitions: [], suspendState: nil)
@@ -197,7 +228,7 @@ final class MachineSerializationTests: XCTestCase {
         XCTAssertEqual(loadedMachine.windowLayout, windowLayout)
     }
 
-    func testSuspensibleMachineSerialization() throws {
+    func testSuspensibleMachineSerialisation() throws {
         // Create a suspensible machine
         let state1 = State(name: "Normal")
         let state2 = State(name: "Suspended")
