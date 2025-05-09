@@ -177,18 +177,18 @@ final class LayoutTests: XCTestCase {
     func testStateLayoutPropertyList() {
         // Create a layout with property list
         let dict = NSDictionary(dictionary: [
-            "x": 50.0,
-            "y": 60.0,
-            "w": 100.0,
-            "h": 80.0,
-            "expanded": true,
-            "expandedWidth": 200.0,
-            "expandedHeight": 150.0,
-            "onEntryHeight": 25.0,
-            "onExitHeight": 25.0,
-            "internalHeight": 50.0,
-            "onSuspendHeight": 20.0,
-            "onResumeHeight": 20.0
+            StateLayoutKey.positionX.rawValue: 50.0,
+            StateLayoutKey.positionY.rawValue: 60.0,
+            StateLayoutKey.width.rawValue: 100.0,
+            StateLayoutKey.height.rawValue: 80.0,
+            StateLayoutKey.expanded.rawValue: true,
+            StateLayoutKey.expandedWidth.rawValue: 200.0,
+            StateLayoutKey.expandedHeight.rawValue: 150.0,
+            StateLayoutKey.onEntryHeight.rawValue: 25.0,
+            StateLayoutKey.onExitHeight.rawValue: 25.0,
+            StateLayoutKey.internalHeight.rawValue: 50.0,
+            StateLayoutKey.onSuspendHeight.rawValue: 20.0,
+            StateLayoutKey.onResumeHeight.rawValue: 20.0
         ])
 
         let stateLayout = StateLayout(dict)
@@ -209,14 +209,18 @@ final class LayoutTests: XCTestCase {
 
         // Test conversion back to property list
         let resultDict = stateLayout.layoutDictionary
-        XCTAssertEqual(resultDict["expanded"] as? Bool, true)
-        XCTAssertEqual(resultDict["positionX"] as? Double, 50.0)
-        XCTAssertEqual(resultDict["positionY"] as? Double, 60.0)
-        XCTAssertEqual(resultDict["width"] as? Double, 100.0)
-        XCTAssertEqual(resultDict["height"] as? Double, 80.0)
-        XCTAssertEqual(resultDict["expandedWidth"] as? Double, 200.0)
-        XCTAssertEqual(resultDict["expandedHeight"] as? Double, 150.0)
-        XCTAssertEqual(resultDict["onEntryHeight"] as? Double, 25.0)
+        XCTAssertEqual(resultDict[StateLayoutKey.expanded.rawValue] as? Bool, true)
+        XCTAssertEqual(resultDict[StateLayoutKey.positionX.rawValue] as? Double, 50.0)
+        XCTAssertEqual(resultDict[StateLayoutKey.positionY.rawValue] as? Double, 60.0)
+        XCTAssertEqual(resultDict[StateLayoutKey.width.rawValue] as? Double, 100.0)
+        XCTAssertEqual(resultDict[StateLayoutKey.height.rawValue] as? Double, 80.0)
+        XCTAssertEqual(resultDict[StateLayoutKey.expandedWidth.rawValue] as? Double, 200.0)
+        XCTAssertEqual(resultDict[StateLayoutKey.expandedHeight.rawValue] as? Double, 150.0)
+        XCTAssertEqual(resultDict[StateLayoutKey.onEntryHeight.rawValue] as? Double, 25.0)
+        XCTAssertEqual(resultDict[StateLayoutKey.onExitHeight.rawValue] as? Double, 25.0)
+        XCTAssertEqual(resultDict[StateLayoutKey.internalHeight.rawValue] as? Double, 50.0)
+        XCTAssertEqual(resultDict[StateLayoutKey.onSuspendHeight.rawValue] as? Double, 20.0)
+        XCTAssertEqual(resultDict[StateLayoutKey.onResumeHeight.rawValue] as? Double, 20.0)
     }
 
     func testTransitionLayout() {
@@ -240,18 +244,18 @@ final class LayoutTests: XCTestCase {
 
         // Test property list conversion
         let plist = transitionLayout.propertyList
-        XCTAssertNotNil(plist["bezierPath"])
+        XCTAssertNotNil(plist[TransitionLayoutKey.bezierPath.rawValue])
 
         // Create from property list dictionary
         let dict = NSDictionary(dictionary: [
-            "srcPointX": 15.0,
-            "srcPointY": 20.0,
-            "ctlPoint1X": 35.0,
-            "ctlPoint1Y": 40.0,
-            "ctlPoint2X": 65.0,
-            "ctlPoint2Y": 40.0,
-            "dstPointX": 85.0,
-            "dstPointY": 20.0
+            TransitionLayoutKey.srcPointX.rawValue: 15.0,
+            TransitionLayoutKey.srcPointY.rawValue: 20.0,
+            TransitionLayoutKey.ctlPoint1X.rawValue: 35.0,
+            TransitionLayoutKey.ctlPoint1Y.rawValue: 40.0,
+            TransitionLayoutKey.ctlPoint2X.rawValue: 65.0,
+            TransitionLayoutKey.ctlPoint2Y.rawValue: 40.0,
+            TransitionLayoutKey.dstPointX.rawValue: 85.0,
+            TransitionLayoutKey.dstPointY.rawValue: 20.0
         ])
 
         let fromDict = TransitionLayout(dict)
