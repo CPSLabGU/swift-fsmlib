@@ -2,7 +2,7 @@
 //  CBinding+Code.swift
 //
 //  Created by Rene Hexel on 17/08/2023.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 /// Create the C include file for an LLFSM.
 ///
@@ -162,6 +162,7 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
     let upperName = name.uppercased()
     let lowerName = name.lowercased()
     let lowerState = state.name.lowercased()
+    let transitionIDs = llfsm.transitionsFrom(state.id)
     return """
     //
     // State_\(state.name).h
@@ -178,7 +179,7 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
         "#define NULL ((void*)0)"
         "#endif"
         ""
-        "#define MACHINE_\(upperName)_NUMBER_OF_TRANSITIONS \(llfsm.states.count)"
+        "#define MACHINE_\(upperName)_NUMBER_OF_TRANSITIONS \(transitionIDs.count)"
         ""
         "#pragma GCC diagnostic push"
         "#pragma GCC diagnostic ignored \"-Wunknown-pragmas\""
