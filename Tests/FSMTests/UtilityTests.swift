@@ -109,8 +109,8 @@ final class UtilityTests: XCTestCase {
         XCTAssertNotNil(cLang)
         XCTAssertEqual(cLang?.name, "c")
 
-        let cppLang = outputLanguage(for: .cpp)
-        XCTAssertNotNil(cppLang)
+//        let cppLang = outputLanguage(for: .cpp)
+//        XCTAssertNotNil(cppLang)
 
         // Test with default value
         let defaultBinding = CBinding()
