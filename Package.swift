@@ -25,6 +25,6 @@ let package = Package(
             .product(name: "ArgumentParser", package: "swift-argument-parser"),
             "FSM"
         ]),
-        .testTarget(name: "FSMTests", dependencies: ["FSM"]),
+        .testTarget(name: "FSMTests", dependencies: ["FSM"], resources: [.copy("Resources")]),
     ]
 )
