@@ -2,7 +2,7 @@
 //  OutputLanguage.swift
 //
 //  Created by Rene Hexel on 12/8/2023.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 import Foundation
 import SystemPackage
@@ -10,10 +10,15 @@ import SystemPackage
 /// A language binding that can be used to generate code.
 public protocol OutputLanguage: LanguageBinding {
     /// Create a file wrapper at the given URL.
-    ///
+    /// 
     /// This is used to create the file wrapper for the
     /// given URL in preparation for writing the FSM.
-    func createWrapper(at url: URL) throws -> MachineWrapper
+    ///
+    /// - Parameters:
+    ///   - url: URL to create the machine wrapper at
+    ///   - machine: Machine to create the file wrapper for (or `nil` if no machine exists yet).
+    /// - Returns: The MachineWrapper for the given URL
+    func createWrapper(at url: URL, for machine: Machine?) throws -> MachineWrapper
     /// Create an arrangement at the given URL.
     ///
     /// This is used to create the file wrapper for the
@@ -158,11 +163,12 @@ public extension OutputLanguage {
     /// This is used to create the file wrapper for the
     /// given URL in preparation for writing the FSM.
     ///
-    /// - Parameter url: The URL to create the file wrapper at.
+    /// - Parameters:
+    ///   - url: The URL to create the file wrapper at.
+    ///   - machine:The FSM to create the file wrapper for.
     @inlinable
-    func createWrapper(at url: URL) throws -> MachineWrapper {
-        let wrapper = MachineWrapper(directoryWithFileWrappers: [:], for: Machine())
-        wrapper.preferredFilename = url.lastPathComponent
+    func createWrapper(at url: URL, for machine: Machine? = nil) throws -> MachineWrapper {
+        let wrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine ?? Machine(), named: url.lastPathComponent)
         return wrapper
     }
     /// Create an arrangement file wrapper for the given URL.

@@ -2,7 +2,7 @@
 //  Machine.swift
 //
 //  Created by Rene Hexel on 23/9/2016.
-//  Copyright © 2016, 2023, 2024 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2024, 2025 Rene Hexel. All rights reserved.
 //
 import Foundation
 import SystemPackage
@@ -168,7 +168,7 @@ public class Machine {
     ///   - isSuspensible: Whether the FSM code will allow suspension.
     @inlinable
     public func write(to url: URL, language destination: any OutputLanguage, isSuspensible: Bool) throws {
-        let arrangement = try destination.createWrapper(at: url)
+        let arrangement = try destination.createWrapper(at: url, for: self)
         try add(to: arrangement, language: destination, isSuspensible: isSuspensible)
         try arrangement.write(to: url)
     }
@@ -206,7 +206,7 @@ public class Machine {
         try destination.addLanguage(to: machineWrapper)
         try destination.add(boilerplate: boilerplate, to: machineWrapper)
         try destination.add(windowLayout: windowLayout, to: machineWrapper)
-        try destination.add(stateNames: llfsm.states.map { llfsm.stateMap[$0]!.name }, to: machineWrapper)
+        try destination.add(stateNames: llfsm.stateNames, to: machineWrapper)
         try destination.addInterface(for: llfsm, to: machineWrapper, isSuspensible: isSuspensible)
         try destination.addCode(for: llfsm, to: machineWrapper, isSuspensible: isSuspensible)
         try destination.addStateInterface(for: llfsm, to: machineWrapper, isSuspensible: isSuspensible)
