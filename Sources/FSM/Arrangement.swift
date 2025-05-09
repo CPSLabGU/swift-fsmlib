@@ -2,7 +2,7 @@
 //  Arrangement.swift
 //
 //  Created by Rene Hexel on 17/08/2023.
-//  Copyright © 2015, 2016, 2023, 2024 Rene Hexel. All rights reserved.
+//  Copyright © 2015, 2016, 2023, 2024, 2025 Rene Hexel. All rights reserved.
 //
 import Foundation
 
@@ -93,7 +93,7 @@ public extension Arrangement {
         try language.addArrangementCMakeFile(for: instances, to: wrapper, isSuspensible: isSuspensible)
         try language.addArrangementMachine(instances: instances, to: wrapper, isSuspensible: isSuspensible)
         return machineFiles.map {
-            $0.hasSuffix(".machine") ? $0 : ($0 + ".machine")
+            $0.hasSuffix(MachineWrapper.dottedSuffix) ? $0 : ($0 + MachineWrapper.dottedSuffix)
         }
     }
     /// Read the names of machines from the given ``ArrangementWrapper``.

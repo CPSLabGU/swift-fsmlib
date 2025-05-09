@@ -38,7 +38,7 @@ struct FSMConvert: AsyncParsableCommand {
             if fileManager.fileExists(atPath: $0) {
                 path = $0
             } else {
-                path = $0 + ".machine"
+                path = $0 + MachineWrapper.dottedSuffix
                 guard fileManager.fileExists(atPath: path) else {
                     throw ValidationError("File '\($0)' does not exist")
                 }

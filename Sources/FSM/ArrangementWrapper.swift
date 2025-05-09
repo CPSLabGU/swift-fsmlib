@@ -2,7 +2,7 @@
 //  ArrangementWrapper.swift
 //
 //  Created by Rene Hexel on 9/10/2023.
-//  Copyright © 2016, 2023, 2024 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2024, 2025 Rene Hexel. All rights reserved.
 //
 
 import Foundation
@@ -75,8 +75,8 @@ open class ArrangementWrapper: DirectoryWrapper {
     public override init(url: URL, options: ReadingOptions = []) throws {
         let directoryWrapper = try DirectoryWrapper(url: url, options: options)
         let instanceNames = Arrangement.machineNames(from: directoryWrapper.fileWrappers?[Filename.machines]?.stringContents ?? "")
-        let namedWrappers = instanceNames.compactMap {instanceName in
-            directoryWrapper.fileWrappers?[instanceName].flatMap {
+        let namedWrappers = instanceNames.compactMap { instanceName in
+            (directoryWrapper.fileWrappers?[instanceName] ?? directoryWrapper.fileWrappers?[instanceName + MachineWrapper.dottedSuffix]).flatMap {
                 MachineWrapper($0).map {
                     (name: instanceName, wrapper: $0)
                 }

@@ -40,8 +40,7 @@ final class InstanceArrangementTests: XCTestCase {
 
         // Create identical machine
         let machine2 = Machine()
-        let state2 = State(name: "Test")
-        machine2.llfsm = LLFSM(states: [state2], transitions: [], suspendState: nil)
+        machine2.llfsm = LLFSM(states: [state1], transitions: [], suspendState: nil)
 
         // Create different machine
         let machine3 = Machine()
@@ -122,38 +121,39 @@ final class InstanceArrangementTests: XCTestCase {
 
     func testArrangementSerialization() throws {
         // Create machines
+        let machine1Name = "Machine1"
+        let machine1FileName = machine1Name + MachineWrapper.dottedSuffix
         let machine1 = Machine()
         let state1 = State(name: "State1")
         machine1.llfsm = LLFSM(states: [state1], transitions: [], suspendState: nil)
         machine1.language = CBinding()
         
         // Create machine wrapper that will be serialized
-        let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine1, named: "Machine1.machine")
+        let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine1, named: machine1FileName)
         
         // Create instance with the same typeFile name as the machine wrapper
-        let instance1 = Instance(name: "Machine1", typeFile: "Machine1.machine", machine: machine1)
+        let instance1 = Instance(name: machine1FileName, typeFile: machine1FileName, machine: machine1)
         
         // Create arrangement
         let arrangement = Arrangement(namedInstances: [instance1])
         
         // Create arrangement wrapper with the machine wrapper added
-        // The key must match the instance typeFile for proper deserialization
-        let wrappers = ["Machine1.machine": machineWrapper]
-        let wrapper = ArrangementWrapper(directoryWithFileWrappers: wrappers, for: arrangement, named: "TestArrangement")
-        
-        // Write arrangement to disk
         let arrangementURL = tempDirectoryURL.appendingPathComponent("TestArrangement.arrangement")
+        let wrappers = [machine1FileName: machineWrapper]
+        let wrapper = ArrangementWrapper(directoryWithFileWrappers: wrappers, for: arrangement, named: arrangementURL.lastPathComponent)
+
+        // Write arrangement to disk
         try wrapper.write(to: arrangementURL)
         
         // Verify files were created
         XCTAssertTrue(FileManager.default.fileExists(atPath: arrangementURL.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: arrangementURL.appendingPathComponent(Filename.machines).path))
-        XCTAssertTrue(FileManager.default.fileExists(atPath: arrangementURL.appendingPathComponent("Machine1.machine").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: arrangementURL.appendingPathComponent(machine1FileName).path))
         
         // Check machine names file
         let machinesContent = try String(contentsOf: arrangementURL.appendingPathComponent(Filename.machines))
-        XCTAssertTrue(machinesContent.contains("Machine1"))
-        
+        XCTAssertTrue(machinesContent.contains(machine1Name))
+
         // Read arrangement back
         let readWrapper = try ArrangementWrapper(url: arrangementURL)
         

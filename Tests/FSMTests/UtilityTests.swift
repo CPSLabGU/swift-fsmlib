@@ -95,7 +95,7 @@ final class UtilityTests: XCTestCase {
         // Test file extension handling
         let fileName = "test.machine"
         XCTAssertEqual(fileName.sansExtension, "test")
-        XCTAssertEqual(fileName.dottedExtension, ".machine")
+        XCTAssertEqual(String(fileName.dottedExtension), MachineWrapper.dottedSuffix)
     }
 
     func testFormatHandling() {

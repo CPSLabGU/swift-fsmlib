@@ -2,12 +2,16 @@
 //  MachineWrapper.swift
 //
 //  Created by Rene Hexel on 30/9/2023.
-//  Copyright © 2016, 2023, 2024 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2024, 2025 Rene Hexel. All rights reserved.
 //
 import Foundation
 
 /// Directory file wrapper wrapping a Machine
 open class MachineWrapper: DirectoryWrapper {
+    /// The preferred file extension used for a machine wrapper.
+    public static let fileExtension = "machine"
+    /// The suffix to add to a machine name
+    public static let dottedSuffix = "." + fileExtension
     /// The machine wrapped by this class.
     open var machine: Machine
     /// The language the machine is written in.
