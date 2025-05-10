@@ -4,12 +4,17 @@
 //  Created by Rene Hexel on 19/10/2016.
 //  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
+// swiftlint:disable:this type_contents_order
 import Foundation
 
 /// Objective-C++ language binding
 public struct ObjCPPBinding: OutputLanguage {
     /// The canonical name of the Objective-C++ binding.
     public let name = Format.objCX.rawValue
+
+    /// Designated initialiser.
+    @inlinable
+    public init() {}
 
     /// Objective-C++ binding from URL and state name to number of transitions.
     ///
@@ -83,8 +88,7 @@ public struct ObjCPPBinding: OutputLanguage {
         numberOfObjCPPTransitionsFor(machine: url, state: s)
     }
     /// Objective-C++ binding from URL, state name, and transition to expression
-    public let expressionOfTransition: (URL, StateName) -> (Int) -> String = {
-        url, s in { number in
+    public let expressionOfTransition: (URL, StateName) -> (Int) -> String = { url, s in { number in
             expressionOfObjCPPTransitionFor(machine: url, state: s, transition: number)
         }
     }
@@ -108,10 +112,6 @@ public struct ObjCPPBinding: OutputLanguage {
     public var stateBoilerplate: (URL, StateName) -> any Boilerplate = { url, stateName in
         boilerplateofObjCPPState(at: url, state: stateName)
     }
-
-    /// Designated initialiser.
-    @inlinable
-    public init() {}
 }
 
 public extension ObjCPPBinding {
@@ -438,7 +438,7 @@ public func expressionOfObjCPPTransition(_ number: Int, state: StateName, for ma
         fputs("Cannot read '\(file)'\n", stderr)
         return "true"
     }
-    return expression.trimmingCharacters(in:.whitespacesAndNewlines)
+    return expression.trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
 /// Return the target state ID for a given transition

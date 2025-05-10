@@ -4,6 +4,7 @@
 //  Created by Rene Hexel on 24/9/2016.
 //  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
+// swiftlint:disable:this type_contents_order
 
 /// Abstract representation of a bezier path
 public protocol BezierPath {

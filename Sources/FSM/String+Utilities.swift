@@ -3,8 +3,9 @@
 //  FSMLib
 //
 //  Created by Rene Hexel on 29/9/16.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
+// swiftlint:disable:this type_contents_order
 extension StringProtocol {
     /// Convenience initialiser concatenating an array of lines.
     /// - Parameter lines: Array of lines to concatenate.

@@ -54,7 +54,7 @@ final class ConversionTests: XCTestCase {
         XCTAssertEqual(readMachine.language.name, "c")
         XCTAssertEqual(readMachine.llfsm.states.count, 3)
 
-        // TODO: Convert to ObjC++
+        // Convert to ObjC++
         let objcppMachineURL = tempDirectoryURL.appendingPathComponent("TestMachine_ObjCPP.machine")
         try readMachine.write(to: objcppMachineURL, language: ObjCPPBinding(), isSuspensible: true)
 
@@ -106,7 +106,7 @@ final class ConversionTests: XCTestCase {
         var isDirectory: ObjCBool = false
         guard let bundleResourcesURL = Bundle.module.resourceURL,
                   fm.fileExists(atPath: bundleResourcesURL.path, isDirectory: &isDirectory),
-                  isDirectory.boolValue else{
+                  isDirectory.boolValue else {
             return
         }
         let testResourcesURL = bundleResourcesURL.appendingPathComponent("Resources")

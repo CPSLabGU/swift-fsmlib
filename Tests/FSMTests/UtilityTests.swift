@@ -136,10 +136,15 @@ final class UtilityTests: XCTestCase {
         XCTAssertTrue(opt1 == opt2)
         XCTAssertFalse(opt1 == opt3)
         XCTAssertFalse(opt1 == opt4)
-        XCTAssertTrue(opt4 == opt4)
+        XCTAssertFalse(opt2 == opt3)
+        XCTAssertFalse(opt2 == opt4)
+        XCTAssertFalse(opt3 == opt4)
 
         XCTAssertFalse(opt1 != opt2)
         XCTAssertTrue(opt1 != opt3)
         XCTAssertTrue(opt1 != opt4)
+        XCTAssertTrue(opt2 != opt3)
+        XCTAssertTrue(opt2 != opt4)
+        XCTAssertTrue(opt3 != opt4)
     }
 }

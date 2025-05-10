@@ -4,6 +4,7 @@
 //  Created by Rene Hexel on 21/10/2016.
 //  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
+// swiftlint:disable fallthrough
 
 /// Protocol for state activities (OnEntry, OnExit, Internal)
 public protocol StateActivities {

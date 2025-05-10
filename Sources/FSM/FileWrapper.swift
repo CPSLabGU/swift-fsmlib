@@ -2,8 +2,9 @@
 //  FileWrapper.swift
 //
 //  Created by Rene Hexel on 1/10/2023.
-//  Copyright © 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2023, 2025 Rene Hexel. All rights reserved.
 //
+// swiftlint:disable:this type_contents_order
 import Foundation
 #if !canImport(Darwin)
 import SystemPackage
@@ -225,8 +226,7 @@ open class FileWrapper: @unchecked Sendable {
     @usableFromInline
     func writeData(to url: URL, originalContentsURL: URL? = nil) throws {
         if let originalContentsURL,
-           let originalData = try? Data(contentsOf: originalContentsURL, options: readingOptions.contains(.withoutMapping) ? [] : .mappedIfSafe)
-        {
+           let originalData = try? Data(contentsOf: originalContentsURL, options: readingOptions.contains(.withoutMapping) ? [] : .mappedIfSafe) {
             let writeLink: Bool
             if case let .data(data) = content {
                 writeLink = data == originalData

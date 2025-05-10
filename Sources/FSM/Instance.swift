@@ -2,8 +2,9 @@
 //  Instance.swift
 //
 //  Created by Rene Hexel on 19/08/2023.
-//  Copyright © 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2023, 2025 Rene Hexel. All rights reserved.
 //
+// swiftlint:disable:this type_contents_order
 import Foundation
 
 /// Instance of an FSM.
