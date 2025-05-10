@@ -8,6 +8,7 @@ import Foundation
 import SystemPackage
 
 #if !canImport(Darwin)
+// swiftlint:disable:next identifier_name
 public let UUID_NULL: uuid_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 #endif
 
@@ -18,13 +19,13 @@ public typealias MachineName = String
 public typealias StateNames = [StateName]
 
 /// Mapping from state ID to state layout
-public typealias StateLayouts = [StateID : StateLayout]
+public typealias StateLayouts = [StateID: StateLayout]
 
 /// Mapping from transition ID to transition layout
-public typealias TransitionLayouts = [TransitionID : TransitionLayout]
+public typealias TransitionLayouts = [TransitionID: TransitionLayout]
 
 /// Mapping from state name to state/transitions layout
-public typealias StateNameLayouts = [StateName : (state: StateLayout, transitions: [TransitionLayout])]
+public typealias StateNameLayouts = [StateName: (state: StateLayout, transitions: [TransitionLayout])]
 
 /// A finite-state machine.
 ///
@@ -43,7 +44,7 @@ public class Machine {
     /// Machine boilerplate
     public var boilerplate: any Boilerplate
     /// State boilerplate
-    public var stateBoilerplate: [StateID : any Boilerplate]
+    public var stateBoilerplate: [StateID: any Boilerplate]
     /// Source code of OnEntry/OnExit/Internal actions of states
     public var activities: StateActivitiesSourceCode
     
@@ -74,7 +75,7 @@ public class Machine {
         let names = stateNames(for: machineWrapper, statesFilename: .states)
         let states = names.map { State(id: StateID(), name: $0) }
         let susp = language.suspendState(for: machineWrapper, states: states)
-        var transitionMap = [StateID : [TransitionID]]()
+        var transitionMap = [StateID: [TransitionID]]()
         let transitionsForState = transitions(for: machineWrapper, with: states, using: language)
         let transitions = states.flatMap {
             let transitions = transitionsForState($0)
@@ -274,7 +275,7 @@ public func stateNames(for wrapper: MachineWrapper, statesFilename: Filename) ->
 /// - Parameter content: content of the state names file.
 /// - Returns: An array of state names.
 @inlinable
-public func stateNames(from content: String)  -> StateNames {
+public func stateNames(from content: String) -> StateNames {
     content.lines.map(trimmed).filter(nonempty)
 }
 
@@ -379,11 +380,11 @@ public func dictionary(from layouts: StateNameLayouts) -> NSDictionary {
 /// - Returns: A function that returns an array of transitions for a given source state.
 @inlinable
 func transitions(for machineWrapper: MachineWrapper, with states: [State], using language: any LanguageBinding = ObjCPPBinding()) -> (State) -> [Transition] {
-    return { (state: State) -> [Transition] in
+    { (state: State) -> [Transition] in
         let sourceID = state.id
         let n = language.numberOfTransitions(for: machineWrapper, stateName: state.name)
         let transitionIndices = (0..<n).enumerated()
-        let transitions = transitionIndices.map { i, _ -> Transition in
+        let transitions = transitionIndices.map { i, _ in
             let targetID = language.target(of: i, for: machineWrapper, stateName: state.name, with: states) ?? StateID(uuid: UUID_NULL)
             return Transition(id: TransitionID(), label: language.expression(of: i, for: machineWrapper, stateName: state.name), source: sourceID, target: targetID)
         }
