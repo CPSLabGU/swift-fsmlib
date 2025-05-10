@@ -41,6 +41,7 @@ public func cMachineInterface(for llfsm: LLFSM, named name: String, isSuspensibl
         "#pragma clang diagnostic ignored \"-Wunused-macros\""
         ""
         "#define MACHINE_" + upperName + "_NUMBER_OF_STATES \(llfsm.states.count)"
+        "#define MACHINE_" + upperName + "_NUMBER_OF_TRANSITIONS \(llfsm.transitions.count)"
         ""
         if isSuspensible {
             "#define MACHINE_" + upperName + "_IS_SUSPENSIBLE 1"
@@ -155,12 +156,13 @@ public func cMachineCode(for llfsm: LLFSM, named name: String, isSuspensible: Bo
 ///
 /// - Parameters:
 ///   - llfsm: The finite-state machine to create code for.
-///   - name: The name of the State.
+///   - name: The name of the Machine.
 ///   - isSuspensible: Set to `true` to create an interface that supports suspension.
 /// - Returns: The generated header for the state.
 public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, isSuspensible: Bool) -> Code {
     let upperName = name.uppercased()
     let lowerName = name.lowercased()
+    let upperState = state.name.uppercased()
     let lowerState = state.name.lowercased()
     let transitionIDs = llfsm.transitionsFrom(state.id)
     return """
@@ -179,7 +181,7 @@ public func cStateInterface(for state: State, llfsm: LLFSM, named name: String, 
         "#define NULL ((void*)0)"
         "#endif"
         ""
-        "#define MACHINE_\(upperName)_NUMBER_OF_TRANSITIONS \(transitionIDs.count)"
+        "#define MACHINE_\(upperName)_STATE_\(upperState)_NUMBER_OF_TRANSITIONS \(transitionIDs.count)"
         ""
         "#pragma GCC diagnostic push"
         "#pragma GCC diagnostic ignored \"-Wunknown-pragmas\""

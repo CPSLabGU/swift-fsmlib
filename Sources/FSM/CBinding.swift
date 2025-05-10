@@ -307,7 +307,7 @@ public extension CBinding {
 /// - Returns: The number of transitions in the given state.
 @inlinable
 public func numberOfCTransitionsIn(header content: String) -> Int {
-    if let numString = string(containedIn: content, matching: #/#define.*MACHINE_NUMBER_OF_TRANSITIONS[^0-9]*([0-9][0-9]*)/#),
+    if let numString = string(containedIn: content, matching: #/#define.*_NUMBER_OF_TRANSITIONS[^0-9]*([0-9][0-9]*)/#),
        let numberOfTransitions = Int(numString) {
         return numberOfTransitions
     }
