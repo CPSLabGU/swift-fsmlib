@@ -60,7 +60,8 @@
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
-      useCustomWorkingDirectory = "NO"
+      useCustomWorkingDirectory = "YES"
+      customWorkingDirectory = "/Users/rh/Downloads/swift-fsmlib/examples"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
@@ -93,7 +94,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "c"
+            argument = "c++"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -105,12 +106,20 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "/Users/rh/Downloads/SuspendCounter.machine"
+            argument = "/Users/rh/Downloads/swift-fsmlib/examples/SuspendCounter.machine"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "/Users/rh/Downloads/Counter.machine"
+            argument = "/Users/rh/Downloads/swift-fsmlib/examples/Counter.machine"
             isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "/Users/rh/Downloads/SuspendCounter.machine"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "/Users/rh/Downloads/Counter.machine"
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "/Users/rh/src/swift/rh/swift-fsmlib/examples/Counter.machine"
