@@ -2,12 +2,12 @@
 //  ObjCPPBinding.swift
 //
 //  Created by Rene Hexel on 19/10/2016.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 import Foundation
 
 /// Objective-C++ language binding
-public struct ObjCPPBinding: LanguageBinding {
+public struct ObjCPPBinding: OutputLanguage {
     /// The canonical name of the Objective-C++ binding.
     public let name = Format.objCX.rawValue
 
@@ -112,6 +112,193 @@ public struct ObjCPPBinding: LanguageBinding {
     /// Designated initialiser.
     @inlinable
     public init() {}
+}
+
+public extension ObjCPPBinding {
+    /// Add the given boilerplate to the given `MachineWrapper`.
+    ///
+    /// This function tries to convert the given boilerplate
+    /// to an Objective-C++ boilerplate and then adds it
+    /// to the given `MachineWrapper`.
+    ///
+    /// - Parameters:
+    ///   - boilerplate: The boilerplate to add.
+    ///   - wrapper: The `MachineWrapper` to add to.
+    @inlinable
+    func add(boilerplate: any Boilerplate, to wrapper: MachineWrapper) throws {
+        CBoilerplate(boilerplate).add(to: wrapper)
+    }
+    /// Write the given state boilerplate to the given URL
+    /// - Parameters:
+    ///   - stateBoilerplate: The boilerplate to add.
+    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - stateName: The name of the state to add the boilerplate for.
+    func add(stateBoilerplate: any Boilerplate, to wrapper: MachineWrapper, for stateName: String) throws {
+        CBoilerplate(stateBoilerplate).add(state: stateName, to: wrapper)
+    }
+    /// Add the interface for the given LLFSM to the given `MachineWrapper`.
+    ///
+    /// This method adds the language interface (if any)
+    /// for the given finite-state machine to the given `MachineWrapper`.
+    ///
+    /// - Parameters:
+    ///   - llfsm: The finite-state machine to add.
+    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    @inlinable
+    func addInterface(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.name
+        let header = objcppMachineHeader(for: llfsm, named: name)
+        let fileWrapper = fileWrapper(named: "\(name).h", from: header)
+        wrapper.replaceFileWrapper(fileWrapper)
+    }
+    /// Add the state interface for the given LLFSM to the given `MachineWrapper`.
+    ///
+    /// This method adds the language interface (if any)
+    /// for the given finite-state machine to the given `MachineWrapper`.
+    ///
+    /// - Parameters:
+    ///   - llfsm: The finite-state machine to add.
+    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    @inlinable
+    func addStateInterface(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.name
+        for stateID in fsm.states {
+            guard let state = fsm.stateMap[stateID] else {
+                fputs("Warning: orphaned state ID \(stateID) for \(name)\n", stderr)
+                continue
+            }
+            let header = objcppStateHeader(for: state, llfsm: fsm, named: name)
+            let fileWrapper = fileWrapper(named: "State_\(state.name).h", from: header)
+            wrapper.replaceFileWrapper(fileWrapper)
+        }
+    }
+    /// Add the code for the given LLFSM to the given `MachineWrapper`.
+    ///
+    /// This method adds the implementation code
+    /// for the given finite-state machine to the given `MachineWrapper`.
+    ///
+    /// - Parameters:
+    ///   - llfsm: The finite-state machine to add.
+    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    @inlinable
+    func addCode(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.name
+        let impl = objcppMachineImplementation(for: llfsm, named: name)
+        let fileWrapper = fileWrapper(named: "\(name).mm", from: impl)
+        wrapper.replaceFileWrapper(fileWrapper)
+    }
+    /// Add the state code for the given LLFSM to the given `MachineWrapper`.
+    ///
+    /// This method adds the language interface (if any)
+    /// for the given finite-state machine to the given `MachineWrapper`.
+    ///
+    /// - Parameters:
+    ///   - llfsm: The finite-state machine to add.
+    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    @inlinable
+    func addStateCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.name
+        for stateID in fsm.states {
+            guard let state = fsm.stateMap[stateID] else {
+                fputs("Warning: orphaned state ID \(stateID) for \(name)\n", stderr)
+                continue
+            }
+            let impl = objcppStateImplementation(for: state, llfsm: fsm, named: name)
+            let fileWrapper = fileWrapper(named: "State_\(state.name).mm", from: impl)
+            wrapper.replaceFileWrapper(fileWrapper)
+        }
+    }
+    /// Add the transition expressions for the given LLFSM to the given `MachineWrapper`.
+    ///
+    /// This method adds the transition expressions
+    /// for the given finite-state machine to the given `MachineWrapper`.
+    ///
+    /// - Parameters:
+    ///   - llfsm: The finite-state machine to add.
+    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    @inlinable
+    func addTransitionCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.name
+        for (i, stateID) in fsm.states.enumerated() {
+            guard let state = fsm.stateMap[stateID] else {
+                fputs("Warning: orphaned state \(i) ID \(stateID) for \(name)\n", stderr)
+                continue
+            }
+            let transitions = fsm.transitionsFrom(stateID)
+            for (j, transitionID) in transitions.enumerated() {
+                guard let transition = fsm.transitionMap[transitionID] else { continue }
+                let expr = transition.label.hasSuffix("\n") ? transition.label : transition.label + "\n"
+                let fileWrapper = fileWrapper(named: "State_\(state.name)_Transition_\(j).expr", from: expr)
+                wrapper.replaceFileWrapper(fileWrapper)
+            }
+        }
+    }
+    /// Add the arrangement interface for the given instances to the given `ArrangementWrapper`.
+    ///
+    /// This method adds the arrangement interface (if any)
+    /// for the given finite-state machine instances to the given `ArrangementWrapper`.
+    ///
+    /// - Parameters:
+    ///   - instances: The FSM instances to arrange.
+    ///   - wrapper: The `ArrangementWrapper` to add to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    @inlinable
+    func addArrangementInterface(for instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.name
+        let header = objcppArrangementHeader(for: instances, named: name, isSuspensible: isSuspensible)
+        let fileWrapper = fileWrapper(named: "Arrangement_\(name).h", from: header)
+        wrapper.replaceFileWrapper(fileWrapper)
+    }
+    /// Add the arrangement code for the given instances to the given `ArrangementWrapper`.
+    ///
+    /// This method adds the arrangement code (if any)
+    /// for the given finite-state machine instances to the given `ArrangementWrapper`.
+    ///
+    /// - Parameters:
+    ///   - instances: The FSM instances to arrange.
+    ///   - wrapper: The `ArrangementWrapper` to add to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    @inlinable
+    func addArrangementCode(for instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws {
+        let name = wrapper.name
+        let impl = objcppArrangementImplementation(for: instances, named: name, isSuspensible: isSuspensible)
+        let fileWrapper = fileWrapper(named: "Arrangement_\(name).mm", from: impl)
+        wrapper.replaceFileWrapper(fileWrapper)
+    }
+    /// Add a CMakefile for the given LLFSM to the given `MachineWrapper`.
+    ///
+    /// This method creates a CMakefile to compile the
+    /// given finite-state machine locally and adds it
+    /// to the given `MachineWrapper`.
+    ///
+    /// - Parameters:
+    ///   - llfsm: The finite-state machine to add.
+    ///   - boilerplate: The boilerplate containing the include paths.
+    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    @inlinable
+    func addCMakeFile(for fsm: LLFSM, boilerplate: any Boilerplate, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+        // FIXME: needs implementation
+    }
+    /// Add a CMakefile for the given LLFSM arrangement to the given `ArrangementWrapper`.
+    ///
+    /// This method creates a CMakefile to compile the
+    /// given finite-state machine arrangement locally and adds it
+    /// to the given `ArrangementWrapper`.
+    ///
+    /// - Parameters:
+    ///   - instances: The FSM instances.
+    ///   - wrapper: The `ArrangementWrapper` to add to.
+    ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
+    @inlinable
+    func addArrangementCMakeFile(for instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws {
+        // FIXME: needs implementation
+    }
 }
 
 /// Return the number of transitions based on the content of the State.h file
