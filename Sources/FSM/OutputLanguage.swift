@@ -249,7 +249,8 @@ public extension OutputLanguage {
     /// This method creates a file containing the names of the
     /// FSM instances used by the arrangement in the order
     /// in which they are arranged.  Each line contains the
-    /// name of an instance.
+    /// name of an instance and the corresponding machine filename,
+    /// separated by a tab character.
     ///
     /// - Parameters:
     ///   - instances: The arranged machine instances.
@@ -257,7 +258,9 @@ public extension OutputLanguage {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
     func addArrangementMachine(instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws {
-        guard let data = instances.map(\.name).joined(separator: "\n").data(using: .utf8) else { throw POSIXError(.EINVAL) }
+        guard let data = instances.map({
+            $0.name + "\t" + $0.typeFile
+        }).joined(separator: "\n").data(using: .utf8) else { throw POSIXError(.EINVAL) }
         let fileWrapper = FileWrapper(regularFileWithContents: data)
         fileWrapper.preferredFilename = .machines
         wrapper.replaceFileWrapper(fileWrapper)

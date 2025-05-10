@@ -23,21 +23,13 @@ open class ArrangementWrapper: DirectoryWrapper {
     /// - Parameter fileWrapper: The `FileWrapper` to clone.
     @inlinable
     public init(fileWrapper: FileWrapper) throws {
-        guard fileWrapper.isDirectory else {
-            throw FSMError.notADirectory
+        let namedWrappers = try createMachineWrappers(for: fileWrapper)
+        let namedInstances = namedWrappers.map {
+            Instance(name: $0.instance, typeFile: $0.name, machine: $0.wrapper.machine)
         }
-        let instanceNames = Arrangement.machineNames(from: fileWrapper.fileWrappers?[Filename.machines]?.stringContents ?? "")
-        let namedWrappers = instanceNames.compactMap { instanceName in
-            fileWrapper.fileWrappers?[instanceName].flatMap {
-                MachineWrapper($0).map {
-                    (name: instanceName, wrapper: $0)
-                }
-            }
-        }
-        let namedInstances = namedWrappers.map { Instance(name: $0.name, typeFile: $0.name, machine: $0.wrapper.machine) }
         arrangement = Arrangement(namedInstances: namedInstances)
-        language = arrangement.namedInstances.lazy.compactMap { $0.machine.language }.first ?? CBinding()
-        let machineWrappers = [ String : MachineWrapper ](uniqueKeysWithValues: namedWrappers)
+        language = languageBindingIfAvailable(for: fileWrapper) ?? arrangement.namedInstances.lazy.compactMap { $0.machine.language }.first ?? CBinding()
+        let machineWrappers = [ String : MachineWrapper ](uniqueKeysWithValues: namedWrappers.map { ($0.name, $0.wrapper) })
         super.init(directoryWithFileWrappers: machineWrappers)
         preferredFilename = fileWrapper.preferredFilename
     }
@@ -74,18 +66,16 @@ open class ArrangementWrapper: DirectoryWrapper {
     /// - Throws: Any error thrown by the underlying file system.
     public override init(url: URL, options: ReadingOptions = []) throws {
         let directoryWrapper = try DirectoryWrapper(url: url, options: options)
-        let instanceNames = Arrangement.machineNames(from: directoryWrapper.fileWrappers?[Filename.machines]?.stringContents ?? "")
-        let namedWrappers = instanceNames.compactMap { instanceName in
-            (directoryWrapper.fileWrappers?[instanceName] ?? directoryWrapper.fileWrappers?[instanceName + MachineWrapper.dottedSuffix]).flatMap {
-                MachineWrapper($0).map {
-                    (name: instanceName, wrapper: $0)
-                }
-            }
+        let namedWrappers = try createMachineWrappers(for: directoryWrapper)
+        let namedInstances = namedWrappers.map {
+            Instance(name: $0.instance, typeFile: $0.name, machine: $0.wrapper.machine)
         }
-        let namedInstances = namedWrappers.map { Instance(name: $0.name, typeFile: $0.name, machine: $0.wrapper.machine) }
         language = languageBinding(for: directoryWrapper)
         arrangement = Arrangement(namedInstances: namedInstances)
         try super.init(url: url, options: options)
+        for namedWrapper in namedWrappers {
+            replaceFileWrapper(namedWrapper.wrapper) // replace FileWrapper with MachineWrapper
+        }
         preferredFilename = url.lastPathComponent
         filename = url.lastPathComponent
     }
@@ -104,17 +94,40 @@ open class ArrangementWrapper: DirectoryWrapper {
             throw FSMError.unsupportedOutputFormat
         }
         preferredFilename = url.lastPathComponent
-        let wrappersAndNames: [(MachineWrapper, Filename)] = arrangement.namedInstances.compactMap {
+        let wrappersAndNames: [(wrapper: MachineWrapper, directory: Filename, instanceName: MachineName)] = try arrangement.namedInstances.compactMap {
             let fileName = $0.typeFile
-            guard let wrapper = fileWrappers?[fileName] as? MachineWrapper else { return nil }
-            wrapper.language = language
-            return (wrapper, fileName)
+            let existingWrapper: MachineWrapper?
+            if let wrapper = fileWrappers?[fileName] {
+                if let mw = wrapper as? MachineWrapper {
+                    existingWrapper = mw
+                } else if let mw = MachineWrapper(wrapper) {
+                    mw.preferredFilename = fileName
+                    existingWrapper = mw
+                    replaceFileWrapper(mw)
+                } else {
+                    existingWrapper =  nil
+                }
+            } else {
+                existingWrapper = nil
+            }
+            let machineWrapper: MachineWrapper
+            if let existingWrapper {
+                machineWrapper = existingWrapper
+            } else {
+                let machineURL = url.appending(path: fileName, directoryHint: .isDirectory)
+                machineWrapper = try destination.createWrapper(at: machineURL, for: $0.machine)
+                replaceFileWrapper(machineWrapper)
+            }
+            machineWrapper.language = language
+            return (wrapper: machineWrapper, directory: fileName, instanceName: $0.name)
         }
         let names = wrappersAndNames.map { $0.1 }
         let fsmNames: [String] = try arrangement.add(to: self, language: destination, machineNames: names, isSuspensible: isSuspensible)
         let wrappers = wrappersAndNames.map { $0.0 }
+        var fsmsWritten = Set<Filename>()
         try zip(wrappers, fsmNames).forEach {
             let machineName = $0.1
+            guard !fsmsWritten.contains(machineName) else { return } // avoid duplication for multiple instances of the same machine
             let machineWrapper: MachineWrapper
             if $0.0.preferredFilename == machineName {
                 machineWrapper = $0.0
@@ -123,8 +136,50 @@ open class ArrangementWrapper: DirectoryWrapper {
                 machineWrapper.preferredFilename = machineName
             }
             try machineWrapper.machine.add(to: machineWrapper, language: destination, isSuspensible: isSuspensible)
+            fsmsWritten.insert(machineName)
         }
         try super.write(to: url, options: options, originalContentsURL: originalContentsURL)
         filename = url.lastPathComponent
     }
+}
+
+/// Return the machine instances wrapped by the arrangment.
+///
+/// This function reads the Machines file containing the instances
+/// and machine directories for these instances.
+///
+/// - Parameter directoryWrapper: The FileWrapper representing the arrangement directory.
+/// - Returns: Array of tuples containing the instance names, machine names, and corresponding Machine wrappers.
+@usableFromInline
+func createMachineWrappers(for directoryWrapper: FileWrapper) throws -> [(instance: MachineName, name: Filename, wrapper: MachineWrapper)] {
+    guard directoryWrapper.isDirectory else {
+        throw FSMError.notADirectory
+    }
+    var allWrappers: [Filename : MachineWrapper] = [:]
+    let instanceMachinePairs = Arrangement.machineNames(from: directoryWrapper.fileWrappers?[Filename.machines]?.stringContents ?? "")
+    let namedWrappers: [(instance: MachineName, name: Filename, wrapper: MachineWrapper)] = instanceMachinePairs.compactMap { (instanceName, name) in
+        let suffixedName = name + MachineWrapper.dottedSuffix
+        let directoryName: Filename
+        let fileWrapper: FileWrapper
+        if let wrapper = directoryWrapper.fileWrappers?[name], wrapper.isDirectory {
+            directoryName = name
+            fileWrapper = wrapper
+        } else if let wrapper = directoryWrapper.fileWrappers?[suffixedName] {
+            directoryName = suffixedName
+            fileWrapper = wrapper
+        } else {
+            return nil
+        }
+        let machineWrapper: MachineWrapper
+        if let wrapper = allWrappers[directoryName] {
+            machineWrapper = wrapper
+        } else if let wrapper = MachineWrapper(fileWrapper) {
+            allWrappers[directoryName] = wrapper
+            machineWrapper = wrapper
+        } else {
+            return nil
+        }
+        return (instance: instanceName, name: directoryName, wrapper: machineWrapper)
+    }
+    return namedWrappers
 }

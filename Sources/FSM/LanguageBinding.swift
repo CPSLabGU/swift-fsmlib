@@ -2,7 +2,7 @@
 //  LanguageBinding.swift
 //
 //  Created by Rene Hexel on 14/10/2016.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 import Foundation
 
@@ -93,11 +93,36 @@ public func languageBinding(for url: URL) -> any LanguageBinding {
 
 /// Return the language binding for the given MachineWrapper.
 ///
+/// This method reads the content of the language file and
+/// maps it to a language binding.
+///
+/// - Note: this function will return a default language binding.
+///         Use `languageBindingIfAvailable(for:)` instead
+///         if you want to receive a `nil` value if no language binding
+///         has been registered.
+///
 /// - Parameter wrapper: The directory wrapper containing the language file.
 /// - Returns: The language binding for the given wrapper..
 @inlinable
 public func languageBinding(for wrapper: DirectoryWrapper) -> any LanguageBinding {
     languageBinding(for: wrapper.stringContents(of: .language))
+}
+
+/// Return the language binding for the given FileWrapper.
+///
+/// This method reads the content of the language file and
+/// maps it to a language binding.
+///
+/// - Note: this function will return `nil` if no binding is available.
+///         Use `languageBinding(for:)` instead
+///         if you want to receive a default value if no language binding
+///         has been registered.
+///
+/// - Parameter wrapper: The file wrapper containing the language file.
+/// - Returns: The language binding for the given wrapper., or `nil` if not available.
+@inlinable
+public func languageBindingIfAvailable(for wrapper: FileWrapper) -> (any LanguageBinding)? {
+    wrapper.stringContents(of: .language).map(languageBinding(for:))
 }
 
 /// Return the language binding for the given language

@@ -11,9 +11,6 @@ public struct Arrangement {
     /// The FSMs in the arrangement and their names.
     public var namedInstances: [Instance]
 
-//    /// The FSMs in this arrangement.
-//    public var machines: [Machine]
-
     /// Designated initialiser.
     ///
     /// This initialiser creates an arrangement of FSMs
@@ -84,7 +81,7 @@ public extension Arrangement {
                 }
             }
             instanceMappings[uniqueName] = (resolvedFile, resolvedMachine)
-            return Instance(name: uniqueName, typeFile: resolvedFile, machine: resolvedMachine)
+            return Instance(name: uniqueName, typeFile: $0.typeFile, machine: resolvedMachine)
         }
         let machineFiles = instances.map(\.typeFile)
         try language.addLanguage(to: wrapper)
@@ -105,19 +102,22 @@ public extension Arrangement {
     ///   - wrapper: The machine wrapper to examine.
     ///   - machinesFilename: The name of the states file.
     /// - Throws: `NSError` if the file cannot be read.
-    /// - Returns: An array of state names.
+    /// - Returns: An array of machine instances together with their machine names.
     @inlinable
-    func machineInstanceNames(for wrapper: ArrangementWrapper, machinesFilename: Filename) -> [MachineName] {
+    func machineInstanceNames(for wrapper: ArrangementWrapper, machinesFilename: Filename) -> [(instance: MachineName, machine: Filename)] {
         Arrangement.machineNames(from: wrapper.fileWrappers?[machinesFilename]?.stringContents ?? "")
     }
     /// Read the names of machines from the given string.
     ///
-    /// This  interprets each line as a machine instance name.
+    /// This  interprets each line as a pair of instance and machine names.
     ///
     /// - Parameter content: content of the machine names file.
     /// - Returns: An array of machine names.
     @inlinable
-    static func machineNames(from content: String) -> [MachineName] {
-        content.lines.map(trimmed).filter(nonempty)
+    static func machineNames(from content: String) -> [(instance: MachineName, machine: Filename)] {
+        content.lines.map(trimmed).filter(nonempty).map {
+            let fields = $0.split(separator: "\t")
+            return (instance: fields.first?.trimmed ?? "", machine: fields.last?.trimmed ?? "")
+        }
     }
 }
