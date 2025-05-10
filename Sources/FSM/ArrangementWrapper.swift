@@ -114,7 +114,11 @@ open class ArrangementWrapper: DirectoryWrapper {
             if let existingWrapper {
                 machineWrapper = existingWrapper
             } else {
+#if swift(>=6)
                 let machineURL = url.appending(path: fileName, directoryHint: .isDirectory)
+#else
+                let machineURL = url.appendingPathComponent(fileName, isDirectory: true)
+#endif
                 machineWrapper = try destination.createWrapper(at: machineURL, for: $0.machine)
                 replaceFileWrapper(machineWrapper)
             }
