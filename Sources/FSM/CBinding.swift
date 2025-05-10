@@ -325,6 +325,7 @@ public func numberOfCTransitionsIn(header content: String) -> Int {
 /// - Returns:
 @inlinable
 public func targetStateIndexOfCTransition(_ i: Int, inHeader content: String) -> Int? {
+    // swiftlint:disable:next force_try
     guard let numString = string(containedIn: content, matching: try! Regex("Transition_\(i).*int.*toState.*=[^0-9]*([0-9]*)")),
           let targetStateIndex = Int(numString) else { return nil }
     return targetStateIndex

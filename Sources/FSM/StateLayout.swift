@@ -2,7 +2,7 @@
 //  StateLayout.swift
 //
 //  Created by Rene Hexel on 24/9/2016.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 
 /// Abstract representation of a state layout
@@ -40,10 +40,10 @@ public struct StateLayout: StateNodeLayout {
 
     /// Height of the onEntry section
     public var onEntryHeight: Double
-    
+
     /// Height of the onExit section
     public var onExitHeight: Double
-    
+
     /// Height of the onSuspend section
     public var onSuspendHeight: Double
 
@@ -52,15 +52,15 @@ public struct StateLayout: StateNodeLayout {
 
     /// Height of the Internal section
     public var internalHeight: Double
-    
+
     /// Height of the onEntry section when zoomed
     public var zoomedOnEntryHeight: Double
-    
+
     /// Height of the onExit section when zoomed
     public var zoomedOnExitHeight: Double
-    
+
     /// Height of the Internal section when zoomed
-    public var zoomedInternalHeight: Double      
+    public var zoomedInternalHeight: Double
 
     /// Height of the onSuspend section when zoomed
     public var zoomedOnSuspendHeight: Double
@@ -68,4 +68,3 @@ public struct StateLayout: StateNodeLayout {
     /// Height of the onResume section when zoomed
     public var zoomedOnResumeHeight: Double
 }
-

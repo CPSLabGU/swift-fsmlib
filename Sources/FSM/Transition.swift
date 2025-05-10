@@ -2,7 +2,7 @@
 //  Transition.swift
 //
 //  Created by Rene Hexel on 1/07/2015.
-//  Copyright © 2015, 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2015, 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 import Foundation
 
@@ -78,13 +78,13 @@ public func==<T: TransitionVertex>(lhs: T, rhs: T) -> Bool {
 public struct Transition: TransitionVertex, Equatable, Hashable {
     /// Unique ID of this transition
     public var id: TransitionID
-    
+
     /// Expression that labels this transition
     public var label: Expression = ""
-    
+
     /// Source state that this transition originates from
     public var source: StateID
-    
+
     /// Target state that this transition originates from
     public var target: StateID
 
@@ -127,4 +127,3 @@ func dictionary(_ transitions: [Transition]) -> TransitionDictionary {
         return dictionary
     }
 }
-

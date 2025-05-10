@@ -2,7 +2,7 @@
 //  FSM.swift
 //
 //  Created by Rene Hexel on 7/10/2015.
-//  Copyright © 2015, 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2015, 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 import Foundation
 
@@ -65,4 +65,3 @@ extension SuspensibleFSM {
         (suspendState?.description ?? "(none)")
     }
 }
-

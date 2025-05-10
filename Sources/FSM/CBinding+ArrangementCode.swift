@@ -2,6 +2,7 @@
 //  CBinding+ArrangementCode.swift
 //
 //  Created by Rene Hexel on 19/8/2023.
+//  Copyright © 2012-2019, 2023, 2025 Rene Hexel. All rights reserved.
 //
 /// Return the interface for a C-language LLFSM arrangement.
 ///
@@ -824,4 +825,3 @@ public func cArrangementCMakeLists(for instances: [Instance], named name: String
         ""
     }
 }
-

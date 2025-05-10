@@ -2,7 +2,7 @@
 //  Path.swift
 //
 //  Created by Rene Hexel on 24/9/2016.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 
 /// Abstract representation of a bezier path
@@ -26,6 +26,7 @@ public extension BezierPath {
     }
     /// Starting point
     @inlinable var beg: Point2D {
+        // swiftlint:disable:next force_unwrapping
         get { return points.first! }
         mutating set { points[0] = newValue }
     }
@@ -41,6 +42,7 @@ public extension BezierPath {
     }
     /// End point
     var end: Point2D {
+        // swiftlint:disable:next force_unwrapping
         get { return points.last! }
         mutating set { points[points.count-1] = newValue }
     }

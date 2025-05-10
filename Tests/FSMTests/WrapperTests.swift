@@ -16,8 +16,9 @@ final class WrapperTests: XCTestCase {
         try? FileManager.default.removeItem(at: tempDirectoryURL)
     }
 
+    /// Test regular file wrapper
     func testFileWrapperBasicOperations() throws {
-        // Test regular file wrapper
+        // swiftlint:disable:next force_unwrapping
         let testData = "Test content".data(using: .utf8)!
         let fileWrapper = FileWrapper(regularFileWithContents: testData)
         fileWrapper.preferredFilename = "test.txt"
@@ -40,9 +41,11 @@ final class WrapperTests: XCTestCase {
 
     func testDirectoryWrapperOperations() throws {
         // Create a directory wrapper with some files
+        // swiftlint:disable:next force_unwrapping
         let file1 = FileWrapper(regularFileWithContents: "File 1 content".data(using: .utf8)!)
         file1.preferredFilename = "file1.txt"
 
+        // swiftlint:disable:next force_unwrapping
         let file2 = FileWrapper(regularFileWithContents: "File 2 content".data(using: .utf8)!)
         file2.preferredFilename = "file2.txt"
 
@@ -134,8 +137,9 @@ final class WrapperTests: XCTestCase {
         XCTAssertTrue(machinesContent.contains("instance2"))
     }
 
+    /// Test string contents extraction
     func testFileOperations() {
-        // Test string contents extraction
+        // swiftlint:disable:next force_unwrapping
         let textData = "Hello, world!".data(using: .utf8)!
         let file = FileWrapper(regularFileWithContents: textData)
         XCTAssertEqual(file.stringContents, "Hello, world!")

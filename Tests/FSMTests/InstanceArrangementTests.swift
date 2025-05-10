@@ -127,16 +127,16 @@ final class InstanceArrangementTests: XCTestCase {
         let state1 = State(name: "State1")
         machine1.llfsm = LLFSM(states: [state1], transitions: [], suspendState: nil)
         machine1.language = CBinding()
-        
+
         // Create machine wrapper that will be serialized
         let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine1, named: machine1FileName)
-        
+
         // Create instance with the same typeFile name as the machine wrapper
         let instance1 = Instance(name: machine1FileName, typeFile: machine1FileName, machine: machine1)
-        
+
         // Create arrangement
         let arrangement = Arrangement(namedInstances: [instance1])
-        
+
         // Create arrangement wrapper with the machine wrapper added
         let arrangementURL = tempDirectoryURL.appendingPathComponent("TestArrangement.arrangement")
         let wrappers = [machine1FileName: machineWrapper]
@@ -144,22 +144,22 @@ final class InstanceArrangementTests: XCTestCase {
 
         // Write arrangement to disk
         try wrapper.write(to: arrangementURL)
-        
+
         // Verify files were created
         XCTAssertTrue(FileManager.default.fileExists(atPath: arrangementURL.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: arrangementURL.appendingPathComponent(Filename.machines).path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: arrangementURL.appendingPathComponent(machine1FileName).path))
-        
+
         // Check machine names file
         let machinesContent = try String(contentsOf: arrangementURL.appendingPathComponent(Filename.machines))
         XCTAssertTrue(machinesContent.contains(machine1Name))
 
         // Read arrangement back
         let readWrapper = try ArrangementWrapper(url: arrangementURL)
-        
+
         // Verify loaded arrangement (just check count)
         XCTAssertEqual(readWrapper.arrangement.namedInstances.count, 1)
-        
+
         // If there is at least one instance, verify its name
         // swiftlint:disable empty_count
         if readWrapper.arrangement.namedInstances.count > 0 {
@@ -173,28 +173,28 @@ final class InstanceArrangementTests: XCTestCase {
         let state = State(name: "State")
         machine.llfsm = LLFSM(states: [state], transitions: [], suspendState: nil)
         machine.language = CBinding()
-        
+
         // Create machine wrapper
         let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: "Machine.machine")
-        
+
         // Create instance with matching typeFile
         let instance = Instance(name: "Machine", typeFile: "Machine.machine", machine: machine)
         let arrangement = Arrangement(namedInstances: [instance])
-        
+
         // Create wrapper with the machine wrapper
         let wrapper = ArrangementWrapper(directoryWithFileWrappers: ["Machine.machine": machineWrapper], for: arrangement, named: "FromURLArrangement")
-        
+
         // Write arrangement to disk
         let arrangementURL = tempDirectoryURL.appendingPathComponent("FromURLArrangement.arrangement")
         try wrapper.write(to: arrangementURL)
-        
+
         // Verify files were created
         XCTAssertTrue(FileManager.default.fileExists(atPath: arrangementURL.path))
 
         // Test the add method which is what we're really trying to verify
         // This is a better test than checking if instances loaded correctly
         XCTAssertTrue(FileManager.default.fileExists(atPath: arrangementURL.appendingPathComponent(Filename.machines).path))
-        
+
         // We want to test loading, just verify it doesn't throw
         _ = try ArrangementWrapper(url: arrangementURL)
         // Test passes if no exception is thrown
@@ -215,7 +215,7 @@ final class InstanceArrangementTests: XCTestCase {
 
         // Create a machine wrapper with the same name as instance typeFile
         let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: "Machine.machine")
-        
+
         // Create arrangement wrapper with the machine wrapper
         let wrapper = ArrangementWrapper(directoryWithFileWrappers: ["Machine.machine": machineWrapper], for: arrangement, named: "TestArrangement")
 

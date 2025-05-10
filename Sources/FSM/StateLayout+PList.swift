@@ -2,8 +2,9 @@
 //  StateLayout+PList.swift
 //
 //  Created by Rene Hexel on 29/9/16.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
+// swiftlint:disable comma
 import Foundation
 
 #if canImport(Darwin)

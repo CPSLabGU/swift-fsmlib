@@ -138,6 +138,7 @@ final class ConversionTests: XCTestCase {
 
         // Convert to ObjC++
         let objcppMachineURL = tempDirectoryURL.appendingPathComponent("TrafficLight_ObjCPP.machine")
+        // swiftlint:disable:next force_unwrapping
         try machine.write(to: objcppMachineURL, language: outputLanguage(for: .objCX)!, isSuspensible: true)
 
         // Read back converted machine

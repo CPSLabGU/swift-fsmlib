@@ -2,8 +2,9 @@
 //  Layout.swift
 //
 //  Created by Rene Hexel on 24/9/2016.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
+// swiftlint:disable operator_usage_whitespace
 #if os(Linux)
     import Glibc
 #else
@@ -36,14 +37,14 @@ let half_π = π / 2
 public extension Vector2D {
     /// distance from (0,0)
     var polarDistance: Double { return sqrt(x*x + y*y) }
-    
+
     /// angle in radians
     var polarAngle: Double {
         guard x != 0 else { return y > 0 ? half_π : (two_π - half_π) }
         let angle = atan(y/x) + x < 0 ? π : 0
         return angle
     }
-    
+
     /// initialise from polar coordinates
     init(r: Double, θ: Double) { self.init(r * cos(θ), r * sin(θ)) }
 }

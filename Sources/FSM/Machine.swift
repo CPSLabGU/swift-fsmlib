@@ -47,7 +47,7 @@ public class Machine {
     public var stateBoilerplate: [StateID: any Boilerplate]
     /// Source code of OnEntry/OnExit/Internal actions of states
     public var activities: StateActivitiesSourceCode
-    
+
     /// Constructor for reading an FSM from a given URL.
     ///
     /// This initialiser will read the states and transitions from
@@ -59,7 +59,7 @@ public class Machine {
         let wrapper = try MachineWrapper(url: url)
         try self.init(from: wrapper)
     }
-    
+
     /// Constructor for reading an FSM from a given MachineWrapper.
     ///
     /// This initialiser will read the states and transitions from
@@ -83,7 +83,7 @@ public class Machine {
             return transitions
         }
         llfsm = LLFSM(states: states, transitions: transitions, suspendState: susp)
-        
+
         let namesLayout: StateNameLayouts
         if let layoutWrapper = machineWrapper.fileWrappers?[.layout] {
             namesLayout = stateNameLayouts(from: layoutWrapper)
@@ -125,7 +125,7 @@ public class Machine {
             }
         }
     }
-    
+
     /// Create a default, empty machine.
     @inlinable
     public init() {
@@ -157,7 +157,7 @@ public class Machine {
         }
         try write(to: url, language: outputLanguage, isSuspensible: isSuspensible)
     }
-    
+
     /// Write the FSM in the given language to the given URL.
     ///
     /// This method will write the FSM to the
@@ -391,4 +391,3 @@ func transitions(for machineWrapper: MachineWrapper, with states: [State], using
         return transitions
     }
 }
-

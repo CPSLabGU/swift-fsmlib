@@ -2,7 +2,7 @@
 //  StateActivities.swift
 //
 //  Created by Rene Hexel on 21/10/2016.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 
 /// Protocol for state activities (OnEntry, OnExit, Internal)
@@ -188,4 +188,3 @@ extension Array where Element: StringProtocol {
         }
     }
 }
-

@@ -71,15 +71,15 @@ final class UtilityTests: XCTestCase {
         XCTAssertEqual(dict.value(.width, default: 0), 100)
     }
 
-    func testRegexUtils() {
+    func testRegexUtils() throws {
         let content = "Number is 123 and another number is 456"
 
         // Test string extraction with regex
-        let regex = try! Regex<(Substring, Substring)>("Number is ([0-9]+)")
+        let regex = try Regex<(Substring, Substring)>("Number is ([0-9]+)")
         let match = string(containedIn: content, matching: regex)
         XCTAssertEqual(match, "123")
 
-        let noMatchRegex = try! Regex<(Substring, Substring)>("XYZ is ([0-9]+)")
+        let noMatchRegex = try Regex<(Substring, Substring)>("XYZ is ([0-9]+)")
         let noMatch = string(containedIn: content, matching: noMatchRegex)
         XCTAssertNil(noMatch)
     }

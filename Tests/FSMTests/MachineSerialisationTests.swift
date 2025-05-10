@@ -212,6 +212,7 @@ final class MachineSerialisationTests: XCTestCase {
         machine.language = CBinding()
 
         // Create mock window layout data
+        // swiftlint:disable:next force_unwrapping
         let windowLayout = "Window Layout Data".data(using: .utf8)!
         machine.windowLayout = windowLayout
 

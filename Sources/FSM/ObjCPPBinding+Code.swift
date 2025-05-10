@@ -75,6 +75,7 @@ public func objcppMachineImplementation(for llfsm: LLFSM, named name: String) ->
     for i in 0..<stateNames.count {
         stateDeletes += "\tdelete _states[\(i)];\n"
     }
+    // swiftlint:disable:next force_unwrapping
     let suspendLine = suspendStateIndex != nil ? "\n\tsetSuspendState(_states[\(suspendStateIndex!)]);            // set suspend state" : ""
     return """
     //
@@ -120,7 +121,14 @@ public func objcppStateHeader(for state: State, llfsm: LLFSM, named name: String
     let className = state.name
     var transitions = ""
     for i in 0..<transitionCount {
-        transitions += "                    class Transition_\(i): public CLTransition\n                    {\n                    public:\n                        Transition_\(i)(int toState = 0): CLTransition(toState) {}\n\n                        virtual bool check(CLMachine *, CLState *) const;\n                    };\n"
+        transitions +=
+            "                    class Transition_\(i): public CLTransition\n" +
+            "                    {\n" +
+            "                    public:\n" +
+            "                        Transition_\(i)(int toState = 0): CLTransition(toState) {}\n" +
+            "\n" +
+            "                        virtual bool check(CLMachine *, CLState *) const;\n" +
+            "                    };\n"
     }
     return """
     //
@@ -219,7 +227,13 @@ public func objcppStateImplementation(for state: State, llfsm: LLFSM, named name
     }
     var transitionChecks = ""
     for i in 0..<transitionCount {
-        transitionChecks += "bool \(className)::Transition_\(i)::check(CLMachine *_machine, CLState *_state) const\n{\n#\tinclude \"\(name)_VarRefs.mm\"\n#\tinclude \"State_\(className)_VarRefs.mm\"\n#\tinclude \"\(name)_FuncRefs.mm\"\n#\tinclude \"State_\(className)_FuncRefs.mm\"\n\n\treturn\n\t(\n#\t\tinclude \"State_\(className)_Transition_\(i).expr\"\n\t);\n}\n\n"
+        transitionChecks +=
+            "bool \(className)::Transition_\(i)::check(CLMachine *_machine, CLState *_state) const\n" +
+            "{\n#\tinclude \"\(name)_VarRefs.mm\"\n" +
+            "#\tinclude \"State_\(className)_VarRefs.mm\"\n" +
+            "#\tinclude \"\(name)_FuncRefs.mm\"\n" +
+            "#\tinclude \"State_\(className)_FuncRefs.mm\"\n\n" +
+            "\treturn\n\t(\n#\t\tinclude \"State_\(className)_Transition_\(i).expr\"\n\t);\n}\n\n"
     }
     return """
     //

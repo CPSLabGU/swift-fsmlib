@@ -136,7 +136,7 @@ open class ArrangementWrapper: DirectoryWrapper {
             if $0.0.preferredFilename == machineName {
                 machineWrapper = $0.0
             } else {
-                machineWrapper = try! MachineWrapper(fileWrapper: $0.0)
+                machineWrapper = try MachineWrapper(fileWrapper: $0.0)
                 machineWrapper.preferredFilename = machineName
             }
             try machineWrapper.machine.add(to: machineWrapper, language: destination, isSuspensible: isSuspensible)

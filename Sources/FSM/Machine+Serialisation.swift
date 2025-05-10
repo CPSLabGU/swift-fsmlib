@@ -2,7 +2,7 @@
 //  Machine+Serialisation.swift
 //
 //  Created by Rene Hexel on 14/10/16.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 import Foundation
 
@@ -47,7 +47,7 @@ extension URL {
     /// - Returns: The URL for the file.
     @usableFromInline
     func fileURL(for name: Filename) -> URL { return appendingPathComponent(name) }
-    
+
     /// Return the content of the given file.
     ///
     /// This method reads the content of
