@@ -32,7 +32,7 @@ jobs:
           ssh-add ~/.ssh/id_ed25519
 
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       #- name: Reconfigure Private Repo URLs
       #  run: sed -i 's/git@github.com:/https:\/\/${{ secrets.ACCESS_TOKEN }}@github.com\//g' Package.swift
