@@ -54,52 +54,52 @@ final class ConversionTests: XCTestCase {
         XCTAssertEqual(readMachine.language.name, "c")
         XCTAssertEqual(readMachine.llfsm.states.count, 3)
 
-//        // TODO: Convert to ObjC++
-//        let objcppMachineURL = tempDirectoryURL.appendingPathComponent("TestMachine_ObjCPP.machine")
-//        try readMachine.write(to: objcppMachineURL, language: ObjCPPBinding(), isSuspensible: true)
-//
-//        // Read back the converted machine
-//        let convertedMachine = try Machine(from: objcppMachineURL)
-//
-//        // Verify language binding changed
-//        XCTAssertEqual(convertedMachine.language.name, "objc++")
-//
-//        // Verify state and transition preservation
-//        XCTAssertEqual(convertedMachine.llfsm.states.count, 3)
-//        XCTAssertEqual(convertedMachine.llfsm.transitions.count, 2)
-//
-//        // Verify suspendState preservation
-//        XCTAssertNotNil(convertedMachine.llfsm.suspendState)
-//
-//        // Check for language-specific files
-//        let languageFile = objcppMachineURL.appendingPathComponent(Filename.language)
-//        let languageContent = try String(contentsOf: languageFile)
-//        XCTAssertEqual(languageContent, "objc++")
+        // TODO: Convert to ObjC++
+        let objcppMachineURL = tempDirectoryURL.appendingPathComponent("TestMachine_ObjCPP.machine")
+        try readMachine.write(to: objcppMachineURL, language: ObjCPPBinding(), isSuspensible: true)
+
+        // Read back the converted machine
+        let convertedMachine = try Machine(from: objcppMachineURL)
+
+        // Verify language binding changed
+        XCTAssertEqual(convertedMachine.language.name, "objc++")
+
+        // Verify state and transition preservation
+        XCTAssertEqual(convertedMachine.llfsm.states.count, 3)
+        XCTAssertEqual(convertedMachine.llfsm.transitions.count, 2)
+
+        // Verify suspendState preservation
+        XCTAssertNotNil(convertedMachine.llfsm.suspendState)
+
+        // Check for language-specific files
+        let languageFile = objcppMachineURL.appendingPathComponent(Filename.language)
+        let languageContent = try String(contentsOf: languageFile)
+        XCTAssertEqual(languageContent, "objc++")
     }
 
-//    func testObjCPPToCConversion() throws {
-//        // Create a machine with ObjC++ binding
-//        let machine = createTestMachine()
-//        machine.language = ObjCPPBinding()
-//
-//        // Write machine to file system in ObjC++ language
-//        let objcppMachineURL = tempDirectoryURL.appendingPathComponent("TestMachine_ObjCPP.machine")
-//        try machine.write(to: objcppMachineURL, isSuspensible: true)
-//
-//        // Convert to C
-//        let cMachineURL = tempDirectoryURL.appendingPathComponent("TestMachine_C.machine")
-//        try machine.write(to: cMachineURL, language: CBinding(), isSuspensible: true)
-//
-//        // Read back the converted machine
-//        let convertedMachine = try Machine(from: cMachineURL)
-//
-//        // Verify language binding changed
-//        XCTAssertEqual(convertedMachine.language.name, "c")
-//
-//        // Verify state and transition preservation
-//        XCTAssertEqual(convertedMachine.llfsm.states.count, 3)
-//        XCTAssertEqual(convertedMachine.llfsm.transitions.count, 2)
-//    }
+    func testObjCPPToCConversion() throws {
+        // Create a machine with ObjC++ binding
+        let machine = createTestMachine()
+        machine.language = ObjCPPBinding()
+
+        // Write machine to file system in ObjC++ language
+        let objcppMachineURL = tempDirectoryURL.appendingPathComponent("TestMachine_ObjCPP.machine")
+        try machine.write(to: objcppMachineURL, isSuspensible: true)
+
+        // Convert to C
+        let cMachineURL = tempDirectoryURL.appendingPathComponent("TestMachine_C.machine")
+        try machine.write(to: cMachineURL, language: CBinding(), isSuspensible: true)
+
+        // Read back the converted machine
+        let convertedMachine = try Machine(from: cMachineURL)
+
+        // Verify language binding changed
+        XCTAssertEqual(convertedMachine.language.name, "c")
+
+        // Verify state and transition preservation
+        XCTAssertEqual(convertedMachine.llfsm.states.count, 3)
+        XCTAssertEqual(convertedMachine.llfsm.transitions.count, 2)
+    }
 
     func testTrafficLightMachineInResources() throws {
         let fm = FileManager.default
@@ -136,14 +136,14 @@ final class ConversionTests: XCTestCase {
         XCTAssertTrue(stateNames.contains("Green"))
         XCTAssertTrue(stateNames.contains("YellowToRed"))
 
-//        // Convert to ObjC++
-//        let objcppMachineURL = tempDirectoryURL.appendingPathComponent("TrafficLight_ObjCPP.machine")
-//        try machine.write(to: objcppMachineURL, language: outputLanguage(for: .objCX)!, isSuspensible: true)
-//
-//        // Read back converted machine
-//        let convertedMachine = try Machine(from: objcppMachineURL)
-//        XCTAssertEqual(convertedMachine.language.name, "objc++")
-//        XCTAssertEqual(convertedMachine.llfsm.states.count, 4)
+        // Convert to ObjC++
+        let objcppMachineURL = tempDirectoryURL.appendingPathComponent("TrafficLight_ObjCPP.machine")
+        try machine.write(to: objcppMachineURL, language: outputLanguage(for: .objCX)!, isSuspensible: true)
+
+        // Read back converted machine
+        let convertedMachine = try Machine(from: objcppMachineURL)
+        XCTAssertEqual(convertedMachine.language.name, "objc++")
+        XCTAssertEqual(convertedMachine.llfsm.states.count, 4)
     }
 
     func testArrangementConversion() throws {
