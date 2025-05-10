@@ -162,15 +162,21 @@ public class Machine {
     /// This method will write the FSM to the
     /// filesystem location denoted by the given URL.
     ///
+    /// - Note: this wil temporarily change the language of the Machine,
+    ///         to the destination language.
+    ///
     /// - Parameters:
     ///   - url: The filesystem URL to write the FSM to.
     ///   - language: The language to use.
     ///   - isSuspensible: Whether the FSM code will allow suspension.
     @inlinable
     public func write(to url: URL, language destination: any OutputLanguage, isSuspensible: Bool) throws {
+        let originalLanguage = language
+        language = destination
         let machineWrapper = try destination.createWrapper(at: url, for: self)
         try add(to: machineWrapper, language: destination, isSuspensible: isSuspensible)
         try machineWrapper.write(to: url)
+        language = originalLanguage
     }
 
     /// Add the FSM to the given `MachineWrapper`.
