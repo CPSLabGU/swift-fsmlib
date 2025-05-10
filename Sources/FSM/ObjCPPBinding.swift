@@ -283,7 +283,13 @@ public extension ObjCPPBinding {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
     func addCMakeFile(for fsm: LLFSM, boilerplate: any Boilerplate, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
-        // FIXME: needs implementation
+        let name = wrapper.name
+        let cmakeFragment = objcppCMakeFragment(for: fsm, named: name, isSuspensible: isSuspensible)
+        let fragmentWrapper = fileWrapper(named: "project.cmake", from: cmakeFragment)
+        wrapper.replaceFileWrapper(fragmentWrapper)
+        let cmakeLists = objcppCMakeLists(for: fsm, named: name, boilerplate: boilerplate, isSuspensible: isSuspensible)
+        let cmakeWrapper = fileWrapper(named: "CMakeLists.txt", from: cmakeLists)
+        wrapper.replaceFileWrapper(cmakeWrapper)
     }
     /// Add a CMakefile for the given LLFSM arrangement to the given `ArrangementWrapper`.
     ///
@@ -297,7 +303,29 @@ public extension ObjCPPBinding {
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
     func addArrangementCMakeFile(for instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws {
-        // FIXME: needs implementation
+        let name = wrapper.name
+        let cmakeFragment = objcppArrangementCMakeFragment(for: instances, named: name, isSuspensible: isSuspensible)
+        let fragmentWrapper = fileWrapper(named: "project.cmake", from: cmakeFragment)
+        wrapper.replaceFileWrapper(fragmentWrapper)
+        let cmakeLists = objcppArrangementCMakeLists(for: instances, named: name, isSuspensible: isSuspensible)
+        let cmakeWrapper = fileWrapper(named: "CMakeLists.txt", from: cmakeLists)
+        wrapper.replaceFileWrapper(cmakeWrapper)
+        // Static arrangement support
+        let staticInterface = objcppStaticArrangementInterface(for: instances, named: name, isSuspensible: isSuspensible)
+        let staticInterfaceWrapper = fileWrapper(named: "Static_Arrangement_\(name).h", from: staticInterface)
+        wrapper.replaceFileWrapper(staticInterfaceWrapper)
+        let staticCode = objcppStaticArrangementCode(for: instances, named: name, isSuspensible: isSuspensible)
+        let staticCodeWrapper = fileWrapper(named: "Static_Arrangement_\(name).c", from: staticCode)
+        wrapper.replaceFileWrapper(staticCodeWrapper)
+        let staticMain = objcppStaticArrangementMainCode(for: instances, named: name, isSuspensible: isSuspensible)
+        let staticMainWrapper = fileWrapper(named: "static_main.c", from: staticMain)
+        wrapper.replaceFileWrapper(staticMainWrapper)
+        let staticCMakeFragment = objcppStaticArrangementCMakeFragment(for: instances, named: name, isSuspensible: isSuspensible)
+        let staticCMakeFragmentWrapper = fileWrapper(named: "static_project.cmake", from: staticCMakeFragment)
+        wrapper.replaceFileWrapper(staticCMakeFragmentWrapper)
+        let staticCMakeLists = objcppStaticArrangementCMakeLists(for: instances, named: name, isSuspensible: isSuspensible)
+        let staticCMakeListsWrapper = fileWrapper(named: "Static_CMakeLists.txt", from: staticCMakeLists)
+        wrapper.replaceFileWrapper(staticCMakeListsWrapper)
     }
 }
 
