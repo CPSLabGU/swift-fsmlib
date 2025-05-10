@@ -161,6 +161,7 @@ final class InstanceArrangementTests: XCTestCase {
         XCTAssertEqual(readWrapper.arrangement.namedInstances.count, 1)
         
         // If there is at least one instance, verify its name
+        // swiftlint:disable empty_count
         if readWrapper.arrangement.namedInstances.count > 0 {
             XCTAssertEqual(readWrapper.arrangement.namedInstances[0].name, "Machine1")
         }

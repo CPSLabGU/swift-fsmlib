@@ -24,9 +24,11 @@ public protocol Vector2D {
 let π = Double.pi
 
 /// Two times Pi
+// swiftlint:disable identifier_name
 let two_π = 2 * π
 
 /// Half of Pi
+// swiftlint:disable identifier_name
 let half_π = π / 2
 
 
