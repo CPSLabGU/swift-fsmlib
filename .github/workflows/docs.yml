@@ -15,14 +15,9 @@ jobs:
     name: Generate Documentation
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: swift-actions/setup-swift@v2
-        with:
-          swift-version: ${{ matrix.swift }}
-
-      - name: Print OS and Swift version
+      - name: Print OS version
         run: |
           uname -a
-          swift --version
 
       - name: Setup SSH Key
         run: |
@@ -40,7 +35,8 @@ jobs:
       - name: Generate Documentation
         uses: rhx/swiftpm-generate-documentation@main
         with:
-          hosting-base-path: ${{ github.event.repository.name }} 
+          hosting-base-path: ${{ github.event.repository.name }}
+          swift-version: ${{ matrix.swift }}
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
