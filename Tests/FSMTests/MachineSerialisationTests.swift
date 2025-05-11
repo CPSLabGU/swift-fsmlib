@@ -148,7 +148,8 @@ final class MachineSerialisationTests: XCTestCase {
         }
 
         // Verify layout properties
-        XCTAssertEqual(loadedLayout.isOpen, true)
+        // swiftlint:disable:next xct_specific_matcher
+        XCTAssertTrue(loadedLayout.isOpen)
         XCTAssertEqual(loadedLayout.openLayout.dimensions.w, stateLayout.openLayout.dimensions.w)
         XCTAssertEqual(loadedLayout.openLayout.dimensions.h, stateLayout.openLayout.dimensions.h)
         XCTAssertEqual(loadedLayout.closedLayout.dimensions.w, stateLayout.closedLayout.dimensions.w)

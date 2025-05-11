@@ -113,7 +113,7 @@ final class WrapperTests: XCTestCase {
 
         // Verify properties
         XCTAssertEqual(wrapper.name, "TestMachine")
-        XCTAssertTrue(wrapper.machine.llfsm.states.count == 2)
+        XCTAssertEqual(wrapper.machine.llfsm.states.count, 2)
         XCTAssertEqual(wrapper.language.name, "c")
 
         // Write the machine to disk

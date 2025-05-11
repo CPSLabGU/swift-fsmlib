@@ -1,3 +1,4 @@
+// swiftlint:disable xct_specific_matcher
 import XCTest
 @testable import FSM
 
