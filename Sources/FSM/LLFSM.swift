@@ -125,7 +125,7 @@ public extension LLFSM {
     ///   - states: The array of states for the machine.
     ///   - transitions: The array of transitions for the machine.
     ///   - suspendState: The optional suspend state ID.
-    init(states: [State], transitions: [Transition], suspendState: StateID?) {
+    init(states: [State], transitions: [Transition], suspendState: StateID? = nil) {
         self.states = states.map { $0.id }
         self.transitions = transitions.map { $0.id }
         self.transitionMap = dictionary(transitions)

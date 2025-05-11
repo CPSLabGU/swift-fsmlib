@@ -1,11 +1,9 @@
 # ``FSM``
 
-@Metadata {
-  @Title("FSM Framework")
-  @Technology("FSM")
-}
-
-The ``FSM`` module provides a high-performance, type-safe framework for defining and manipulating finite state machines in Swift. It is designed for both academic and production use, supporting extensibility and cross-platform compatibility.
+The ``FSM`` module provides a high-performance, type-safe framework
+for defining and manipulating finite state machines in Swift.
+It is designed for both academic and production use, supporting extensibility
+and cross-platform compatibility.
 
 ## Background
 

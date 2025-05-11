@@ -15,27 +15,26 @@ Add `swift-fsmlib` as a dependency in your `Package.swift`:
 ```swift
 import FSM
 
-// Define two states using the real State struct
+// Define two states
 let red = State(name: "Red")
 let green = State(name: "Green")
 
-// Define transitions using the Transition struct
-let toGreen = Transition(label: "timer", source: red.id, target: green.id)
-let toRed = Transition(label: "timer", source: green.id, target: red.id)
+// Define transitions
+let toGreen = Transition(label: "after_ms(5000)", source: red.id, target: green.id)
+let toRed = Transition(label: "after_ms(5000)", source: green.id, target: red.id)
 
-// Create a minimal LLFSM using the tested API
-let fsm = LLFSM(states: [red, green], transitions: [toGreen, toRed], suspendState: nil)
+// Create a minimal LLFSM
+let fsm = LLFSM(states: [red, green], transitions: [toGreen, toRed])
 
-// Access states and transitions (for demonstration)
-print("Initial state: \(fsm.initialState)")
+// Access states and transitions
 print("States: \(fsm.states)")
 print("Transitions: \(fsm.transitions)")
+print("State Names: \(fsm.stateNames)")
 ```
 
-This example is tested and cross-platform. For more advanced usage, see the API documentation and tests.
-
+For more advanced usage, see the API documentation and tests.
 
 ## Next Steps
 
 - Explore the API documentation for advanced usage.
-- See the [Concepts](Concepts.md) guide for a deeper dive into FSM theory.
+- See the [Concepts](Concepts.md) guide for a deeper dive into the types used.
