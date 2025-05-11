@@ -20,6 +20,23 @@
 			"detail": "swift build --build-tests"
 		},
 		{
+			"type": "swift",
+			"args": [
+				"test",
+			],
+			"cwd": ".",
+			"disableTaskQueue": true,
+			"problemMatcher": [
+				"$swiftc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"label": "swift: Test",
+			"detail": "swift test"
+		},
+		{
             "label": "clean",
             "type": "shell",
 			"command": "/bin/rm",
@@ -32,7 +49,6 @@
 				"isDefault": false
 			},
 			"detail": "rm -rf .build"
-		},
         }
 	]
 }
