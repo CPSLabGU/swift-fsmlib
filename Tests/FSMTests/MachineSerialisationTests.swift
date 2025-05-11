@@ -293,4 +293,59 @@ final class MachineSerialisationTests: XCTestCase {
         let suspendStateName = loadedMachine.llfsm.suspendState.flatMap { loadedMachine.llfsm.stateName(for: $0) }
         XCTAssertEqual(suspendStateName, "Suspended")
     }
+
+    /// Test all Filename constants for correct values.
+    ///
+    /// This test ensures that all filename constants used for machine serialisation
+    /// have the expected values, matching the documented filenames and keys.
+    func testFilenameConstants() {
+        XCTAssertEqual(Filename.language, "Language")
+        XCTAssertEqual(Filename.states, "States")
+        XCTAssertEqual(Filename.layout, "Layout.plist")
+        XCTAssertEqual(Filename.windowLayout, "WindowLayout.plist")
+        XCTAssertEqual(Filename.includePath, "IncludePath")
+        XCTAssertEqual(Filename.fileVersionKey, "Version")
+        XCTAssertEqual(Filename.fileVersion, "1.3")
+        XCTAssertEqual(Filename.graph, "net.mipal.micase.graph")
+        XCTAssertEqual(Filename.metaData, "net.mipal.micase.metadata")
+    }
+
+    /// Test the URL extension methods for file operations.
+    ///
+    /// This test verifies the correct behaviour of fileURL(for:), contents(of:),
+    /// stringContents(of:), write(_:to:), and write(content:to:) methods, including
+    /// edge cases such as non-existent files and empty data.
+    func testURLExtensionFileOperations() throws {
+        let tempDir = tempDirectoryURL
+        let testFile = "TestFile.txt"
+        let testURL = tempDir.fileURL(for: testFile)
+        let testData = "Hello, FSM!".data(using: .utf8)
+        let testString = "Hello, FSM!"
+
+        // fileURL(for:) should append the file name
+        XCTAssertEqual(testURL, tempDir.appendingPathComponent(testFile))
+
+        // contents(of:) should return nil for non-existent file
+        XCTAssertNil(tempDir.contents(of: "NoSuchFile.txt"))
+
+        // stringContents(of:) should return empty string for non-existent file
+        XCTAssertEqual(tempDir.stringContents(of: "NoSuchFile.txt"), "")
+
+        // write(_:to:) should write data to file
+        try tempDir.write(testData, to: testFile)
+        let readData = tempDir.contents(of: testFile)
+        XCTAssertEqual(readData, testData)
+
+        // stringContents(of:) should return correct string
+        XCTAssertEqual(tempDir.stringContents(of: testFile), testString)
+
+        // write(content:to:) should overwrite file with new content
+        let newString = "Updated content"
+        try tempDir.write(content: newString, to: testFile)
+        XCTAssertEqual(tempDir.stringContents(of: testFile), newString)
+
+        // write(_:to:) with nil should not throw or write
+        XCTAssertNoThrow(try tempDir.write(nil, to: "NilFile.txt"))
+        XCTAssertNil(tempDir.contents(of: "NilFile.txt"))
+    }
 }

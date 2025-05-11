@@ -159,4 +159,98 @@ final class FSMTests: XCTestCase {
         XCTAssertEqual(dict[transition1.id]?.label, "go")
         XCTAssertEqual(dict[transition2.id]?.label, "back")
     }
+
+    /// Test FSM protocol extension: default description and initialState setter edge cases.
+    func testFSMProtocolExtensionBehaviour() {
+        struct TestFSM: FSM {
+            var states: StateArray
+            var transitions: TransitionArray
+            func transitionsFrom(_ s: StateID) -> TransitionArray {
+                transitions.filter { _ in true } // dummy
+            }
+        }
+        let s1 = State(name: "Alpha")
+        let s2 = State(name: "Beta")
+        var fsm = TestFSM(states: [s1.id, s2.id], transitions: [])
+        XCTAssertEqual(fsm.initialState, s1.id)
+        // No description for StateID, so skip description check
+        let newID = StateID()
+        fsm.initialState = newID
+        XCTAssertEqual(fsm.states[0], newID)
+        var emptyFSM = TestFSM(states: [], transitions: [])
+        let id2 = StateID()
+        emptyFSM.initialState = id2
+        XCTAssertEqual(emptyFSM.states, [id2])
+    }
+
+    /// Test Suspensible and SuspensibleFSM protocol extension default descriptions.
+    func testSuspensibleAndSuspensibleFSMDescription() {
+        struct TestSuspensible: Suspensible {
+            var suspendState: StateID?
+        }
+        let sID = StateID()
+        let s = TestSuspensible(suspendState: sID)
+        let sNil = TestSuspensible(suspendState: nil)
+        XCTAssertEqual(s.description, sID.description)
+        XCTAssertEqual(sNil.description, "(none)")
+
+        struct TestSuspensibleFSM: SuspensibleFSM {
+            var states: StateArray
+            var transitions: TransitionArray
+            var suspendState: StateID?
+            func transitionsFrom(_ s: StateID) -> TransitionArray { transitions }
+        }
+        let st1 = State(name: "Gamma")
+        let st2 = State(name: "Delta")
+        let suspFSM = TestSuspensibleFSM(states: [st1.id, st2.id], transitions: [], suspendState: st2.id)
+        // No description for StateID, so skip description check
+        XCTAssertTrue(suspFSM.description.contains(st2.id.description))
+    }
+
+    /// Test Transition protocol default descriptions and equality.
+    func testTransitionProtocolsAndEquality() {
+        struct TestLabel: TransitionLabel { let label: String }
+        let lbl = TestLabel(label: "x")
+        XCTAssertEqual(lbl.description, "x")
+        struct TestSource: TransitionSource { let source: StateID }
+        let srcID = StateID()
+        let src = TestSource(source: srcID)
+        XCTAssertEqual(src.description, srcID.description)
+        struct TestTarget: TransitionTarget { let target: StateID }
+        let tgtID = StateID()
+        let tgt = TestTarget(target: tgtID)
+        XCTAssertEqual(tgt.description, tgtID.description)
+        struct TestPath: TransitionPath { let source: StateID; let target: StateID }
+        let path = TestPath(source: srcID, target: tgtID)
+        XCTAssertEqual(path.description, "( \(srcID) --> \(tgtID))")
+        struct TestTargetTransition: TargetTransition { let label: String; let target: StateID }
+        let tt = TestTargetTransition(label: "foo", target: tgtID)
+        XCTAssertEqual(tt.description, "( -- foo --> \(tgtID))")
+        struct TestVertex: TransitionVertex { let source: StateID; let label: String; let target: StateID; static func ==(lhs: TestVertex, rhs: TestVertex) -> Bool { lhs.source == rhs.source && lhs.label == rhs.label && lhs.target == rhs.target } }
+        let v1 = TestVertex(source: srcID, label: "lab", target: tgtID)
+        let v2 = TestVertex(source: srcID, label: "lab", target: tgtID)
+        let v3 = TestVertex(source: tgtID, label: "lab", target: srcID)
+        XCTAssertEqual(v1, v2)
+        XCTAssertNotEqual(v1, v3)
+        XCTAssertEqual(v1.description, "( \(srcID) -- lab --> \(tgtID))")
+    }
+
+    /// Test Transition struct edge cases and dictionary helpers.
+    func testTransitionStructEdgeCasesAndDictionary() {
+        let sID = StateID()
+        let tID = StateID()
+        let tr = Transition(label: "go", source: sID, target: tID)
+        let tr2 = Transition(label: "go", source: sID, target: tID)
+        let trDiff = Transition(label: "back", source: tID, target: sID)
+        XCTAssertNotEqual(tr, tr2) // different IDs
+        XCTAssertTrue(tr.description.contains("go"))
+        let dictEmpty = dictionary([Transition]())
+        XCTAssertTrue(dictEmpty.isEmpty)
+        let dictOne = dictionary([tr])
+        XCTAssertEqual(dictOne[tr.id]?.label, "go")
+        let dictDup = dictionary([tr, tr])
+        XCTAssertEqual(dictDup.count, 1)
+        let dictMulti = dictionary([tr, trDiff])
+        XCTAssertEqual(dictMulti.count, 2)
+    }
 }
