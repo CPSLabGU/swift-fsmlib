@@ -2,7 +2,7 @@
 //  StateLayoutKey.swift
 //
 //  Created by Rene Hexel on 14/10/2016.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 /// Keys for state layout dictionary entries.
 ///

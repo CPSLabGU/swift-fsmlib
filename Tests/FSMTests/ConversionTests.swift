@@ -210,19 +210,19 @@ final class ConversionTests: XCTestCase {
         XCTAssertEqual(readWrapper.arrangement.namedInstances.count, 2)
         XCTAssertEqual(readWrapper.language.name, "c")
 
-//        // Convert to ObjC++
-//        readWrapper.language = ObjCPPBinding()
-//        let objcppArrangementURL = tempDirectoryURL.appendingPathComponent("TestArrangement_ObjCPP.arrangement")
-//        try readWrapper.write(to: objcppArrangementURL)
-//
-//        // Read back the converted arrangement
-//        let convertedWrapper = try ArrangementWrapper(url: objcppArrangementURL)
-//
-//        // Verify language binding changed
-//        XCTAssertEqual(convertedWrapper.language.name, "objc++")
-//
-//        // Verify instances preservation
-//        XCTAssertEqual(convertedWrapper.arrangement.namedInstances.count, 2)
+        // Convert to ObjC++
+        readWrapper.language = ObjCPPBinding()
+        let objcppArrangementURL = tempDirectoryURL.appendingPathComponent("TestArrangement_ObjCPP.arrangement")
+        try readWrapper.write(to: objcppArrangementURL)
+
+        // Read back the converted arrangement
+        let convertedWrapper = try ArrangementWrapper(url: objcppArrangementURL)
+
+        // Verify language binding changed
+        XCTAssertEqual(convertedWrapper.language.name, "objc++")
+
+        // Verify instances preservation
+        XCTAssertEqual(convertedWrapper.arrangement.namedInstances.count, 2)
     }
 
     /// Test code generation verification for C language.
@@ -249,19 +249,19 @@ final class ConversionTests: XCTestCase {
         XCTAssertTrue(cHeaderContent.contains("struct Machine_TestMachine_C"))
         XCTAssertTrue(cHeaderContent.contains("void fsm_testmachine_c_init"))
 
-//        // Create wrapper for ObjC++ language
-//        let objcppWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: "TestMachine")
-//        objcppWrapper.language = ObjCPPBinding()
-//
-//        // Generate ObjC++ code
-//        let objcppMachineURL = tempDirectoryURL.appendingPathComponent("TestMachine_ObjCPP.machine")
-//        try objcppWrapper.write(to: objcppMachineURL)
-//
-//        // Verify language file
-//        let languageFilePath = objcppMachineURL.appendingPathComponent(Filename.language)
-//        XCTAssertTrue(FileManager.default.fileExists(atPath: languageFilePath.path))
-//
-//        let languageContent = try String(contentsOf: languageFilePath)
-//        XCTAssertEqual(languageContent, "objc++")
+        // Create wrapper for ObjC++ language
+        let objcppWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: "TestMachine")
+        objcppWrapper.language = ObjCPPBinding()
+
+        // Generate ObjC++ code
+        let objcppMachineURL = tempDirectoryURL.appendingPathComponent("TestMachine_ObjCPP.machine")
+        try objcppWrapper.write(to: objcppMachineURL)
+
+        // Verify language file
+        let languageFilePath = objcppMachineURL.appendingPathComponent(Filename.language)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: languageFilePath.path))
+
+        let languageContent = try String(contentsOf: languageFilePath)
+        XCTAssertEqual(languageContent, "objc++")
     }
 }
