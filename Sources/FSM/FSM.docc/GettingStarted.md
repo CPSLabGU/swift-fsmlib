@@ -29,6 +29,7 @@ let fsm = LLFSM(states: [red, green], transitions: [toGreen, toRed])
 // Access states and transitions
 print("States: \(fsm.states)")
 print("Transitions: \(fsm.transitions)")
+print("Initial state: \(fsm.initialState)")
 print("State Names: \(fsm.stateNames)")
 ```
 
