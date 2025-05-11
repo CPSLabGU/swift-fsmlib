@@ -2,8 +2,17 @@ import XCTest
 import Foundation
 @testable import FSM
 
+/// Unit tests for FSM file and directory wrappers.
+///
+/// This test case verifies the correct behaviour of file and directory wrappers
+/// used for serialising and deserialising FSMs, machines, and arrangements. It
+/// ensures that all file operations, wrapper properties, and content extraction
+/// methods function as intended.
+///
+/// - Note: These tests cover a variety of file management scenarios for FSMs.
 final class WrapperTests: XCTestCase {
 
+    /// Temporary directory for test file operations.
     let tempDirectoryURL: URL = {
         let tempDir = FileManager.default.temporaryDirectory
         let testDir = tempDir.appendingPathComponent("FSMWrapperTests-\(UUID().uuidString)")
@@ -11,12 +20,20 @@ final class WrapperTests: XCTestCase {
         return testDir
     }()
 
+    /// Remove the temporary directory after each test.
+    ///
+    /// This method ensures that the temporary directory used for test file
+    /// operations is deleted after each test, preventing resource leaks and
+    /// clutter.
     override func tearDown() {
         super.tearDown()
         try? FileManager.default.removeItem(at: tempDirectoryURL)
     }
 
-    /// Test regular file wrapper
+    /// Test regular file wrapper.
+    ///
+    /// This test creates a regular file wrapper with some test content and verifies that
+    /// the properties are correctly set.
     func testFileWrapperBasicOperations() throws {
         // swiftlint:disable:next force_unwrapping
         let testData = "Test content".data(using: .utf8)!
@@ -39,6 +56,10 @@ final class WrapperTests: XCTestCase {
         XCTAssertEqual(readWrapper.stringContents, "Test content")
     }
 
+    /// Test directory wrapper operations.
+    ///
+    /// This test creates a directory wrapper with some files and verifies that
+    /// the properties are correctly set.
     func testDirectoryWrapperOperations() throws {
         // Create a directory wrapper with some files
         // swiftlint:disable:next force_unwrapping
@@ -70,6 +91,11 @@ final class WrapperTests: XCTestCase {
         XCTAssertEqual(readDirWrapper.stringContents(of: "file1.txt"), "File 1 content")
     }
 
+    /// Test creation of a machine wrapper.
+    ///
+    /// This test creates a simple test machine with two states and a transition.
+    /// It then creates a machine wrapper with the machine and writes it to disk.
+    /// Finally, it verifies that the machine filename was added to the wrapper.
     func testMachineWrapperCreation() throws {
         // Create a simple test machine
         let machine = Machine()
@@ -105,6 +131,11 @@ final class WrapperTests: XCTestCase {
         XCTAssertEqual(langWrapper?.stringContents, "c")
     }
 
+    /// Test creation of an arrangement wrapper.
+    ///
+    /// This test creates a test machine, an instance with the machine, and an arrangement with the instance.
+    /// It then creates a machine wrapper with the same name as the instance typeFile and adds it to the arrangement wrapper.
+    /// Finally, it writes the arrangement to disk and verifies that the machine filename was added to the wrapper.
     func testArrangementWrapperCreation() throws {
         // Create test machine
         let machine = Machine()

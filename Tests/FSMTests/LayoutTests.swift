@@ -1,8 +1,19 @@
 import XCTest
 @testable import FSM
 
+/// Unit tests for FSM layout structures and geometry calculations.
+///
+/// This test case verifies the correct behaviour of coordinate and layout
+/// structures, including points, rectangles, ellipses, and paths. It ensures
+/// that all geometric operations and properties behave as expected for FSM
+/// layout and visualisation.
+///
+/// - Note: These tests cover both basic and advanced geometry features used in FSM layouts.
 final class LayoutTests: XCTestCase {
 
+    /// Test coordinate 2D creation and properties.
+    ///
+    /// This test creates a coordinate with x and y values and verifies that all properties are correctly set.
     func testCoordinate2D() {
         // Test initialization and property access
         let coord = Coordinate2D(10, 20)
@@ -40,6 +51,9 @@ final class LayoutTests: XCTestCase {
         XCTAssertEqual(sum.y, 13)
     }
 
+    /// Test rectangle creation and properties.
+    ///
+    /// This test creates a rectangle with a top-left corner and dimensions and verifies that all properties are correctly set.
     func testRectangle() {
         // Test initialization and property access
         let topLeft = Coordinate2D(10, 20)
@@ -88,6 +102,9 @@ final class LayoutTests: XCTestCase {
         XCTAssertEqual(mutableRect.rightX, 174)  // leftX + new width - 1
     }
 
+    /// Test path creation and properties.
+    ///
+    /// This test creates a path with points and verifies that all properties are correctly set.
     func testPath() {
         // Test basic path creation
         let points = [Point2D(0, 0), Point2D(10, 10), Point2D(20, 0), Point2D(30, 10)]
@@ -136,6 +153,10 @@ final class LayoutTests: XCTestCase {
         XCTAssertEqual(mutablePath.end.y, 20)
     }
 
+    /// Test state layout creation and properties.
+    ///
+    /// This test creates a state layout with a closed and open layout and verifies that
+    /// all properties are correctly set.
     func testStateLayout() {
         // Create a basic state layout
         let closedLayout = Ellipse(topLeft: Coordinate2D(10, 10), dimensions: Dimensions2D(100, 50))
@@ -174,6 +195,10 @@ final class LayoutTests: XCTestCase {
         XCTAssertEqual(stateLayout.openLayout.dimensions.w, 250)
     }
 
+    /// Test state layout property list conversion.
+    ///
+    /// This test creates a state layout with a property list and verifies that
+    /// all properties are correctly set.
     func testStateLayoutPropertyList() {
         // Create a layout with property list
         let dict = NSDictionary(dictionary: [
@@ -223,6 +248,10 @@ final class LayoutTests: XCTestCase {
         XCTAssertEqual(resultDict[StateLayoutKey.onResumeHeight.rawValue] as? Double, 20.0)
     }
 
+    /// Test transition layout creation and properties.
+    ///
+    /// This test creates a transition layout with a path and verifies that
+    /// all properties are correctly set.
     func testTransitionLayout() {
         // Create points for a transition path
         let srcPoint = Point2D(10, 10)
@@ -266,6 +295,10 @@ final class LayoutTests: XCTestCase {
         XCTAssertEqual(fromDict.path.yn, 20.0)
     }
 
+    /// Test vector operations.
+    ///
+    /// This test creates two vectors and verifies that vector addition and
+    /// subtraction are performed correctly.
     func testVectorOperations() {
         // Test vector addition
         let v1 = Coordinate2D(10, 20)

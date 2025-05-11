@@ -2,10 +2,15 @@
 //  Dictionary+Utiliities.swift
 //  
 //  Created by Rene Hexel on 7/8/2023.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 import Foundation
 
+/// Extension providing utility methods for NSDictionary to support strongly
+/// typed access and mutation for state and transition layout keys. These
+/// utilities simplify working with property lists and layout dictionaries in
+/// a type-safe manner, especially when serialising and deserialising FSM
+/// layouts.
 extension NSDictionary {
     /// Non-optional value for the given state layout key.
     ///
@@ -87,11 +92,17 @@ extension NSDictionary {
 #endif
 }
 
+/// Extension providing utility methods for Dictionary where Key == AnyHashable
+/// and Value: Any, to support strongly typed access and mutation for state and
+/// transition layout keys. These utilities simplify working with property lists
+/// and layout dictionaries in a type-safe manner, especially when serialising
+/// and deserialising FSM layouts.
 extension Dictionary where Key == AnyHashable, Value: Any {
     /// Non-optional value for the given state layout key.
     ///
     /// This function returns a value for a given key,
-    /// or a default value if the key is not present.
+    /// or a default value if the key is not present
+    /// in the dictionary.
     ///
     /// - Parameters:
     ///   - key: The key to look up.
@@ -106,7 +117,7 @@ extension Dictionary where Key == AnyHashable, Value: Any {
     /// Non-optional value for the given transition layout key.
     ///
     /// This function returns a value for a given transition layout key,
-    /// or a default value if the key is not present.
+    /// or a default value if the key is not present in the dictionary.
     ///
     /// - Parameters:
     ///   - key: The key to look up.
@@ -120,7 +131,7 @@ extension Dictionary where Key == AnyHashable, Value: Any {
     /// Typed, optional value for the given transition layout key.
     ///
     /// This function returns a value for a given transition layout key,
-    /// or `nil` if the key is not present.
+    /// or `nil` if the key is not present in the dictionary.
     ///
     /// - Parameters:
     ///   - key: The key to look up.
@@ -157,6 +168,8 @@ extension Dictionary where Key == AnyHashable, Value: Any {
     }
 
     /// Set the value for the given string key.
+    ///
+    /// This function sets a value in the dictionary for the specified string key.
     ///
     /// - Parameters:
     ///   - value: The value to set.

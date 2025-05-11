@@ -6,7 +6,16 @@
 //
 import Foundation
 
-/// Arrangement of multiple FSMs.
+/// Arrangement of multiple finite-state machines (FSMs).
+///
+/// This struct represents a collection of FSM instances, allowing for the
+/// grouping and management of multiple machines as a single arrangement.
+/// Arrangements are used to coordinate the serialisation, deserialisation,
+/// and code generation for sets of related FSMs.
+///
+/// - Note: Arrangements are typically used to model systems composed of
+///         multiple interacting FSMs, supporting batch operations and
+///         persistent storage of machine groups.
 public struct Arrangement {
     /// The FSMs in the arrangement and their names.
     public var namedInstances: [Instance]
@@ -49,18 +58,24 @@ public struct Arrangement {
     }
 }
 
+/// Extension providing convenience properties for accessing and mutating
+/// arrangement properties.
 public extension Arrangement {
     /// Add the arrangement to the given `ArrangementWrapper`.
     ///
-    /// This method creates a file wrapper for an arrangement
-    /// of FSMs and writes it to the given `ArrangementWrapper`.
+    /// This method creates a file wrapper for an arrangement of FSMs and writes
+    /// it to the given `ArrangementWrapper`. It generates code and metadata for
+    /// each FSM, ensuring that all required files are created and properly named.
     ///
     /// - Parameters:
-    ///   - outputFormat: The output language format to use.
     ///   - wrapper: The output `ArrangementWrapper` to add to.
+    ///   - language: The output language format to use.
     ///   - machineNames: The names associated with the FSMs.
     ///   - isSuspensible: Whether the output FSMs should be suspensible.
     /// - Returns: The filenames of the machines for adding to the arrangement.
+    /// - Throws: An error if writing to the wrapper fails.
+    ///
+    /// - Note: This method is used for batch generation of FSM arrangements.
     @inlinable
     func add(to wrapper: ArrangementWrapper, language: any OutputLanguage, machineNames: [String], isSuspensible: Bool = true) throws -> [Filename] {
         var instanceMappings = [String: (String, Machine)]()

@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "type": "swift",
+            "type": "lldb",
             "request": "launch",
             "sourceLanguages": [
                 "swift"
@@ -20,7 +20,7 @@
             "preLaunchTask": "swift: Build Debug fsmconvert"
         },
         {
-            "type": "swift",
+            "type": "lldb",
             "request": "launch",
             "sourceLanguages": [
                 "swift"

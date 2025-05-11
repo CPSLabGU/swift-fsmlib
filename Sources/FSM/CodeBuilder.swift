@@ -2,14 +2,28 @@
 //  CodeBuilder.swift
 //
 //  Created by Rene Hexel on 16/8/2023.
-//  Copyright © 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2023, 2025 Rene Hexel. All rights reserved.
 //
 
 /// Source code.
 public typealias Code = String
 
+/// Extension providing convenience properties for accessing and mutating
+/// code.
 extension Code {
-    /// Ignored code marker
+    /// Marker for ignored code segments.
+    ///
+    /// This static constant is used to denote code segments that should be
+    /// ignored during code generation or processing. It helps to identify
+    /// and skip over sections not relevant for the current operation.
+    ///
+    /// - Note: Useful for code transformation or filtering tasks.
+    ///
+    /// - SeeAlso: `CodeBuilder`
+    ///
+    /// - Warning: Ensure this marker does not appear in user code unintentionally.
+    ///
+    /// - Returns: The ignored code marker string.
     @usableFromInline
     static let ignored = "\n%%i%%\n"
     /// Four-space indentation
@@ -106,7 +120,17 @@ extension Code {
     }
 }
 
-/// Result builder for lines of code.
+/// Result builder for constructing source code blocks.
+///
+/// This result builder enables the declarative construction of source code by
+/// joining lines, handling optionals, and supporting conditional code
+/// generation. It is used to build up code blocks in a readable and
+/// maintainable way, filtering out ignored lines and supporting conditional and
+/// optional code fragments.
+///
+/// - Note: This is particularly useful for code generation tasks where code
+///         structure needs to be composed programmatically, such as when
+///         generating C, C++, or Objective-C code from Swift.
 @resultBuilder
 struct CodeBuilder {
     /// Join lines of code.

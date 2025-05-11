@@ -1,8 +1,21 @@
 import XCTest
 @testable import FSM
 
+/// Unit tests for code generation utilities and C/arrangement code output.
+///
+/// This test case verifies the correct generation of code blocks, C code,
+/// arrangement code, and CMake files for finite-state machines (FSMs) and
+/// arrangements. It ensures that all generated code matches expected output
+/// and that code generation utilities behave as intended.
+///
+/// - Note: These tests cover both code builder utilities and language-specific
+///         code generation for C and arrangements.
 final class CodeGenerationTests: XCTestCase {
 
+    /// Test the CodeBuilder utilities for code block generation.
+    ///
+    /// This test verifies the correct output of code blocks, indented blocks,
+    /// braced blocks, include files, forEach, and enumerating utilities.
     func testCodeBuilder() {
         // Test basic code block creation
         let basicCode = Code.block {
@@ -59,6 +72,10 @@ final class CodeGenerationTests: XCTestCase {
         XCTAssertEqual(enumeratedCode, "[0]: x\n[1]: y\n[2]: z")
     }
 
+    /// Test C binding code generation for FSMs.
+    ///
+    /// This test verifies the correct generation of C interface and
+    /// implementation code, state interfaces, and suspensible code for FSMs.
     func testCBindingCodeGeneration() {
         // Create a simple FSM
         let state1 = State(name: "Initial")
@@ -104,6 +121,10 @@ final class CodeGenerationTests: XCTestCase {
         XCTAssertTrue(suspensibleCode.contains("struct LLFSMState *suspend_state;"))
     }
 
+    /// Test C binding arrangement code generation.
+    ///
+    /// This test verifies the correct generation of arrangement interface,
+    /// implementation, and static code for C language arrangements.
     func testCBindingArrangementCodeGeneration() {
         // Create a simple arrangement with two instances
         let state1 = State(name: "Initial")
@@ -152,6 +173,10 @@ final class CodeGenerationTests: XCTestCase {
         XCTAssertTrue(staticCode.contains(".fsm_instance1 = &static_fsm_instance1"))
     }
 
+    /// Test CMake fragment and CMakeLists generation for FSMs.
+    ///
+    /// This test verifies the correct generation of CMake build fragments and
+    /// CMakeLists files for FSMs and arrangements.
     func testCMakeGeneration() {
         // Create a simple FSM
         let state1 = State(name: "Initial")
@@ -183,6 +208,10 @@ final class CodeGenerationTests: XCTestCase {
         XCTAssertTrue(cmakeLists.contains("add_library(TestMachine_fsm STATIC ${TestMachine_FSM_SOURCES})"))
     }
 
+    /// Test arrangement CMake generation for arrangements.
+    ///
+    /// This test verifies the correct generation of CMake build files for
+    /// arrangements of FSMs.
     func testArrangementCMakeGeneration() {
         // Create a simple arrangement with two instances
         let state1 = State(name: "Initial")

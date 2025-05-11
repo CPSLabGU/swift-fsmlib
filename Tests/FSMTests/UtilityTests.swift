@@ -1,8 +1,20 @@
 import XCTest
 @testable import FSM
 
+/// Unit tests for utility extensions and helper functions in FSM.
+///
+/// This test case verifies the correct behaviour of string, dictionary,
+/// regex, filename, format, and language binding utilities. It ensures that
+/// all utility functions and extensions work as intended for FSM support.
+///
+/// - Note: These tests cover a wide range of utility helpers used throughout
+///         the FSM codebase.
 final class UtilityTests: XCTestCase {
 
+    /// Test string extension utilities.
+    ///
+    /// This test verifies the correct behaviour of string trimming, line
+    /// splitting, extension handling, and helper functions.
     func testStringExtensions() {
         // Test trimmed
         XCTAssertEqual("  hello  ".trimmed, "hello")
@@ -36,6 +48,10 @@ final class UtilityTests: XCTestCase {
         XCTAssertFalse(nonempty(""))
     }
 
+    /// Test dictionary extension utilities.
+    ///
+    /// This test verifies the correct behaviour of NSDictionary and
+    /// Dictionary<AnyHashable, Any> extensions for value access and mutation.
     func testDictionaryExtensions() {
         // Test with NSDictionary
         let nsDict = NSDictionary(dictionary: [
@@ -71,6 +87,10 @@ final class UtilityTests: XCTestCase {
         XCTAssertEqual(dict.value(.width, default: 0), 100)
     }
 
+    /// Test regex utility functions.
+    ///
+    /// This test verifies the correct behaviour of string extraction using
+    /// regular expressions.
     func testRegexUtils() throws {
         let content = "Number is 123 and another number is 456"
 
@@ -84,6 +104,10 @@ final class UtilityTests: XCTestCase {
         XCTAssertNil(noMatch)
     }
 
+    /// Test filename handling utilities.
+    ///
+    /// This test verifies the correct behaviour of filename constants and
+    /// file extension handling.
     func testFileNameHandling() {
         // Test filename constants
         XCTAssertEqual(Filename.language, "Language")
@@ -98,6 +122,10 @@ final class UtilityTests: XCTestCase {
         XCTAssertEqual(String(fileName.dottedExtension), MachineWrapper.dottedSuffix)
     }
 
+    /// Test format and output language handling utilities.
+    ///
+    /// This test verifies the correct behaviour of format enums and output
+    /// language lookup functions.
     func testFormatHandling() {
         // Test format enum
         XCTAssertEqual(Format.c.rawValue, "c")
@@ -120,6 +148,10 @@ final class UtilityTests: XCTestCase {
         XCTAssertEqual(lang?.name, "c")
     }
 
+    /// Test language binding equality utilities.
+    ///
+    /// This test verifies the correct behaviour of language binding equality
+    /// comparisons for different language binding types and optionals.
     func testLanguageBindingEquality() {
         let binding1 = CBinding()
         let binding2 = CBinding()

@@ -8,9 +8,21 @@
 import Foundation
 
 #if canImport(Darwin)
+/// A layout dictionary.
+///
+/// On Darwin platforms, layout dictionaries
+/// are NSDictionary instances.
+///
+/// - Note: By contrast, on non-Darwin platforms,
+/// layout dictionaries are Swift dictionaries.
 public typealias LayoutDictionary = NSDictionary
+/// Mutable dictionary typealias for layout construction on Darwin platforms.
 @usableFromInline typealias MutableDictionary = NSMutableDictionary
-/// Return the Layout Dictionary as a Property List dictionary
+/// Return the Layout Dictionary as a Property List dictionary.
+///
+/// This function performs a simple type conversion that returns the layout
+/// dictionary as an NSDictionary, suitable for property list use.
+///
 /// - Parameter dict: The layout dictionary to convert.
 /// - Returns: The NSDictionary representing the property list.
 @usableFromInline
@@ -18,9 +30,21 @@ func asPList(_ dict: LayoutDictionary) -> NSDictionary {
     dict
 }
 #else
+/// A layout dictionary.
+///
+/// Typealias for a layout dictionary on non-Darwin platforms,
+/// using a Swift dictionary.
+///
+/// - Note: By contrast, on Darwin platforms,
+/// layout dictionaries can be represented as NSDictionary instances.
 public typealias LayoutDictionary = [AnyHashable: Any]
+/// Mutable dictionary typealias for layout construction on non-Darwin platforms.
 @usableFromInline typealias MutableDictionary = LayoutDictionary
-/// Return the Layout Dictionary as a Property List dictionary
+/// Return the Layout Dictionary as a Property List dictionary.
+///
+/// This function performs a type conversion that returns the layout
+/// dictionary as an NSDictionary, suitable for property list use.
+///
 /// - Parameter dict: The layout dictionary to convert.
 /// - Returns: The NSDictionary representing the property list.
 @usableFromInline
@@ -29,12 +53,21 @@ func asPList(_ dict: LayoutDictionary) -> NSDictionary {
 }
 #endif
 
-/// Reading a state layout from a property list
+/// Extension for reading and writing StateLayout as a property list.
 public extension StateLayout {
-    /// Property list representation
+    /// Property list representation of the state layout.
+    ///
+    /// This computed property returns the state layout as an NSDictionary,
+    /// suitable for serialisation to a property list.
     @inlinable var propertyList: NSDictionary { asPList(layoutDictionary) }
 
-    /// Property list initialiser for a state layout
+    /// Property list initialiser for a state layout.
+    ///
+    /// This initialiser constructs a StateLayout from a property list
+    /// dictionary, using sensible defaults for missing values. The state
+    /// index is used for autolayout positioning if coordinates are not
+    /// specified.
+    ///
     /// - Parameters:
     ///   - propertyList: The property list to read from.
     ///   - i: The state index (for autolayout).
@@ -63,8 +96,13 @@ public extension StateLayout {
     }
 }
 
+/// Extension providing the layout dictionary representation for StateLayout.
 extension StateLayout {
-    /// Layout dictionary representation
+    /// Layout dictionary representation of the state layout.
+    ///
+    /// This computed property returns a dictionary containing all layout
+    /// parameters for the state, suitable for serialisation or further
+    /// processing.
     @usableFromInline var layoutDictionary: LayoutDictionary {
 #if canImport(Darwin)
         let propertyList = MutableDictionary()

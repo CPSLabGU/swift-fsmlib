@@ -9,6 +9,15 @@ import Foundation
 /// Representation of a file name
 public typealias Filename = String
 
+/// Extension providing filename constants for machine serialisation.
+///
+/// This extension defines standard filenames and keys used for serialising
+/// and deserialising finite-state machines, including state lists, layouts,
+/// and metadata files. These constants ensure consistency across file
+/// operations and persistent storage.
+///
+/// - Note: Use these constants when reading or writing FSM-related files to
+///         avoid hardcoding filenames throughout the codebase.
 extension Filename {
     /// Programming language for the given machine.
     @usableFromInline static let language = "Language"
@@ -38,6 +47,15 @@ extension Filename {
     @usableFromInline static let metaData = "net.mipal.micase.metadata"
 }
 
+/// Extension providing file and content utilities for URL.
+///
+/// This extension adds convenience methods for constructing file URLs,
+/// reading file contents as data or strings, and writing data or strings to
+/// files. These utilities simplify file I/O for FSM serialisation and
+/// deserialisation.
+///
+/// - Note: These methods return `nil` or empty strings if files do not exist
+///         or cannot be read, making them safe for optional file operations.
 extension URL {
     /// Return the URL for a given file name.
     ///

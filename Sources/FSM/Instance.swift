@@ -7,7 +7,17 @@
 // swiftlint:disable:this type_contents_order
 import Foundation
 
-/// Instance of an FSM.
+/// Representation of a finite-state machine (FSM) instance.
+///
+/// This struct encapsulates an instance of a finite-state machine, including
+/// its unique name, type file, and a reference to the underlying machine.
+/// Instances are used to represent specific occurrences of FSMs within an
+/// arrangement, supporting unique identification and type association.
+///
+/// - Note: The `name` property must be unique within an arrangement, while
+///         the `typeFile` does not have to be unique. This allows multiple
+///         instances of the same FSM type to be instantiated with different
+///         names.
 public struct Instance: Equatable, Hashable {
     /// The name of the machine instance.
     ///
@@ -34,11 +44,17 @@ public struct Instance: Equatable, Hashable {
     }
 }
 
+/// Extension providing convenience properties for accessing and mutating
+/// instance properties.
 public extension Instance {
     /// Return the type name of the machine.
     ///
-    /// This returns the name of the type
-    /// without the trailing file extension.
+    /// This computed property returns the type name of the machine instance,
+    /// omitting any file extension. It is useful for display, serialisation,
+    /// or code generation tasks where the type name is required without file
+    /// suffixes.
+    ///
+    /// - Returns: The type name as a `Substring`, without file extension.
     @inlinable var typeName: Substring {
         typeFile.sansExtension
     }

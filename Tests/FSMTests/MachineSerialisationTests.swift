@@ -2,8 +2,18 @@ import XCTest
 import Foundation
 @testable import FSM
 
+/// Unit tests for machine serialisation and deserialisation.
+///
+/// This test case verifies the correct serialisation and deserialisation of
+/// finite-state machines (FSMs), including state and transition layouts, to
+/// and from disk. It ensures that all file operations, layouts, and machine
+/// properties are preserved across the serialisation process.
+///
+/// - Note: These tests use a temporary directory for file operations and
+///         clean up after each test run.
 final class MachineSerialisationTests: XCTestCase {
 
+    /// Temporary directory for test file operations.
     let tempDirectoryURL: URL = {
         let tempDir = FileManager.default.temporaryDirectory
         let testDir = tempDir.appendingPathComponent("FSMSerializationTests-\(UUID().uuidString)")
@@ -11,11 +21,21 @@ final class MachineSerialisationTests: XCTestCase {
         return testDir
     }()
 
+    /// Remove the temporary directory after each test.
+    ///
+    /// This method ensures that the temporary directory used for test file
+    /// operations is deleted after each test, preventing resource leaks and
+    /// clutter.
     override func tearDown() {
         super.tearDown()
         try? FileManager.default.removeItem(at: tempDirectoryURL)
     }
 
+    /// Test basic machine serialisation and deserialisation.
+    ///
+    /// This test creates a simple FSM, serialises it to disk, and verifies
+    /// that all states, transitions, and layouts are correctly written and
+    /// read back.
     func testBasicMachineSerialization() throws {
         // Create a simple machine
         let state1 = State(name: "Initial")
@@ -80,6 +100,11 @@ final class MachineSerialisationTests: XCTestCase {
         XCTAssertTrue(stateNames.contains(state3.name))
     }
 
+    /// Test state layout serialisation and deserialisation.
+    ///
+    /// This test creates a machine with a specific state layout, serialises
+    /// it to disk, and verifies that the layout is preserved after
+    /// deserialisation.
     func testLayoutSerialisation() throws {
         // Create a machine with specific layout
         let state = State(name: "TestState")
@@ -133,6 +158,11 @@ final class MachineSerialisationTests: XCTestCase {
         XCTAssertEqual(loadedLayout.internalHeight, stateLayout.internalHeight)
     }
 
+    /// Test transition layout serialisation and deserialisation.
+    ///
+    /// This test creates a machine with a specific transition layout,
+    /// serialises it to disk, and verifies that the layout is preserved after
+    /// deserialisation.
     func testTransitionLayoutSerialisation() throws {
         // Create a machine with transition layout
         let state1 = State(name: "Source")
@@ -202,6 +232,10 @@ final class MachineSerialisationTests: XCTestCase {
         XCTAssertEqual(loadedLayout.path.end.y, dstPoint.y)
     }
 
+    /// Test window layout serialisation and deserialisation.
+    ///
+    /// This test creates a machine with a window layout, serialises it to disk,
+    /// and verifies that the window layout is preserved after deserialisation.
     func testWindowLayoutSerialisation() throws {
         // Create a machine with window layout
         let state = State(name: "TestState")
@@ -229,6 +263,10 @@ final class MachineSerialisationTests: XCTestCase {
         XCTAssertEqual(loadedMachine.windowLayout, windowLayout)
     }
 
+    /// Test suspensible machine serialisation and deserialisation.
+    ///
+    /// This test creates a machine with a suspend state, serialises it to disk,
+    /// and verifies that the suspend state is preserved after deserialisation.
     func testSuspensibleMachineSerialisation() throws {
         // Create a suspensible machine
         let state1 = State(name: "Normal")

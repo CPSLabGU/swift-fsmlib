@@ -289,8 +289,23 @@ open class FileWrapper: @unchecked Sendable {
     }
 }
 
+/// Extension providing convenience properties for accessing and mutating
+/// reading options for FileWrapper.
 public extension FileWrapper {
-    /// The reading options for the file wrapper.
+    /// Reading options for FileWrapper.
+    ///
+    /// This option set specifies how a FileWrapper should read its content,
+    /// including immediate reading and memory mapping behaviour. It is used
+    /// to control file reading strategies for performance and resource
+    /// management.
+    /// Reading options for FileWrapper.
+    ///
+    /// This option set specifies how a FileWrapper should read its content,
+    /// including immediate reading and memory mapping behaviour. It is used
+    /// to control file reading strategies for performance and resource
+    /// management.
+    ///
+    /// - Note: Use these options to optimise file reading on different platforms.
     struct ReadingOptions: OptionSet, @unchecked Sendable {
         /// Raw value of the reading options.
         public var rawValue: UInt
@@ -302,8 +317,8 @@ public extension FileWrapper {
         }
         /// Read the file wrapper immediately.
         ///
-        /// This option causes the file wrapper to
-        /// read its content immediatelay after creation.
+        /// This option causes the file wrapper to read its content
+        /// immediately after creation.
         public static var immediate: FileWrapper.ReadingOptions { .init(rawValue: 1) }
         /// Do not use memory mapping.
         ///
@@ -318,6 +333,13 @@ public extension FileWrapper {
     }
 
     /// The writeing options for the file wrapper.
+    /// Writing options for FileWrapper.
+    ///
+    /// This option set specifies how a FileWrapper should write its content,
+    /// including atomic writes and name updating. It is used to control file
+    /// writing strategies for reliability and consistency.
+    ///
+    /// - Note: Use these options to ensure safe and predictable file writes.
     struct WritingOptions: OptionSet, @unchecked Sendable {
         /// Raw value of the writeing options.
         public var rawValue: UInt
@@ -344,12 +366,18 @@ public extension FileWrapper {
     }
 }
 
+/// Extension providing internal utilities for FileWrapper content management.
 extension FileWrapper {
     /// The content of a FileWrapper.
+    ///
+    /// This enum represents the different types of content that a FileWrapper can contain,
+    /// including file data, a directory, or a symbolic link.
+    /// It is used internally to manage the different types of file system entities
+    /// that a FileWrapper can represent.
     @usableFromInline enum Content {
-        /// File data associated with the FileWraper.
+        /// File data associated with the FileWrapper.
         case data(Data)
-        /// Directory Bundle of FileWrapper.
+        /// Directory bundle of FileWrapper.
         case directory([Filename: FileWrapper])
         /// Symbolic link target URL of FileWrapper.
         case symbolicLink(URL)
@@ -372,9 +400,12 @@ extension FileWrapper {
     }
 }
 
+/// Set of URL resource keys used internally for FileWrapper URL management.
 @usableFromInline let urlKeys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey, .isRegularFileKey]
 #endif
 
+/// Extension providing convenience properties for accessing and mutating
+/// file wrapper content.
 extension FileWrapper {
 
     /// Return the contents of the given file as a String.

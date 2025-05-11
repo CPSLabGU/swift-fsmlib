@@ -93,6 +93,13 @@ public struct LLFSM: SuspensibleFSM, Equatable, Hashable {
     }
 }
 
+/// Extension providing state name utilities for LLFSM.
+///
+/// This extension adds a computed property for retrieving the names of all
+/// states in the LLFSM, in the order they appear. If a state has no name,
+/// its UUID string is used instead.
+///
+/// - Note: This is useful for serialisation, debugging, and code generation.
 public extension LLFSM {
     /// Return the state names of this LLFSM.
     ///
@@ -108,6 +115,16 @@ public extension LLFSM {
         }
     }
 
+    /// Designated initialiser for an LLFSM.
+    ///
+    /// This initialiser constructs an LLFSM from arrays of states and transitions,
+    /// and an optional suspend state. It builds the internal state and transition
+    /// maps for efficient lookup.
+    ///
+    /// - Parameters:
+    ///   - states: The array of states for the machine.
+    ///   - transitions: The array of transitions for the machine.
+    ///   - suspendState: The optional suspend state ID.
     init(states: [State], transitions: [Transition], suspendState: StateID?) {
         self.states = states.map { $0.id }
         self.transitions = transitions.map { $0.id }
@@ -117,7 +134,13 @@ public extension LLFSM {
     }
 }
 
-// Hashable conformance
+/// Extension providing Hashable conformance for LLFSM.
+///
+/// This extension implements the hash function for LLFSM, combining all
+/// relevant properties to ensure correct hashing behaviour for use in
+/// collections.
+///
+/// - Note: Hashing includes states, suspend state, transitions, and their maps.
 public extension LLFSM {
     /// Hash function.
     /// - Parameter hasher: Hasher to use for hashing.

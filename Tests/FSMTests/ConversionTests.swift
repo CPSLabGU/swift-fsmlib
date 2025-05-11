@@ -2,8 +2,18 @@ import XCTest
 import Foundation
 @testable import FSM
 
+/// Unit tests for FSM conversion between language bindings and arrangements.
+///
+/// This test case verifies the correct conversion of finite-state machines
+/// (FSMs) between different language bindings (C, Objective-C++), as well as
+/// arrangement serialisation, deserialisation, and code generation. It ensures
+/// that all properties, layouts, and files are preserved across conversions.
+///
+/// - Note: These tests use a temporary directory for file operations and
+///         clean up after each test run.
 final class ConversionTests: XCTestCase {
 
+    /// Temporary directory for test file operations.
     let tempDirectoryURL: URL = {
         let tempDir = FileManager.default.temporaryDirectory
         let testDir = tempDir.appendingPathComponent("FSMConversionTests-\(UUID().uuidString)")
@@ -11,11 +21,20 @@ final class ConversionTests: XCTestCase {
         return testDir
     }()
 
+    /// Remove the temporary directory after each test.
+    ///
+    /// This method ensures that the temporary directory used for test file
+    /// operations is deleted after each test, preventing resource leaks and
+    /// clutter.
     override func tearDown() {
         super.tearDown()
         try? FileManager.default.removeItem(at: tempDirectoryURL)
     }
 
+    /// Create a simple test machine for conversion tests.
+    ///
+    /// This helper method creates a machine with three states and two
+    /// transitions, and initialises empty layouts.
     func createTestMachine() -> Machine {
         // Create a simple test machine with three states and two transitions
         let machine = Machine()
@@ -38,6 +57,11 @@ final class ConversionTests: XCTestCase {
         return machine
     }
 
+    /// Test conversion from C to Objective-C++ language binding.
+    ///
+    /// This test creates a machine with C binding, serialises it, converts it
+    /// to Objective-C++, and verifies that all properties and files are
+    /// preserved.
     func testCToObjCPPConversion() throws {
         // Create a machine with C binding
         let machine = createTestMachine()
@@ -77,6 +101,11 @@ final class ConversionTests: XCTestCase {
         XCTAssertEqual(languageContent, "objc++")
     }
 
+    /// Test conversion from Objective-C++ to C language binding.
+    ///
+    /// This test creates a machine with Objective-C++ binding, serialises it,
+    /// converts it to C, and verifies that all properties and files are
+    /// preserved.
     func testObjCPPToCConversion() throws {
         // Create a machine with ObjC++ binding
         let machine = createTestMachine()
@@ -101,6 +130,10 @@ final class ConversionTests: XCTestCase {
         XCTAssertEqual(convertedMachine.llfsm.transitions.count, 2)
     }
 
+    /// Test reading and converting a traffic light machine from resources.
+    ///
+    /// This test reads a traffic light machine from resources, verifies its
+    /// properties, and converts it to Objective-C++.
     func testTrafficLightMachineInResources() throws {
         let fm = FileManager.default
         var isDirectory: ObjCBool = false
@@ -147,6 +180,10 @@ final class ConversionTests: XCTestCase {
         XCTAssertEqual(convertedMachine.llfsm.states.count, 4)
     }
 
+    /// Test arrangement conversion and serialisation.
+    ///
+    /// This test creates an arrangement, serialises it, and verifies that all
+    /// instances and files are preserved.
     func testArrangementConversion() throws {
         // Create a machine
         let machine = createTestMachine()
@@ -188,6 +225,10 @@ final class ConversionTests: XCTestCase {
 //        XCTAssertEqual(convertedWrapper.arrangement.namedInstances.count, 2)
     }
 
+    /// Test code generation verification for C language.
+    ///
+    /// This test creates a machine, generates C code, and verifies that the
+    /// generated files and properties are correct.
     func testCodeGenerationVerification() throws {
         // Create a machine with C binding
         let machine = createTestMachine()

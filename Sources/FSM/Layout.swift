@@ -5,6 +5,7 @@
 //  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 // swiftlint:disable operator_usage_whitespace
+// swiftlint:disable identifier_name
 #if os(Linux)
     import Glibc
 #else
@@ -25,11 +26,9 @@ public protocol Vector2D {
 let π = Double.pi
 
 /// Two times Pi
-// swiftlint:disable identifier_name
 let two_π = 2 * π
 
 /// Half of Pi
-// swiftlint:disable identifier_name
 let half_π = π / 2
 
 
@@ -104,8 +103,16 @@ public protocol Rectangle2D {
 }
 
 
+/// Extension providing convenience properties for accessing and mutating
+/// rectangle properties.
 public extension Rectangle2D {
-    /// Width
+    /// The width of the rectangle.
+    ///
+    /// This property provides access to the width component of the
+    /// rectangle's dimensions. Setting this value updates the underlying
+    /// dimensions structure.
+    ///
+    /// - Returns: The width as a `Double`.
     var w: Double {
         get { return dimensions.w }
         mutating set { dimensions.w = newValue }
@@ -163,7 +170,15 @@ public extension Rectangle2D {
 }
 
 
-/// Rectangle implementation
+/// Rectangle implementation.
+///
+/// This struct represents a rectangle in 2D space, defined by its top left
+/// corner and dimensions (width and height). It provides initialisers for
+/// both top left and centre-based construction, and supports geometric
+/// operations via protocol conformance.
+///
+/// - Note: Used for layout, collision detection, and graphical representation
+///         in FSM diagrams and editors.
 public struct Rectangle: Rectangle2D {
     /// Coordinates of the top left corner
     public var topLeft: Coordinate2D
@@ -184,6 +199,15 @@ public struct Rectangle: Rectangle2D {
     }
 }
 
+/// Extension providing additional initialisers for Rectangle.
+///
+/// This extension adds a centre-based initialiser to Rectangle, allowing
+/// construction from a centre point and dimensions. This is useful for
+/// geometric calculations and graphical layout where centre-based positioning
+/// is preferred.
+///
+/// - Note: Use this initialiser when you need to create rectangles based on
+///         their centre rather than their top left corner.
 public extension Rectangle {
     /// Initialise a rectangle from a centre position and dimensions.
     ///

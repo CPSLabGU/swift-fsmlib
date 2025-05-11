@@ -21,6 +21,15 @@ public protocol FSM: CustomStringConvertible {
     func transitionsFrom(_ s: StateID) -> TransitionArray
 }
 
+/// Default implementations for FSM protocol requirements.
+///
+/// This extension provides default property implementations for the initial
+/// state and description of a finite-state machine, simplifying conforming
+/// types by supplying common behaviour.
+///
+/// - Note: The initial state defaults to the first state in the states array.
+///         Conforming types can override this property to provide a different
+///         initial state.
 extension FSM {
     /// By default the initial state is the first state
     @inlinable public var initialState: StateID {
@@ -47,6 +56,12 @@ public protocol Suspensible: CustomStringConvertible {
     var suspendState: StateID? { get mutating set }
 }
 
+/// Default implementations for Suspensible protocol requirements.
+///
+/// This extension provides a default description for suspensible states,
+/// returning the name of the suspend state or "(none)" if not set.
+///
+/// - Note: This helps with debugging and logging suspensible FSMs.
 extension Suspensible {
     /// Default description returning the name of the suspend state
     @inlinable public var description: String {
@@ -58,6 +73,12 @@ extension Suspensible {
 /// Abstract representation of a suspensible FSM
 public protocol SuspensibleFSM: FSM, Suspensible {}
 
+/// Default implementations for SuspensibleFSM protocol requirements.
+///
+/// This extension provides a default description for suspensible FSMs,
+/// combining the state descriptions and the suspend state.
+///
+/// - Note: This is useful for serialisation, debugging, and logging.
 extension SuspensibleFSM {
     /// Default description of a suspensible FSM
     @inlinable public var description: String {

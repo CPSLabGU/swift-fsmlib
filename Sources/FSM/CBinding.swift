@@ -82,6 +82,10 @@ public struct CBinding: OutputLanguage {
     }
 }
 
+/// Extension providing methods for adding C boilerplate, interfaces, code,
+/// and CMake files to a MachineWrapper for C-based finite-state machines.
+/// These methods facilitate the serialisation and code generation process
+/// for C language targets, including support for suspensible machines.
 public extension CBinding {
     /// Add the given boilerplate to the given `MachineWrapper`.
     ///
@@ -235,6 +239,10 @@ public extension CBinding {
 
 // Arrangments of C-language LLFSMs
 
+/// Extension providing methods for adding arrangement interfaces, code,
+/// and CMake files to a MachineWrapper for arrangements of C-based
+/// finite-state machines. These methods facilitate the serialisation and
+/// code generation process for arrangements of FSMs in C.
 public extension CBinding {
     /// Add the arrangment interface to the given `MachineWrapper`.
     ///
@@ -302,8 +310,15 @@ public extension CBinding {
     }
 }
 
-/// Return the number of transitions based on the content of the State.h file
-/// - Parameter content: The content of the `State.h` file
+/// Return the number of transitions based on the content of the `State.h` file.
+///
+/// This function parses the provided header content
+/// to determine the number of transitions defined
+/// for a state in a C-language finite-state machine.
+/// It searches for specific preprocessor definitions
+/// or return statements that indicate the number of transitions.
+///
+/// - Parameter content: The content of the `State.h` file.
 /// - Returns: The number of transitions in the given state.
 @inlinable
 public func numberOfCTransitionsIn(header content: String) -> Int {
@@ -316,13 +331,16 @@ public func numberOfCTransitionsIn(header content: String) -> Int {
     return numberOfTransitions
 }
 
-
 /// Return the target state index of the given transition
-/// based on the content of the `State.h` file.
+///
+/// This function parses the header content to extract the target state index
+/// for a specific transition, as defined in the C-language state header file
+/// `State.h`.
+///
 /// - Parameters:
 ///   - i: The transition number.
 ///   - content: The content of the `State.h` file.
-/// - Returns:
+/// - Returns: The target state index if found, or `nil` otherwise.
 @inlinable
 public func targetStateIndexOfCTransition(_ i: Int, inHeader content: String) -> Int? {
     // swiftlint:disable:next force_try
@@ -331,12 +349,18 @@ public func targetStateIndexOfCTransition(_ i: Int, inHeader content: String) ->
     return targetStateIndex
 }
 
-
 /// Read the content of the `State.h` file.
+///
+/// This function attempts to read the contents
+/// of the state header file for the specified state
+/// from the provided machine wrapper.
+/// If the `State.h` file cannot be read,
+/// an error message is printed and `nil` is returned.
+///
 /// - Parameters:
-///   - machineWrapper: The MachineWrapper.
+///   - machineWrapper: The MachineWrapper containing the state files.
 ///   - state: The name of the state to examine.
-/// - Returns: The content of the `State.h` file.
+/// - Returns: The content of the `State.h` file as a string, or `nil` if the file cannot be read.
 @inlinable
 public func contentOfCState(for machineWrapper: MachineWrapper, state: StateName) -> String? {
     let file = "State_\(state).h"
@@ -357,7 +381,6 @@ public func numberOfCTransitions(for machineWrapper: MachineWrapper, state name:
     guard let content = contentOfCState(for: machineWrapper, state: name) else { return 0 }
     return numberOfCTransitionsIn(header: content)
 }
-
 
 /// Read State_%@_Transition_%ld.expr and return the transition expression
 /// - Parameters:

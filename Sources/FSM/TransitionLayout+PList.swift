@@ -46,8 +46,15 @@ public extension TransitionLayout {
     }
 }
 
+/// Extension providing the layout dictionary representation for TransitionLayout.
 extension TransitionLayout {
-    /// Layout dictionary representation
+    /// Layout dictionary representation of the transition layout.
+    ///
+    /// This computed property returns a dictionary containing all layout
+    /// parameters for the transition, suitable for serialisation or further
+    /// processing. The dictionary includes control points, source and
+    /// destination points, and the full bezier path as needed for the
+    /// transition's graphical representation.
     @usableFromInline var layoutDictionary: LayoutDictionary {
 #if canImport(Darwin)
         let propertyList = MutableDictionary()

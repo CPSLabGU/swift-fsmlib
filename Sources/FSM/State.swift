@@ -18,6 +18,11 @@ public protocol StateNode: CustomStringConvertible, Equatable {
     var name: String { get }
 }
 
+/// Default implementation of the description property for StateNode.
+///
+/// This extension provides a default implementation of the `description`
+/// property for types conforming to the `StateNode` protocol. It returns the
+/// name of the state.
 public extension StateNode {
     /// Default description returning the name of the state
     var description: String { return name }
@@ -28,7 +33,17 @@ public func==<S: StateNode>(lhs: S, rhs: S) -> Bool {
         return lhs.id == rhs.id && lhs.name == rhs.name
 }
 
-/// FSM State Implementations
+/// Concrete FSM State implementation.
+///
+/// This struct represents a concrete state in a finite-state machine (FSM),
+/// uniquely identified by an ID and associated with a name. States are
+/// fundamental building blocks of FSMs, representing distinct stages of system
+/// behaviour. Each state can be compared for equality and used in hashed
+/// collections.
+///
+/// - Note: States are used to model the different modes or configurations of
+///         a system, and are referenced by transitions and layouts throughout
+///         the FSM framework.
 public struct State: StateNode, Equatable, Hashable {
     /// Unique ID of the state
     public var id: StateID

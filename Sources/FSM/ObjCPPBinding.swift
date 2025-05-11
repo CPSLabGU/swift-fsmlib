@@ -114,6 +114,16 @@ public struct ObjCPPBinding: OutputLanguage {
     }
 }
 
+/// Extension providing methods for adding Objective-C++ boilerplate,
+/// interfaces, code, and CMake files to wrappers for Objective-C++-based
+/// finite-state machines and arrangements.
+///
+/// These methods facilitate the serialisation, code generation, and build
+/// system integration for Objective-C++ language targets, including support
+/// for suspensible machines and arrangements.
+///
+/// - Note: This extension is intended for use with Objective-C++ bindings and
+///         is not applicable to pure C or Swift FSMs.
 public extension ObjCPPBinding {
     /// Add the given boilerplate to the given `MachineWrapper`.
     ///

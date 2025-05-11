@@ -4,6 +4,13 @@
 //  Created by Rene Hexel on 14/10/2016.
 //  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
 //
+/// Keys for state layout dictionary entries.
+///
+/// This enumeration defines the keys used in the dictionary representation
+/// of state layouts for finite-state machines. Each key corresponds to a
+/// layout property, such as position, size, or expanded state.
+///
+/// - Note: Used for serialisation and deserialisation of state layouts.
 public enum StateLayoutKey: String, RawRepresentable, CaseIterable {
     /// Key for the x position
     case positionX = "x"

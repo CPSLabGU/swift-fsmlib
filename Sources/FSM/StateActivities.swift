@@ -27,6 +27,11 @@ public protocol StateActivities {
     var actions: StateActionsMapping { get mutating set }
 }
 
+/// Extension providing convenience properties for accessing and mutating
+/// canonical state activity actions (onEntry, onExit, internal, onSuspend,
+/// onResume) in arrays of string-like elements. This enables easy access
+/// and modification of state activity code sections in a type-safe and
+/// readable manner.
 extension StateActivities {
     /// Return the activity for a given state.
     ///
@@ -35,6 +40,15 @@ extension StateActivities {
     /// - Parameter stateID: ID of the state to return the actions for.
     /// - Returns: Actions for the given state.
     @inlinable
+    /// Return the activity for a given state.
+    ///
+    /// This function retrieves the array of actions for a specific state,
+    /// returning an empty array if there are no actions defined for the state.
+    ///
+    /// - Parameter stateID: The ID of the state to return actions for.
+    /// - Returns: Actions for the given state, or an empty array if none exist.
+    ///
+    /// - Note: Used for extracting activity lists for state transitions or entry/exit behaviours.
     public func actions(for stateID: StateID) -> StateActivity {
         actions[stateID] ?? []
     }
@@ -60,10 +74,15 @@ public struct StateActivitiesSourceCode: StateActivities {
 /// This represents the cannonical state activities
 /// in the order in which they are stored in the array.
 public enum StateActivityName: String, RawRepresentable, CaseIterable, Codable {
+    /// The OnEntry activity, executed when entering a state.
     case onEntry
+    /// The OnExit activity, executed when exiting a state.
     case onExit
+    /// The Internal activity, executed while in a state.
     case `internal`
+    /// The OnSuspend activity, executed when suspending a state.
     case onSuspend
+    /// The OnResume activity, executed when resuming a state.
     case onResume
 }
 
@@ -72,13 +91,23 @@ public enum StateActivityName: String, RawRepresentable, CaseIterable, Codable {
 /// This represents the array index of cannonical state activities
 /// in the order in which they are stored in the array.
 public enum StateActionIndex: Int, RawRepresentable, CaseIterable, Codable {
+    /// Index for the OnEntry activity in the state activity array.
     case onEntry
+    /// Index for the OnExit activity in the state activity array.
     case onExit
+    /// Index for the Internal activity in the state activity array.
     case `internal`
+    /// Index for the OnSuspend activity in the state activity array.
     case onSuspend
+    /// Index for the OnResume activity in the state activity array.
     case onResume
 }
 
+/// Extension providing convenience properties for accessing and mutating
+/// canonical state activity actions (onEntry, onExit, internal, onSuspend,
+/// onResume) in arrays of string-like elements. This enables easy access
+/// and modification of state activity code sections in a type-safe and
+/// readable manner.
 extension Array where Element: StringProtocol {
     /// The `onEntry` action of a state.
     ///

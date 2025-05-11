@@ -2,8 +2,18 @@ import XCTest
 import Foundation
 @testable import FSM
 
+/// Unit tests for FSM instance and arrangement creation and serialisation.
+///
+/// This test case verifies the correct creation, equality, and serialisation
+/// of FSM instances and arrangements, including file operations and wrapper
+/// management. It ensures that all arrangement and instance properties are
+/// preserved across serialisation and deserialisation.
+///
+/// - Note: These tests use a temporary directory for file operations and
+///         clean up after each test run.
 final class InstanceArrangementTests: XCTestCase {
 
+    /// Temporary directory for test file operations.
     let tempDirectoryURL: URL = {
         let tempDir = FileManager.default.temporaryDirectory
         let testDir = tempDir.appendingPathComponent("FSMInstanceTests-\(UUID().uuidString)")
@@ -11,11 +21,20 @@ final class InstanceArrangementTests: XCTestCase {
         return testDir
     }()
 
+    /// Remove the temporary directory after each test.
+    ///
+    /// This method ensures that the temporary directory used for test file
+    /// operations is deleted after each test, preventing resource leaks and
+    /// clutter.
     override func tearDown() {
         super.tearDown()
         try? FileManager.default.removeItem(at: tempDirectoryURL)
     }
 
+    /// Test creation and properties of FSM instances.
+    ///
+    /// This test creates a machine and an instance, and verifies that all
+    /// properties are correctly set.
     func testInstanceCreation() {
         // Create a machine
         let machine = Machine()
@@ -32,6 +51,10 @@ final class InstanceArrangementTests: XCTestCase {
         XCTAssertEqual(instance.machine.llfsm.states.count, 1)
     }
 
+    /// Test equality and hashing of FSM instances.
+    ///
+    /// This test creates multiple instances and verifies equality and hash
+    /// behaviour for different combinations of names, type files, and machines.
     func testInstanceEquality() {
         // Create a machine
         let machine1 = Machine()
@@ -69,6 +92,10 @@ final class InstanceArrangementTests: XCTestCase {
         XCTAssertEqual(instance1, instance2)
     }
 
+    /// Test creation and properties of FSM arrangements.
+    ///
+    /// This test creates an arrangement of instances and verifies that all
+    /// properties are correctly set.
     func testArrangementCreation() {
         // Create machines
         let machine1 = Machine()
@@ -92,6 +119,10 @@ final class InstanceArrangementTests: XCTestCase {
         XCTAssertEqual(arrangement.namedInstances[1].name, "instance2")
     }
 
+    /// Test creation and properties of ArrangementWrapper.
+    ///
+    /// This test creates an arrangement wrapper and verifies that it contains
+    /// the correct arrangement and language information.
     func testArrangementWrapper() throws {
         // Create machines
         let machine1 = Machine()
@@ -119,6 +150,10 @@ final class InstanceArrangementTests: XCTestCase {
         XCTAssertEqual(wrapper.language.name, "c")
     }
 
+    /// Test serialisation and deserialisation of arrangements.
+    ///
+    /// This test serialises an arrangement to disk and verifies that all
+    /// files are created and the arrangement can be read back correctly.
     func testArrangementSerialization() throws {
         // Create machines
         let machine1Name = "Machine1"
@@ -167,6 +202,10 @@ final class InstanceArrangementTests: XCTestCase {
         }
     }
 
+    /// Test loading an arrangement from a URL.
+    ///
+    /// This test writes an arrangement to disk and verifies that it can be
+    /// loaded without errors, ensuring the add method works as expected.
     func testArrangementFromURL() throws {
         // Create machines
         let machine = Machine()
@@ -200,6 +239,11 @@ final class InstanceArrangementTests: XCTestCase {
         // Test passes if no exception is thrown
     }
 
+    /// Test adding machines to an arrangement.
+    ///
+    /// This test creates a machine, an instance with the machine, and an arrangement with the instance.
+    /// It then creates a machine wrapper with the same name as the instance typeFile and adds it to the arrangement wrapper.
+    /// Finally, it writes the arrangement to disk and verifies that the machine filename was added to the wrapper.
     func testAddingMachinesToArrangement() throws {
         // Create a machine
         let machine = Machine()

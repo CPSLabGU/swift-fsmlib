@@ -7,7 +7,18 @@
 import Foundation
 import SystemPackage
 
-/// A language binding that can be used to generate code.
+/// Protocol for language bindings that generate code for finite-state machines.
+///
+/// This protocol defines the requirements for language bindings that support
+/// code generation, serialisation, and file management for finite-state
+/// machines (FSMs) and their arrangements. Conforming types provide methods
+/// for creating file wrappers, writing language and layout information,
+/// adding boilerplate, and generating build files for different output
+/// languages.
+///
+/// - Note: Implementations of this protocol enable extensibility for new
+///         output languages, supporting cross-platform code generation and
+///         integration with build systems.
 public protocol OutputLanguage: LanguageBinding {
     /// Create a file wrapper at the given URL.
     /// 
@@ -157,15 +168,20 @@ public protocol OutputLanguage: LanguageBinding {
     func addArrangementMachine(instances: [Instance], to wrapper: ArrangementWrapper, isSuspensible: Bool) throws
 }
 
+/// Extension providing convenience properties for accessing and mutating
+/// output language properties.
 public extension OutputLanguage {
     /// Create a file wrapper for the given URL.
     ///
-    /// This is used to create the file wrapper for the
-    /// given URL in preparation for writing the FSM.
+    /// This method creates a `MachineWrapper` for the specified URL, optionally
+    /// initialising it with the provided FSM. It prepares the wrapper for
+    /// subsequent writing or manipulation.
     ///
     /// - Parameters:
     ///   - url: The URL to create the file wrapper at.
-    ///   - machine:The FSM to create the file wrapper for.
+    ///   - machine: The FSM to create the file wrapper for (optional).
+    /// - Returns: A `MachineWrapper` instance for the given URL.
+    /// - Throws: An error if wrapper creation fails.
     @inlinable
     func createWrapper(at url: URL, for machine: Machine? = nil) throws -> MachineWrapper {
         let wrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine ?? Machine(), named: url.lastPathComponent)

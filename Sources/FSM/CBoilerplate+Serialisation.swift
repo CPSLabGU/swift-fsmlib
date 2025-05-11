@@ -2,12 +2,23 @@
 //  CBoilerplate+Serialisation.swift
 //
 //  Created by Rene Hexel on 16/8/2023.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 import Foundation
 
+/// Extension providing methods for serialising and deserialising CBoilerplate
+/// objects to and from MachineWrapper instances. These methods facilitate
+/// the management of boilerplate code sections for C-based finite-state
+/// machines, supporting both machine-level and state-level boilerplate.
 public extension CBoilerplate {
     /// Add the machine boilerplate to the given `MachineWrapper`.
+    ///
+    /// This method adds all relevant boilerplate sections for the machine
+    /// to the specified wrapper, replacing any existing file wrappers
+    /// for those sections.
+    /// The boilerplate is used to provide necessary includes, variables,
+    /// and functions for the generated C code.
+    ///
     /// - Parameter wrapper: The `MachineWrapper` to add the boilerplate to.
     /// - Throws: Any error thrown by the underlying file system.
     @inlinable
@@ -18,10 +29,17 @@ public extension CBoilerplate {
         }
     }
     /// Write the boilerplate for a given state to the given URL.
-    /// - Throws: Any error thrown by the underlying file system.
+    ///
+    /// This method adds all relevant boilerplate sections
+    /// for the specified state to the given wrapper,
+    /// replacing any existing file wrappers for those sections.
+    /// The boilerplate is used to provide necessary includes,
+    /// variables, and functions for the generated C code for the state.
+    ///
     /// - Parameters:
     ///   - state: The state to write the boilerplate for.
     ///   - wrapper: The `MachineWrapper` to add the state to.
+    /// - Throws: Any error thrown by the underlying file system.
     @inlinable
     func add(state: String, to wrapper: MachineWrapper) {
         for (section, fileName) in cStateBoilerplateFileMappings(for: state) {

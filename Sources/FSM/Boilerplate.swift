@@ -2,14 +2,24 @@
 //  Boilerplate.swift
 //
 //  Created by Rene Hexel on 7/10/2015.
-//  Copyright © 2015, 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2015, 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 import Foundation
 
 /// Boilerplate code
 public typealias BoilerplateCode = String
 
-/// Protocol representing generic language boilerplate
+/// Protocol representing generic language boilerplate for code generation.
+///
+/// This protocol defines the requirements for boilerplate code used in
+/// language bindings for finite-state machines. It specifies the structure
+/// for managing boilerplate sections, mapping section names to code, and
+/// adding boilerplate to machine wrappers. Conforming types provide the
+/// necessary code fragments for different parts of generated source files.
+///
+/// - Note: Boilerplate conformers are used to inject language-specific code
+///         into generated files, supporting extensibility for new languages
+///         and custom code sections.
 public protocol Boilerplate {
     /// Section names for boilerplate code.
     associatedtype SectionName: RawRepresentable, Hashable where SectionName.RawValue == String
@@ -36,9 +46,24 @@ public protocol Boilerplate {
     func add(state: String, to wrapper: MachineWrapper)
 }
 
+/// Extension providing additional boilerplate section names for C-like languages.
+///
+/// This extension defines the various section names used in CBoilerplate,
+/// including include paths, variable and function definitions, and action
+/// sections. It is used for organising and generating boilerplate code for
+/// FSMs targeting C or C-like languages.
+///
 public extension Boilerplate {
-    /// Conversion  initialiser.
-    /// - Parameter boilerplate: The boilerplate to convert from.
+    /// Conversion initialiser from another boilerplate instance.
+    ///
+    /// Creates a new boilerplate by copying all sections from
+    // the provided boilerplate instance.  This is useful for
+    // duplicating or adapting boilerplate content for different
+    // finite-state machines (FSMs) or language bindings.
+    ///
+    /// Use this initialiser when you need to create a variant of an existing boilerplate for reuse or modification.
+    ///
+    /// - Parameter boilerplate: The boilerplate instance to convert from.
     @inlinable
     init(_ boilerplate: any Boilerplate) {
         self.init()

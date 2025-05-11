@@ -1,7 +1,20 @@
 import XCTest
 @testable import FSM
 
+/// Unit tests for FSM state, transition, and LLFSM operations.
+///
+/// This test case verifies the correct creation, manipulation, and
+/// dictionary operations for states, transitions, and LLFSMs. It ensures
+/// that all FSM components behave as expected, including initial state
+/// handling and dictionary mapping.
+///
+/// - Note: These tests cover basic FSM operations and are essential for
+///         verifying the integrity of the FSM core data structures.
 final class FSMTests: XCTestCase {
+    /// Test state creation and property access.
+    ///
+    /// This test verifies that states are created with correct names and IDs,
+    /// and that equality and inequality checks work as expected.
     func testStates() {
         let rname = "State 1"
         let sname = "State 2"
@@ -13,6 +26,10 @@ final class FSMTests: XCTestCase {
         XCTAssertNotEqual(r.id, s.id)
     }
 
+    /// Test transition creation and property access.
+    ///
+    /// This test verifies that transitions are created with correct labels,
+    /// sources, and targets, and that equality and inequality checks work.
     func testTransitions() {
         let sname = "State 1"
         let tname = "State 2"
@@ -31,6 +48,10 @@ final class FSMTests: XCTestCase {
         XCTAssertNotEqual(t.id, u.id)
     }
 
+    /// Test LLFSM creation and transition access.
+    ///
+    /// This test verifies that LLFSMs are created with correct states and
+    /// transitions, and that transition lookup functions work as expected.
     func testLLFSM() {
         let sname = "State 1"
         let tname = "State 2"
@@ -51,6 +72,10 @@ final class FSMTests: XCTestCase {
         XCTAssertEqual(fsm.suspendState, s.id)
     }
 
+    /// Test LLFSM state and transition manipulation.
+    ///
+    /// This test verifies that states and transitions can be added and
+    /// updated in an LLFSM, and that their properties are correctly set.
     func testLLFSMStateAndTransitionManipulation() {
         var llfsm = LLFSM(states: [], transitions: [], suspendState: nil)
 
@@ -81,6 +106,10 @@ final class FSMTests: XCTestCase {
         XCTAssertEqual(llfsm.label(for: trans1ID), "updatedTransition")
     }
 
+    /// Test initial state handling in LLFSMs.
+    ///
+    /// This test verifies the default initial state behaviour and setting
+    /// of the initial state in empty FSMs.
     func testInitialStateHandling() {
         // Test default initial state
         let state1 = State(name: "First")
@@ -98,6 +127,10 @@ final class FSMTests: XCTestCase {
         XCTAssertEqual(emptyFSM.initialState, newStateID)
     }
 
+    /// Test dictionary operations for states.
+    ///
+    /// This test verifies that state dictionaries are created and accessed
+    /// correctly from arrays of states.
     func testStateDictionaryOperations() {
         let state1 = State(name: "First")
         let state2 = State(name: "Second")
@@ -109,6 +142,10 @@ final class FSMTests: XCTestCase {
         XCTAssertEqual(dict[state2.id]?.name, "Second")
     }
 
+    /// Test dictionary operations for transitions.
+    ///
+    /// This test verifies that transition dictionaries are created and
+    /// accessed correctly from arrays of transitions.
     func testTransitionDictionaryOperations() {
         let state1ID = StateID()
         let state2ID = StateID()

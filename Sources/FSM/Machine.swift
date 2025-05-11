@@ -9,6 +9,14 @@ import SystemPackage
 
 #if !canImport(Darwin)
 // swiftlint:disable:next identifier_name
+/// Null UUID constant for use on non-Darwin platforms.
+///
+/// This constant provides a zero-initialised UUID value for use
+/// in environments where Darwin's UUID_NULL is unavailable.
+/// It ensures cross-platform compatibility when working with
+/// UUIDs in file system or machine identification contexts.
+///
+/// - Note: Used internally for platform abstraction.
 public let UUID_NULL: uuid_t = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 #endif
 
@@ -27,9 +35,14 @@ public typealias TransitionLayouts = [TransitionID: TransitionLayout]
 /// Mapping from state name to state/transitions layout
 public typealias StateNameLayouts = [StateName: (state: StateLayout, transitions: [TransitionLayout])]
 
-/// A finite-state machine.
+/// A finite-state machine (FSM) representation.
 ///
-/// This class represents a finite-state machine in a given language.
+/// This class encapsulates the structure and behaviour of a finite-state
+/// machine in a given language, including its states, transitions, layouts,
+/// and associated boilerplate code. It provides methods for reading from and
+/// writing to persistent storage, as well as for managing the graphical and
+/// code layout of the FSM. The class is designed to be cross-platform and
+/// supports extensibility for different language bindings and output formats.
 public class Machine {
     /// Programming language binding
     public var language: any LanguageBinding
