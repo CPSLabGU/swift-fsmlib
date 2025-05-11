@@ -4,6 +4,7 @@
 //  Created by Rene Hexel on 16/8/2023.
 //  Copyright © 2023, 2025 Rene Hexel. All rights reserved.
 //
+// swiftlint:disable convenience_type
 
 /// Source code.
 public typealias Code = String
@@ -24,15 +25,14 @@ extension Code {
     /// - Warning: Ensure this marker does not appear in user code unintentionally.
     ///
     /// - Returns: The ignored code marker string.
-    @usableFromInline
-    static let ignored = "\n%%i%%\n"
+    @usableFromInline static let ignored = "\n%%i%%\n"
     /// Four-space indentation
-    @usableFromInline
-    static let fourSpaces = "    "
+    @usableFromInline static let fourSpaces = "    "
     /// A code block.
     /// - Parameters:
     ///   - codeBuilder: The original code builder.
     /// - Returns: The indented code.
+    @usableFromInline
     static func block(@CodeBuilder codeBuilder: () -> Code) -> Code {
         codeBuilder()
     }

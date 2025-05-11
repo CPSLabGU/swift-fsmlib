@@ -70,7 +70,6 @@ opt_in_rules: # some rules are turned off by default, so you need to opt-in
   - toggle_bool
   - unneeded_parentheses_in_closure_argument
   - unowned_variable_capture
-  - unused_import
   - weak_delegate
   - xct_specific_matcher
   - yoda_condition
@@ -91,6 +90,7 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   - Source/*/ExcludedFile.swift # Exclude files with a wildcard
 analyzer_rules: # Rules run by `swiftlint analyze` (experimental)
   - explicit_self
+  - unused_import
 
 # configurable rules can be customized from this configuration file
 # binary rules can set their severity level
@@ -105,7 +105,7 @@ empty_xctest_method: error
 force_cast: warning # implicitly
 force_try:
   severity: warning # explicitly
-legacy_objc_type: error
+#legacy_objc_type: error
 missing_docs:
   warning:
       - private
@@ -118,7 +118,7 @@ missing_docs:
   excludes_inherited_types: false
 # rules that have both warning and error levels, can set just the warning level
 # implicitly
-line_length: 256
+#line_length: 256
 # they can set both implicitly with an array
 type_body_length:
   - 400 # warning
@@ -147,5 +147,5 @@ identifier_name:
     - id
     - URL
     - GlobalAPIKey
-  validates_start_with_lowercase: true
+  validates_start_with_lowercase: warning
 reporter: "github-actions-logging" # reporter type (xcode, json, csv, checkstyle, codeclimate, junit, html, emoji, sonarqube, markdown, github-actions-logging)

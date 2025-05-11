@@ -21,12 +21,13 @@ open class MachineWrapper: DirectoryWrapper {
 
     /// Initialiser for reading from a URL.
     ///
-    ///This initialiser sets up a file wrapper for  reading from the given URL.
+    /// This initialiser sets up a file wrapper for  reading from the given URL.
+    ///
     /// - Parameters:
     ///   - url: The URL to read from.
     ///   - options: The reading options to use.
     /// - Throws: Any error thrown by the underlying file system.
-    public override convenience init(url: URL, options: ReadingOptions = []) throws {
+    override public convenience init(url: URL, options: ReadingOptions = []) throws {
         let temporaryWrapper = try FileWrapper(url: url, options: options)
         try self.init(fileWrapper: temporaryWrapper)
         preferredFilename = url.lastPathComponent
@@ -35,7 +36,8 @@ open class MachineWrapper: DirectoryWrapper {
 
     /// Designated initialiser for reading from a URL.
     ///
-    ///This initialiser sets up a file wrapper for  reading from the given URL.
+    /// This initialiser sets up a file wrapper for  reading from the given URL.
+    ///
     /// - Parameters:
     ///   - url: The URL to read from.
     ///   - options: The reading options to use.
@@ -51,6 +53,10 @@ open class MachineWrapper: DirectoryWrapper {
     }
 
     /// Create a file wrapper for a directory with the given children.
+    ///
+    /// This initialiser sets up a file wrapper for a directory with the given
+    /// children.
+    ///
     /// - Parameters:
     ///   - childrenByPreferredName: Child file wrappers by preferred name.
     ///   - machine: The machine to wrap.
@@ -94,9 +100,11 @@ open class MachineWrapper: DirectoryWrapper {
         }
     }
     /// Initialise from a decoder.
+    ///
     /// - Note: this is not implemented.
+    ///
     /// - Parameter inCoder: The coder to initialise from.
-    required public init?(coder inCoder: NSCoder) {
+    public required init?(coder inCoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 

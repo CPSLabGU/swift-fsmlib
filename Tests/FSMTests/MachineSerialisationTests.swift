@@ -248,7 +248,7 @@ final class MachineSerialisationTests: XCTestCase {
 
         // Create mock window layout data
         // swiftlint:disable:next force_unwrapping
-        let windowLayout = "Window Layout Data".data(using: .utf8)!
+        let windowLayout = Data("Window Layout Data".utf8)
         machine.windowLayout = windowLayout
 
         // Serialize to disk

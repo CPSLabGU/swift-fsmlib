@@ -69,7 +69,8 @@ public extension LanguageBinding {
     ///   - lhs: The left-hand side language binding to compare.
     ///   - rhs: The right-hand side language binding to compare.
     /// - Returns: `true` if the two language bindings are equal.
-    @inlinable static func == (lhs: Self, rhs: Self) -> Bool {
+    @inlinable
+    static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.name == rhs.name
     }
 

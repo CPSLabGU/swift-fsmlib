@@ -40,15 +40,6 @@ extension StateActivities {
     /// - Parameter stateID: ID of the state to return the actions for.
     /// - Returns: Actions for the given state.
     @inlinable
-    /// Return the activity for a given state.
-    ///
-    /// This function retrieves the array of actions for a specific state,
-    /// returning an empty array if there are no actions defined for the state.
-    ///
-    /// - Parameter stateID: The ID of the state to return actions for.
-    /// - Returns: Actions for the given state, or an empty array if none exist.
-    ///
-    /// - Note: Used for extracting activity lists for state transitions or entry/exit behaviours.
     public func actions(for stateID: StateID) -> StateActivity {
         actions[stateID] ?? []
     }

@@ -59,7 +59,8 @@ open class FileWrapper: @unchecked Sendable {
     }
     /// Designated initialiser for reading from a URL.
     ///
-    ///This initialiser sets up a file wrapper for  reading from the given URL.
+    /// This initialiser sets up a file wrapper for  reading from the given URL.
+    ///
     /// - Parameters:
     ///   - url: The URL to read from.
     ///   - options: The reading options to use.
@@ -258,9 +259,13 @@ open class FileWrapper: @unchecked Sendable {
     }
 
     /// Add a child `FileWrapper`.
+    ///
+    /// This method adds a child `FileWrapper` to the receiver.
+    ///
     /// - Parameter child: The child `FileWrapper` to add.
     /// - Returns: The filename of the added child.
-    @discardableResult @inlinable
+    @inlinable
+    @discardableResult
     open func addFileWrapper(_ child: FileWrapper) -> String {
         guard case var .directory(children) = content else { return "" }
         let filename = child.filename ?? child.preferredFilename ?? UUID().uuidString
@@ -270,6 +275,9 @@ open class FileWrapper: @unchecked Sendable {
     }
 
     /// Remove a child `FileWrapper`.
+    ///
+    /// This method removes a child `FileWrapper` from the receiver.
+    ///
     /// - Parameter child: The child `FileWrapper` to remove.
     @inlinable
     open func removeFileWrapper(_ child: FileWrapper) {
@@ -374,7 +382,8 @@ extension FileWrapper {
     /// including file data, a directory, or a symbolic link.
     /// It is used internally to manage the different types of file system entities
     /// that a FileWrapper can represent.
-    @usableFromInline enum Content {
+    @usableFromInline
+    enum Content {
         /// File data associated with the FileWrapper.
         case data(Data)
         /// Directory bundle of FileWrapper.

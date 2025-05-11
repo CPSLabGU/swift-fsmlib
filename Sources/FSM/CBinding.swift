@@ -395,7 +395,7 @@ public func expressionOfCTransition(_ number: Int, state: StateName, for machine
         fputs("Error: cannot read '\(file)'\n", stderr)
         return "true"
     }
-    return content.trimmingCharacters(in:.whitespacesAndNewlines)
+    return content.trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
 /// Return the target state ID for a given transition
@@ -447,7 +447,7 @@ public func suspendStateIndexOfCMachine(inImplementation content: String) -> Int
 ///   - states: The states the machine is composed of.
 /// - Returns: The suspend state ID, or `nil` if nonexistent.
 @inlinable
-public func suspendStateOfCMachine(_ machineWrapper: MachineWrapper, states: [State])  -> StateID? {
+public func suspendStateOfCMachine(_ machineWrapper: MachineWrapper, states: [State]) -> StateID? {
     guard let content = contentOfCImplementation(for: machineWrapper),
           let i = suspendStateIndexOfCMachine(inImplementation: content),
           i >= 0 && i < states.count else { return nil }

@@ -2,7 +2,7 @@
 //  LLFSM.swift
 //
 //  Created by Rene Hexel on 7/10/2015.
-//  Copyright © 2015, 2016, 2023, 2024 Rene Hexel. All rights reserved.
+//  Copyright © 2015, 2016, 2023, 2024, 2025 Rene Hexel. All rights reserved.
 //
 
 /// Generic implementation of an LLFSM
@@ -45,7 +45,7 @@ public struct LLFSM: SuspensibleFSM, Equatable, Hashable {
     ///   - name: The name to set.
     ///   - stateID: The ID of the state whose name should be set.
     @inlinable
-    mutating public func set(name: StateName, for stateID: StateID) {
+    public mutating func set(name: StateName, for stateID: StateID) {
         if var state = stateMap[stateID] {
             state.name = name
             stateMap[stateID] = state
@@ -73,7 +73,7 @@ public struct LLFSM: SuspensibleFSM, Equatable, Hashable {
     ///   - label: The label to set.
     ///   - transitionID: The ID of the transition whose label should be set.
     @inlinable
-    mutating public func set(label: Expression, for transitionID: TransitionID) {
+    public mutating func set(label: Expression, for transitionID: TransitionID) {
         if var transition = transitionMap[transitionID] {
             transition.label = label
             transitionMap[transitionID] = transition

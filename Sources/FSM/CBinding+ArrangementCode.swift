@@ -115,7 +115,7 @@ public func cArrangementCode(for instances: [Instance], named name: String, isSu
         "bool arrangement_" + lowerName + "_validate(struct Arrangement_" + name + " * const arrangement)"
         Code.bracedBlock {
             "return arrangement->number_of_instances == ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES &&"
-            Code.enumerating(array: instances) { (i, instance) in
+            Code.enumerating(array: instances) { i, instance in
                 let lowerInstance = instance.name.lowercased()
                 let lowerType = instance.typeName.lowercased()
                 "    fsm_" + lowerType + "_validate(arrangement->fsm_" + lowerInstance + (i < instances.count - 1 ? ") &&" : ");")
@@ -201,7 +201,7 @@ public func cStaticArrangementCode(for instances: [Instance], named name: String
     #include \"Arrangement_\(name).h\"
     #include \"Static_Arrangement_\(name).h\"
 
-    """ + Code.forEach(machines) { (machine, instance) in
+    """ + Code.forEach(machines) { machine, instance in
         let fsm = instance.machine.llfsm
         "#include \"" + machine + ".machine/Machine_" + machine + ".h\""
         Code.forEach(fsm.states.compactMap {
@@ -240,7 +240,7 @@ public func cStaticArrangementCode(for instances: [Instance], named name: String
                 Code.bracedBlock {
                     Code.enumerating(array: fsm.states.compactMap {
                         fsm.stateMap[$0]
-                    }) { (i, state) in
+                    }) { i, state in
                         "(struct LLFSMState *) &static_" + lowerInstance + "_state_" + state.name +
                         (i == fsm.states.count - 1 ? "" : ",")
                     }
@@ -270,7 +270,7 @@ public func cStaticArrangementCode(for instances: [Instance], named name: String
         Code.bracedBlock {
             ".number_of_instances = STATIC_ARRANGEMENT_" + name.uppercased() + "_NUMBER_OF_INSTANCES,"
             Code.bracedBlock {
-                Code.enumerating(array: instances) { (i, instance) in
+                Code.enumerating(array: instances) { i, instance in
                     let lowerInstance = instance.name.lowercased()
                     ".fsm_\(lowerInstance) = &static_fsm_\(lowerInstance)" +
                     (i < instances.count - 1 ? "," : "")
@@ -818,7 +818,7 @@ public func cArrangementCMakeLists(for instances: [Instance], named name: String
         "target_link_libraries(run_\(name)_arrangement"
         "    \(name)_static_arrangement"
         "    \(name)_arrangement"
-        Code.enumerating(array: machines) { i, machine in
+        Code.enumerating(array: machines) { _, machine in
             "    \(machine)_fsm"
         }
         ")"

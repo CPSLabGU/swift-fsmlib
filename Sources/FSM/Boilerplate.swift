@@ -52,14 +52,13 @@ public protocol Boilerplate {
 /// including include paths, variable and function definitions, and action
 /// sections. It is used for organising and generating boilerplate code for
 /// FSMs targeting C or C-like languages.
-///
 public extension Boilerplate {
     /// Conversion initialiser from another boilerplate instance.
     ///
     /// Creates a new boilerplate by copying all sections from
-    // the provided boilerplate instance.  This is useful for
-    // duplicating or adapting boilerplate content for different
-    // finite-state machines (FSMs) or language bindings.
+    /// the provided boilerplate instance.  This is useful for
+    /// duplicating or adapting boilerplate content for different
+    /// finite-state machines (FSMs) or language bindings.
     ///
     /// Use this initialiser when you need to create a variant of an existing boilerplate for reuse or modification.
     ///

@@ -428,7 +428,7 @@ public func expressionOfObjCPPTransitionFor(machine: URL, state: StateName, tran
     let url = machine.appendingPathComponent(file)
     do {
         let content = try NSString(contentsOf: url, usedEncoding: nil)
-        return content.trimmingCharacters(in:.whitespacesAndNewlines)
+        return content.trimmingCharacters(in: .whitespacesAndNewlines)
     } catch {
         fputs("Cannot read '\(file): \(error.localizedDescription)'\n", stderr)
         return "true"

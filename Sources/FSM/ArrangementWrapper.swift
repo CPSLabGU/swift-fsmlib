@@ -4,7 +4,7 @@
 //  Created by Rene Hexel on 9/10/2023.
 //  Copyright © 2016, 2023, 2024, 2025 Rene Hexel. All rights reserved.
 //
-
+// swiftlint:disable large_tuple
 import Foundation
 
 /// Directory file wrapper wrapping an arrangement of Machines
@@ -49,22 +49,24 @@ open class ArrangementWrapper: DirectoryWrapper {
     }
 
     /// Initialise from a decoder.
+    ///
     /// - Note: this is not implemented.
+    ///
     /// - Parameter inCoder: The coder to initialise from.
-    required public init?(coder inCoder: NSCoder) {
+    public required init?(coder inCoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
     /// Initialiser for reading from a URL.
     ///
-    ///This initialiser sets up an arrangement file wrapper
-    ///for reading from the given URL.
+    /// This initialiser sets up an arrangement file wrapper
+    /// for reading from the given URL.
     ///
     /// - Parameters:
     ///   - url: The URL to read from.
     ///   - options: The reading options to use.
     /// - Throws: Any error thrown by the underlying file system.
-    public override init(url: URL, options: ReadingOptions = []) throws {
+    override public init(url: URL, options: ReadingOptions = []) throws {
         let directoryWrapper = try DirectoryWrapper(url: url, options: options)
         let namedWrappers = try createMachineWrappers(for: directoryWrapper)
         let namedInstances = namedWrappers.map {
@@ -161,7 +163,7 @@ func createMachineWrappers(for directoryWrapper: FileWrapper) throws -> [(instan
     }
     var allWrappers: [Filename: MachineWrapper] = [:]
     let instanceMachinePairs = Arrangement.machineNames(from: directoryWrapper.fileWrappers?[Filename.machines]?.stringContents ?? "")
-    let namedWrappers: [(instance: MachineName, name: Filename, wrapper: MachineWrapper)] = instanceMachinePairs.compactMap { (instanceName, name) in
+    let namedWrappers: [(instance: MachineName, name: Filename, wrapper: MachineWrapper)] = instanceMachinePairs.compactMap { instanceName, name in
         let suffixedName = name + MachineWrapper.dottedSuffix
         let directoryName: Filename
         let fileWrapper: FileWrapper

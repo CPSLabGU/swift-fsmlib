@@ -4,6 +4,7 @@
 //  Created by Rene Hexel on 13/8/2023.
 //  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
 //
+// swiftlint:disable closure_end_indentation
 import Foundation
 
 /// Reading a state layout from a property list

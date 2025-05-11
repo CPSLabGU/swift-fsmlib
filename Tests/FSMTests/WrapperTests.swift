@@ -36,7 +36,7 @@ final class WrapperTests: XCTestCase {
     /// the properties are correctly set.
     func testFileWrapperBasicOperations() throws {
         // swiftlint:disable:next force_unwrapping
-        let testData = "Test content".data(using: .utf8)!
+        let testData = Data("Test content".utf8)
         let fileWrapper = FileWrapper(regularFileWithContents: testData)
         fileWrapper.preferredFilename = "test.txt"
 
@@ -63,11 +63,11 @@ final class WrapperTests: XCTestCase {
     func testDirectoryWrapperOperations() throws {
         // Create a directory wrapper with some files
         // swiftlint:disable:next force_unwrapping
-        let file1 = FileWrapper(regularFileWithContents: "File 1 content".data(using: .utf8)!)
+        let file1 = FileWrapper(regularFileWithContents: Data("File 1 content".utf8))
         file1.preferredFilename = "file1.txt"
 
         // swiftlint:disable:next force_unwrapping
-        let file2 = FileWrapper(regularFileWithContents: "File 2 content".data(using: .utf8)!)
+        let file2 = FileWrapper(regularFileWithContents: Data("File 2 content".utf8))
         file2.preferredFilename = "file2.txt"
 
         let dirWrapper = DirectoryWrapper(directoryWithFileWrappers: [
@@ -171,7 +171,7 @@ final class WrapperTests: XCTestCase {
     /// Test string contents extraction
     func testFileOperations() {
         // swiftlint:disable:next force_unwrapping
-        let textData = "Hello, world!".data(using: .utf8)!
+        let textData = Data("Hello, world!".utf8)
         let file = FileWrapper(regularFileWithContents: textData)
         XCTAssertEqual(file.stringContents, "Hello, world!")
 

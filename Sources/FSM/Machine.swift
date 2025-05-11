@@ -4,11 +4,11 @@
 //  Created by Rene Hexel on 23/9/2016.
 //  Copyright © 2016, 2023, 2024, 2025 Rene Hexel. All rights reserved.
 //
+// swiftlint:disable identifier_name
 import Foundation
 import SystemPackage
 
 #if !canImport(Darwin)
-// swiftlint:disable:next identifier_name
 /// Null UUID constant for use on non-Darwin platforms.
 ///
 /// This constant provides a zero-initialised UUID value for use

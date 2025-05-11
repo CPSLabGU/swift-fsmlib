@@ -4,7 +4,7 @@
 //  Created by Rene Hexel on 13/10/2023.
 //  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
-// swiftlint:disable:next identifier_name
+// swiftlint:disable identifier_name
 import Foundation
 
 /// A generic directory wrapper.
