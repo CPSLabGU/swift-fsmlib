@@ -117,7 +117,7 @@ public func==(lhs: Transition, rhs: Transition) -> Bool {
 public typealias TransitionArray = [TransitionID]
 
 /// Mapping from IDs to transitions
-public typealias TransitionDictionary = [ TransitionID : Transition ]
+public typealias TransitionDictionary = [TransitionID: Transition]
 
 /// return the mapping dictionary for a given array of transitions
 func dictionary(_ transitions: [Transition]) -> TransitionDictionary {

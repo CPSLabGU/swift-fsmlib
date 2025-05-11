@@ -18,7 +18,7 @@ func asPList(_ dict: LayoutDictionary) -> NSDictionary {
     dict
 }
 #else
-public typealias LayoutDictionary = [AnyHashable : Any]
+public typealias LayoutDictionary = [AnyHashable: Any]
 @usableFromInline typealias MutableDictionary = LayoutDictionary
 /// Return the Layout Dictionary as a Property List dictionary
 /// - Parameter dict: The layout dictionary to convert.

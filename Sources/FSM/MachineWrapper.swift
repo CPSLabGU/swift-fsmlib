@@ -56,7 +56,7 @@ open class MachineWrapper: DirectoryWrapper {
     ///   - machine: The machine to wrap.
     ///   - name: The preferred file name for the machine to wrap.
     @inlinable
-    public init(directoryWithFileWrappers childrenByPreferredName: [String : FileWrapper] = [:], for machine: Machine, named name: String? = nil) {
+    public init(directoryWithFileWrappers childrenByPreferredName: [String: FileWrapper], for machine: Machine, named name: String? = nil) {
         self.machine = machine
         self.language = machine.language
         super.init(directoryWithFileWrappers: childrenByPreferredName)

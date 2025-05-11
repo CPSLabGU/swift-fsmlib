@@ -11,7 +11,7 @@ public struct CBoilerplate: Boilerplate, Equatable, Codable {
     ///
     /// The sections for machines and states
     /// of languages derived from C.
-    public var sections: [SectionName : BoilerplateCode] = {
+    public var sections: [SectionName: BoilerplateCode] = {
         SectionName.allCases.reduce(into: [:]) { $0[$1] = "" }
     }()
 

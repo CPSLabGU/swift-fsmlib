@@ -16,7 +16,7 @@ public protocol Boilerplate {
     /// Mapping from file to Boilerplate section.
     typealias BoilerplateFileMapping = (SectionName, Filename)
     /// Boilerplate sections
-    var sections: [SectionName : BoilerplateCode] { get mutating set }
+    var sections: [SectionName: BoilerplateCode] { get mutating set }
     /// Designated initialiser.
     init()
     /// Conversion  initialiser.

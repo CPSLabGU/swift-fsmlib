@@ -29,7 +29,7 @@ open class ArrangementWrapper: DirectoryWrapper {
         }
         arrangement = Arrangement(namedInstances: namedInstances)
         language = languageBindingIfAvailable(for: fileWrapper) ?? arrangement.namedInstances.lazy.compactMap { $0.machine.language }.first ?? CBinding()
-        let machineWrappers = [ String : MachineWrapper ](uniqueKeysWithValues: namedWrappers.map { ($0.name, $0.wrapper) })
+        let machineWrappers = [String: MachineWrapper](uniqueKeysWithValues: namedWrappers.map { ($0.name, $0.wrapper) })
         super.init(directoryWithFileWrappers: machineWrappers)
         preferredFilename = fileWrapper.preferredFilename
     }
@@ -41,7 +41,7 @@ open class ArrangementWrapper: DirectoryWrapper {
     ///   - name: The preferred file name for the arrangement to wrap.
     ///   - language: The language the arrangement is written in.
     @inlinable
-    public init(directoryWithFileWrappers childrenByPreferredName: [MachineName : FileWrapper] = [:], for arrangement: Arrangement, named name: String? = nil, language: (any LanguageBinding)? = nil) {
+    public init(directoryWithFileWrappers childrenByPreferredName: [MachineName: FileWrapper] = [:], for arrangement: Arrangement, named name: String? = nil, language: (any LanguageBinding)? = nil) {
         self.arrangement = arrangement
         self.language = language ?? arrangement.namedInstances.lazy.compactMap { $0.machine.language }.first ?? CBinding()
         super.init(directoryWithFileWrappers: childrenByPreferredName)
@@ -159,7 +159,7 @@ func createMachineWrappers(for directoryWrapper: FileWrapper) throws -> [(instan
     guard directoryWrapper.isDirectory else {
         throw FSMError.notADirectory
     }
-    var allWrappers: [Filename : MachineWrapper] = [:]
+    var allWrappers: [Filename: MachineWrapper] = [:]
     let instanceMachinePairs = Arrangement.machineNames(from: directoryWrapper.fileWrappers?[Filename.machines]?.stringContents ?? "")
     let namedWrappers: [(instance: MachineName, name: Filename, wrapper: MachineWrapper)] = instanceMachinePairs.compactMap { (instanceName, name) in
         let suffixedName = name + MachineWrapper.dottedSuffix

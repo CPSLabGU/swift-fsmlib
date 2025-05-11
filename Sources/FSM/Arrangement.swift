@@ -63,7 +63,7 @@ public extension Arrangement {
     /// - Returns: The filenames of the machines for adding to the arrangement.
     @inlinable
     func add(to wrapper: ArrangementWrapper, language: any OutputLanguage, machineNames: [String], isSuspensible: Bool = true) throws -> [Filename] {
-        var instanceMappings = [ String : (String, Machine) ]()
+        var instanceMappings = [String: (String, Machine)]()
         let instances = namedInstances.map {
             let machine = $0.machine
             let fileName = $0.name

@@ -51,7 +51,7 @@ open class FileWrapper: @unchecked Sendable {
         return regularFileContents
     }
     /// Returns the file wrappers contained in a directory.
-    @inlinable open var fileWrappers: [String : FileWrapper]? {
+    @inlinable open var fileWrappers: [String: FileWrapper]? {
         guard isDirectory else { return nil }
         if content == nil { try? read() }
         guard case let .directory(fileWrappers) = content else { return nil }
@@ -89,7 +89,7 @@ open class FileWrapper: @unchecked Sendable {
     /// file wrappers as children.
     /// - Parameter childrenByPreferredName:
     @inlinable
-    public init(directoryWithFileWrappers childrenByPreferredName: [String : FileWrapper]) {
+    public init(directoryWithFileWrappers childrenByPreferredName: [String: FileWrapper]) {
         content = .directory(childrenByPreferredName)
     }
 
@@ -135,7 +135,7 @@ open class FileWrapper: @unchecked Sendable {
         guard let url else { throw POSIXError(.EBADF) }
         let fileManager = FileManager.default
         let contents = try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: Array(urlKeys))
-        var children = [Filename : FileWrapper]()
+        var children = [Filename: FileWrapper]()
         try contents.forEach {
             children[$0.lastPathComponent] = try FileWrapper(url: $0, options: readingOptions)
         }

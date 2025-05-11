@@ -2,7 +2,7 @@
 //  State.swift
 //
 //  Created by Rene Hexel on 30/06/2015.
-//  Copyright © 2015, 2016, 2023, 2024 Rene Hexel. All rights reserved.
+//  Copyright © 2015, 2016, 2023, 2024, 2025 Rene Hexel. All rights reserved.
 //
 import Foundation
 
@@ -48,7 +48,7 @@ public struct State: StateNode, Equatable, Hashable {
 public typealias StateArray = [StateID]
 
 /// Mapping from IDs to states
-public typealias StateDictionary = [ StateID : State ]
+public typealias StateDictionary = [StateID: State]
 
 /// return the mapping dictionary for a given array of transitions
 func dictionary(_ states: [State]) -> StateDictionary {

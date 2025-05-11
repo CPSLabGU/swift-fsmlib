@@ -21,8 +21,7 @@ public extension StateNodeLayout {
     var layout: Rectangle {
         get { return isOpen ? openLayout : closedLayout }
         mutating set {
-            if isOpen { openLayout = newValue }
-            else { closedLayout = newValue }
+            if isOpen { openLayout = newValue } else { closedLayout = newValue }
         }
     }
 }
