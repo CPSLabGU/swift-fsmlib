@@ -243,8 +243,10 @@ open class FileWrapper: @unchecked Sendable {
                 }
             }
         }
-        guard case let .data(data) = content else { throw POSIXError(.EINVAL) }
-        try data.write(to: url, options: writingOptions.contains(.atomic) ? .atomic : [])
+        if let content {
+            guard case let .data(data) = content else { throw POSIXError(.EINVAL) }
+            try data.write(to: url, options: writingOptions.contains(.atomic) ? .atomic : [])
+        }
         if writingOptions.contains(.withNameUpdating) {
             filename = url.lastPathComponent
             preferredFilename = url.lastPathComponent
