@@ -38,4 +38,4 @@ For more advanced usage, see the API documentation and tests.
 ## Next Steps
 
 - Explore the API documentation for advanced usage.
-- See the [Concepts](Concepts.md) guide for a deeper dive into the types used.
+- See the <doc:Concepts> guide for a deeper dive into the types used.

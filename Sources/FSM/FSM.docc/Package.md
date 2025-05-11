@@ -12,7 +12,7 @@ Finite state machines (FSMs) are mathematical models of computation widely used 
 ## Features
 
 - Type-safe state and transition definitions
-- Deterministic and non-deterministic FSM support
+- Supports FSMs in various programming languages
 - Serialisation and deserialisation utilities
 - Extensible conversion tools
 
