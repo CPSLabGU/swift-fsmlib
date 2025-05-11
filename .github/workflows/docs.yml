@@ -40,7 +40,7 @@ jobs:
       - name: Generate Documentation
         uses: fwcd/swift-docc-action@v1
         with:
-          target: YourTarget
+          target: FSM
           output: ./docs
           hosting-base-path: ${{ github.event.repository.name }}
           disable-indexing: 'true'
