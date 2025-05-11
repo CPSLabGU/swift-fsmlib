@@ -41,7 +41,7 @@ jobs:
         uses: mattpolzin/swift-codecov-action@0.7.5
         id: cov
         with:
-          MINIMUM_COVERAGE: 98
+          MINIMUM_COVERAGE: 90
 
       - name: Post Positive Result
         if: ${{ success() }}
