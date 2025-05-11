@@ -319,7 +319,7 @@ final class MachineSerialisationTests: XCTestCase {
         let tempDir = tempDirectoryURL
         let testFile = "TestFile.txt"
         let testURL = tempDir.fileURL(for: testFile)
-        let testData = "Hello, FSM!".data(using: .utf8)
+        let testData = Data("Hello, FSM!".utf8)
         let testString = "Hello, FSM!"
 
         // fileURL(for:) should append the file name
