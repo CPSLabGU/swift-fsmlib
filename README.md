@@ -18,11 +18,3 @@ Comprehensive documentation is available via DocC in the source tree:
 ## Getting Started
 
 See the [Getting Started](Sources/FSM/FSM.docc/GettingStarted.md) guide for a walkthrough on defining and using FSMs.
-
-## Contributing
-
-Contributions are welcome. Please see the guidelines in the repository.
-
-## Licence
-
-Licensed under the MIT Licence.
