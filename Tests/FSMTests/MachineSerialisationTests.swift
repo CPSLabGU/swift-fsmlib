@@ -54,9 +54,30 @@ final class MachineSerialisationTests: XCTestCase {
         XCTAssertEqual(llfsm.states.count, states.count)
         XCTAssertEqual(llfsm.transitions.count, transitions.count)
 
+        var boilerplate = CBoilerplate()
+        boilerplate.sections[.onEntry] = "counter = 0;"
+        boilerplate.sections[.onExit] = "exitValue = counter;"
+        boilerplate.sections[.internal] = "++counter;"
+
+        XCTAssertEqual(boilerplate.sections.count, CBoilerplate().sections.count)
+        XCTAssertEqual(boilerplate.sections[.onEntry], "counter = 0;")
+        XCTAssertEqual(boilerplate.sections[.onExit], "exitValue = counter;")
+        XCTAssertEqual(boilerplate.sections[.internal], "++counter;")
+        XCTAssertEqual(boilerplate.sections[.onSuspend], "")
+
+        XCTAssertTrue(boilerplate.sectionNames.contains(CBoilerplate.SectionName.includePath.rawValue))
+        XCTAssertTrue(boilerplate.sectionNames.contains(CBoilerplate.SectionName.includes.rawValue))
+        XCTAssertTrue(boilerplate.sectionNames.contains(CBoilerplate.SectionName.variables.rawValue))
+        XCTAssertTrue(boilerplate.sectionNames.contains(CBoilerplate.SectionName.onEntry.rawValue))
+        XCTAssertTrue(boilerplate.sectionNames.contains(CBoilerplate.SectionName.onExit.rawValue))
+        XCTAssertTrue(boilerplate.sectionNames.contains(CBoilerplate.SectionName.internal.rawValue))
+        XCTAssertTrue(boilerplate.sectionNames.contains(CBoilerplate.SectionName.onSuspend.rawValue))
+        XCTAssertTrue(boilerplate.sectionNames.contains(CBoilerplate.SectionName.onResume.rawValue))
+
         let machine = Machine()
         machine.llfsm = llfsm
         machine.language = CBinding()
+        machine.boilerplate = boilerplate
 
         XCTAssertEqual(machine.llfsm.states.count, states.count)
         XCTAssertEqual(machine.llfsm.transitions.count, transitions.count)

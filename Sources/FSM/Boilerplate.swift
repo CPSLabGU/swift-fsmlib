@@ -53,6 +53,14 @@ public protocol Boilerplate {
 /// sections. It is used for organising and generating boilerplate code for
 /// FSMs targeting C or C-like languages.
 public extension Boilerplate {
+    /// Return all section keys.
+    ///
+    /// This property returns the keys of the sections dictionary,
+    /// representing the names of the boilerplate sections
+    /// as Strings.
+    @inlinable var sectionNames: [String] {
+        sections.keys.map(\.rawValue)
+    }
     /// Conversion initialiser from another boilerplate instance.
     ///
     /// Creates a new boilerplate by copying all sections from
