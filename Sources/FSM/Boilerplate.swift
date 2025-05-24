@@ -79,10 +79,39 @@ public extension Boilerplate {
         }
     }
     /// Raw value section accessor.
+    ///
+    /// This method retrieves the boilerplate code for a given section name.
+    ///
     /// - Parameter sectionName: The name of the section to get boilerplate code for.
     /// - Returns: The boilerplate code for the given section name (empty if not found).
     @inlinable
     func getSection(named sectionName: String) -> BoilerplateCode {
         SectionName(rawValue: sectionName).flatMap { sections[$0] } ?? ""
+    }
+    /// Raw value section setter.
+    ///
+    /// This method sets the boilerplate code for a given section name.
+    ///
+    /// - Parameters:
+    ///   - sectionName: The name of the section to set the boilerplate code for.
+    ///   - code: The boilerplate code to set for the given section name.
+    @inlinable
+    mutating func setSection(named sectionName: String, to code: BoilerplateCode) {
+        sections[SectionName(rawValue: sectionName)!] = code
+    }
+    /// Section accessor subscript.
+    ///
+    /// This subscript provides a convenient way to access and modify
+    /// boilerplate code for a given section name.
+    ///
+    /// - Parameter sectionName: The name of the section to access or modify.
+    @inlinable
+    subscript(sectionName: String) -> BoilerplateCode {
+        get {
+            getSection(named: sectionName)
+        }
+        set {
+            setSection(named: sectionName, to: newValue)
+        }
     }
 }

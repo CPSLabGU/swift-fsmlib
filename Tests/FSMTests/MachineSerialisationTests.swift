@@ -55,12 +55,12 @@ final class MachineSerialisationTests: XCTestCase {
         XCTAssertEqual(llfsm.transitions.count, transitions.count)
 
         var boilerplate = CBoilerplate()
-        boilerplate.sections[.onEntry] = "counter = 0;"
+        boilerplate[CBoilerplate.SectionName.onEntry.rawValue] = "counter = 0;"
         boilerplate.sections[.onExit] = "exitValue = counter;"
         boilerplate.sections[.internal] = "++counter;"
 
         XCTAssertEqual(boilerplate.sections.count, CBoilerplate().sections.count)
-        XCTAssertEqual(boilerplate.sections[.onEntry], "counter = 0;")
+        XCTAssertEqual(boilerplate[CBoilerplate.SectionName.onEntry.rawValue], "counter = 0;")
         XCTAssertEqual(boilerplate.sections[.onExit], "exitValue = counter;")
         XCTAssertEqual(boilerplate.sections[.internal], "++counter;")
         XCTAssertEqual(boilerplate.sections[.onSuspend], "")
