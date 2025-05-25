@@ -161,7 +161,6 @@ public class Machine {
     ///
     /// - Parameters:
     ///   - url: The filesystem URL to write the FSM to.
-    ///   - targetLanguage: The language to use (defaults to the original language).
     ///   - isSuspensible: Whether the FSM code will allow suspension.
     @inlinable
     public func write(to url: URL, isSuspensible: Bool) throws {
@@ -181,7 +180,7 @@ public class Machine {
     ///
     /// - Parameters:
     ///   - url: The filesystem URL to write the FSM to.
-    ///   - language: The language to use.
+    ///   - destination: The output language to use.
     ///   - isSuspensible: Whether the FSM code will allow suspension.
     @inlinable
     public func write(to url: URL, language destination: any OutputLanguage, isSuspensible: Bool) throws {
