@@ -73,10 +73,10 @@ public extension StateLayout {
     ///   - i: The state index (for autolayout).
     init(_ propertyList: NSDictionary = [:], index i: Int = 0) {
         isOpen = propertyList.value(.expanded, default: false)
-        let cw: Double = propertyList.value(.width,          default: 100)
-        let ch: Double = propertyList.value(.height,         default: 50)
-        let ow: Double = propertyList.value(.expandedWidth,  default: 200)
-        let oh: Double = propertyList.value(.expandedHeight, default: 100)
+        let cw: Double = propertyList.value(.width,          default: isOpen ? 200 : 100)
+        let ch: Double = propertyList.value(.height,         default: isOpen ? 100 : 50)
+        let ow: Double = propertyList.value(.expandedWidth,  default: cw)
+        let oh: Double = propertyList.value(.expandedHeight, default: ch)
         let cx: Double = propertyList.value(.positionX,      default: cw + ow * Double(i % 8))
         let cy: Double = propertyList.value(.positionY,      default: ch + oh * Double(i / 8))
         let cc = Coordinate2D(cx, cy)
