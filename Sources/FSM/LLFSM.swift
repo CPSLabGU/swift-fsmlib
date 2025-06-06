@@ -91,6 +91,53 @@ public struct LLFSM: SuspensibleFSM, Equatable, Hashable {
             transitionMap[transitionID] = Transition(id: transitionID, label: label, source: stateID)
         }
     }
+
+    /// Return the source state for the given transition.
+    ///
+    /// This function returns the ID of the source state
+    /// for the given transition, or `nil` if the transition
+    /// does not exist.
+    ///
+    /// - Parameter transitionID: The ID of the transition.
+    /// - Returns: The ID of the source state, or `nil` if the transition does not exist.
+    @inlinable
+    public func sourceState(for transitionID: TransitionID) -> StateID? {
+        transitionMap[transitionID]?.source
+    }
+
+    /// Set the source state for the given transition.
+    ///
+    /// This function sets the source state for the given transition.
+    ///
+    /// - Parameters:
+    ///   - transitionID: The ID of the transition.
+    ///   - stateID: The ID of the source state.
+    @inlinable
+    public mutating func setSourceState(for transitionID: TransitionID, to stateID: StateID) {
+        transitionMap[transitionID]?.source = stateID
+    }
+
+    /// Return the target state for the given transition, or `nil` if the transition
+    /// does not exist.
+    ///
+    /// - Parameter transitionID: The ID of the transition.
+    /// - Returns: The ID of the target state, or `nil` if the transition does not exist.
+    @inlinable
+    public func targetState(for transitionID: TransitionID) -> StateID? {
+        transitionMap[transitionID]?.target
+    }
+
+    /// Set the target state for the given transition.
+    ///
+    /// This function sets the target state for the given transition.
+    ///
+    /// - Parameters:
+    ///   - transitionID: The ID of the transition.
+    ///   - stateID: The ID of the target state.
+    @inlinable
+    public mutating func setTargetState(for transitionID: TransitionID, to stateID: StateID) {
+        transitionMap[transitionID]?.target = stateID
+    }
 }
 
 /// Extension providing state name utilities for LLFSM.

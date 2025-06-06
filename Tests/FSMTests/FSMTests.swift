@@ -93,9 +93,13 @@ final class FSMTests: XCTestCase {
         // Add transition
         let trans1ID = TransitionID()
         llfsm.set(label: "goToState2", for: trans1ID)
+        llfsm.setSourceState(for: trans1ID, to: state1ID)
+        llfsm.setTargetState(for: trans1ID, to: state2ID)
 
         XCTAssertEqual(llfsm.transitions.count, 1)
         XCTAssertEqual(llfsm.label(for: trans1ID), "goToState2")
+        XCTAssertEqual(llfsm.sourceState(for: trans1ID), state1ID)
+        XCTAssertEqual(llfsm.targetState(for: trans1ID), state2ID)
 
         // Update state name
         llfsm.set(name: "RenamedState1", for: state1ID)
