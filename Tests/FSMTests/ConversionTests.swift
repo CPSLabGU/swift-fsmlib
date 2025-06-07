@@ -159,25 +159,26 @@ final class ConversionTests: XCTestCase {
         let machine = try Machine(from: trafficLightURL)
 
         // Verify machine properties
-        XCTAssertEqual(machine.language.name, "c")
-        XCTAssertEqual(machine.llfsm.states.count, 4)
+        XCTAssertEqual(machine.language.name, "objc++")
+        XCTAssertEqual(machine.llfsm.states.count, 5)
 
         // Test state names
         let stateNames = machine.llfsm.states.compactMap { machine.llfsm.stateName(for: $0) }
+        XCTAssertTrue(stateNames.contains("InitialPseudoState"))
         XCTAssertTrue(stateNames.contains("Red"))
         XCTAssertTrue(stateNames.contains("Yellow"))
         XCTAssertTrue(stateNames.contains("Green"))
-        XCTAssertTrue(stateNames.contains("YellowToRed"))
+        XCTAssertTrue(stateNames.contains("YellowRed"))
 
         // Convert to ObjC++
-        let objcppMachineURL = tempDirectoryURL.appendingPathComponent("TrafficLight_ObjCPP.machine")
+        let cMachineURL = tempDirectoryURL.appendingPathComponent("TrafficLight_C.machine")
         // swiftlint:disable:next force_unwrapping
-        try machine.write(to: objcppMachineURL, language: outputLanguage(for: .objCX)!, isSuspensible: true)
+        try machine.write(to: cMachineURL, language: outputLanguage(for: .c)!, isSuspensible: true)
 
         // Read back converted machine
-        let convertedMachine = try Machine(from: objcppMachineURL)
-        XCTAssertEqual(convertedMachine.language.name, "objc++")
-        XCTAssertEqual(convertedMachine.llfsm.states.count, 4)
+        let convertedMachine = try Machine(from: cMachineURL)
+        XCTAssertEqual(convertedMachine.language.name, "c")
+        XCTAssertEqual(convertedMachine.llfsm.states.count, 5)
     }
 
     /// Test arrangement conversion and serialisation.
