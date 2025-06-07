@@ -2,7 +2,7 @@
 //  TransitionLayout+PList.swift
 //
 //  Created by Rene Hexel on 13/8/2023.
-//  Copyright © 2016, 2023 Rene Hexel. All rights reserved.
+//  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 // swiftlint:disable closure_end_indentation
 import Foundation
@@ -43,7 +43,23 @@ public extension TransitionLayout {
                 Point2D(x, y)
             }
         }
-        path = Path([src, ctl1, ctl2, dst].compactMap { $0 })
+        let points = [src, ctl1, ctl2, dst].compactMap { $0 }
+        if points.count > 1 {
+            path = Path(points)
+            return
+        } else if let pointArrays = (propertyList.transitionValue(.bezierPath) as [NSArray]?) {
+            let points = pointArrays.compactMap { array -> Point2D? in
+                guard array.count >= 2,
+                      let x = array[0] as? Double,
+                      let y = array[1] as? Double else { return nil }
+                return Point2D(x, y)
+            }
+            if !points.isEmpty {
+                path = Path(points)
+                return
+            }
+        }
+        path = Path(points)
     }
 }
 
