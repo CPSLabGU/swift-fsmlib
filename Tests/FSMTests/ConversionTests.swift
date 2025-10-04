@@ -322,13 +322,13 @@ final class ConversionTests: XCTestCase {
             guard let name = machine.llfsm.stateName(for: sid) else { return nil }
             // All outgoing transitions for this state
             let outgoing = machine.llfsm.transitionMap.values.filter { $0.source == sid }
-            let layoutsArr = outgoing.compactMap { transitionLayouts[$0.id] as? TransitionLayout }
+            let layoutsArr = outgoing.compactMap { transitionLayouts[$0.id] }
             return (name, layoutsArr)
         })
         let convNameToTransitions: [String: [TransitionLayout]] = Dictionary(uniqueKeysWithValues: convertedMachine.llfsm.states.compactMap { sid in
             guard let name = convertedMachine.llfsm.stateName(for: sid) else { return nil }
             let outgoing = convertedMachine.llfsm.transitionMap.values.filter { $0.source == sid }
-            let layoutsArr = outgoing.compactMap { convertedTransitions[$0.id] as? TransitionLayout }
+            let layoutsArr = outgoing.compactMap { convertedTransitions[$0.id] }
             return (name, layoutsArr)
         })
         for name in stateNameToID.keys {
