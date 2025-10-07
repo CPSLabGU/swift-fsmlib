@@ -333,20 +333,35 @@ public func numberOfCTransitionsIn(header content: String) -> Int {
 
 /// Return the target state index of the given transition
 ///
-/// This function parses the header content to extract the target state index
-/// for a specific transition, as defined in the C-language state header file
-/// `State.h`.
+/// This function parses the header or implementation content to extract the target state index
+/// for a specific transition. It supports both old-style ObjCPP format (in .h files) with
+/// `toState = X` and new-style C format (in .c files) with `machine->states[X]`.
 ///
 /// - Parameters:
 ///   - i: The transition number.
-///   - content: The content of the `State.h` file.
+///   - headerContent: The content of the `State.h` file.
+///   - implContent: The content of the `State.c` file (optional).
 /// - Returns: The target state index if found, or `nil` otherwise.
 @inlinable
-public func targetStateIndexOfCTransition(_ i: Int, inHeader content: String) -> Int? {
+public func targetStateIndexOfCTransition(_ i: Int, inHeader headerContent: String, implementation implContent: String? = nil) -> Int? {
+    // Try old-style ObjCPP format in header: Transition_X(..., int toState = Y)
     // swiftlint:disable:next force_try
-    guard let numString = string(containedIn: content, matching: try! Regex("Transition_\(i).*int.*toState.*=[^0-9]*([0-9]*)")),
-          let targetStateIndex = Int(numString) else { return nil }
-    return targetStateIndex
+    if let numString = string(containedIn: headerContent, matching: try! Regex("Transition_\(i).*int.*toState.*=[^0-9]*([0-9]*)")),
+       let targetStateIndex = Int(numString) {
+        return targetStateIndex
+    }
+    // Try new-style C format in implementation: return machine->states[X];
+    // This appears in State_X.c files in check_transitions functions
+    if let implContent {
+        // Look for pattern like: #include "State_X_Transition_Y.expr" ... ) return machine->states[Z];
+        // Use [\s\S] to match any character including newlines
+        // swiftlint:disable:next force_try
+        if let numString = string(containedIn: implContent, matching: try! Regex("State_.*_Transition_\(i)\\.expr[\\s\\S]*?return\\s+machine->states\\[(\\d+)\\]")),
+           let targetStateIndex = Int(numString) {
+            return targetStateIndex
+        }
+    }
+    return nil
 }
 
 /// Read the content of the `State.h` file.
@@ -364,6 +379,28 @@ public func targetStateIndexOfCTransition(_ i: Int, inHeader content: String) ->
 @inlinable
 public func contentOfCState(for machineWrapper: MachineWrapper, state: StateName) -> String? {
     let file = "State_\(state).h"
+    guard let content = machineWrapper.stringContents(of: file) else {
+        fputs("Error: cannot read '\(file)'\n", stderr)
+        return nil
+    }
+    return content
+}
+
+/// Read the content of the `State.c` file.
+///
+/// This function attempts to read the contents
+/// of the state implementation file for the specified state
+/// from the provided machine wrapper.
+/// If the `State.c` file cannot be read,
+/// an error message is printed and `nil` is returned.
+///
+/// - Parameters:
+///   - machineWrapper: The MachineWrapper containing the state files.
+///   - state: The name of the state to examine.
+/// - Returns: The content of the `State.c` file as a string, or `nil` if the file cannot be read.
+@inlinable
+public func contentOfCStateImplementation(for machineWrapper: MachineWrapper, state: StateName) -> String? {
+    let file = "State_\(state).c"
     guard let content = machineWrapper.stringContents(of: file) else {
         fputs("Error: cannot read '\(file)'\n", stderr)
         return nil
@@ -407,8 +444,9 @@ public func expressionOfCTransition(_ number: Int, state: StateName, for machine
 /// - Returns: The State ID if found, `nil` otherwise.
 @inlinable
 public func targetOfCTransition(_ number: Int, state name: StateName, for machineWrapper: MachineWrapper, with states: [State]) -> StateID? {
-    guard let content = contentOfCState(for: machineWrapper, state: name),
-          let i = targetStateIndexOfCTransition(number, inHeader: content),
+    guard let headerContent = contentOfCState(for: machineWrapper, state: name) else { return nil }
+    let implContent = contentOfCStateImplementation(for: machineWrapper, state: name)
+    guard let i = targetStateIndexOfCTransition(number, inHeader: headerContent, implementation: implContent),
           i >= 0 && i < states.count else { return nil }
     let targetState = states[i]
     return targetState.id
