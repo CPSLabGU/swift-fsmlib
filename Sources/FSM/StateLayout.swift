@@ -66,4 +66,12 @@ public struct StateLayout: StateNodeLayout {
 
     /// Height of the onResume section when zoomed
     public var zoomedOnResumeHeight: Double
+
+    /// Extra properties from the property list (for MiCASE compatibility)
+    ///
+    /// This dictionary stores any additional properties from the layout plist
+    /// that are not explicitly handled by this struct, such as `bgColour`
+    /// and `strokeColour`. These properties are preserved during serialisation
+    /// to maintain compatibility with external tools like MiCASE.
+    public var extraProperties: [String: Any]
 }

@@ -93,6 +93,16 @@ public extension StateLayout {
         zoomedInternalHeight  = propertyList.value(.zoomedInternalHeight, default: sh)
         zoomedOnSuspendHeight = propertyList.value(.zoomedOnSuspendHeight, default: sh)
         zoomedOnResumeHeight  = propertyList.value(.zoomedOnResumeHeight,  default: sh)
+
+        // Capture extra properties not explicitly handled (e.g., bgColour, strokeColour)
+        let knownKeys = Set(StateLayoutKey.allCases.map(\.rawValue) + ["Transitions"])
+        var extras: [String: Any] = [:]
+        for (key, value) in propertyList {
+            if let keyString = key as? String, !knownKeys.contains(keyString) {
+                extras[keyString] = value
+            }
+        }
+        extraProperties = extras
     }
 }
 
@@ -126,6 +136,16 @@ extension StateLayout {
         propertyList.set(value: zoomedInternalHeight,    for: .zoomedInternalHeight)
         propertyList.set(value: zoomedOnSuspendHeight,   for: .zoomedOnSuspendHeight)
         propertyList.set(value: zoomedOnResumeHeight,    for: .zoomedOnResumeHeight)
+
+        // Add extra properties (bgColour, strokeColour, etc.) for MiCASE compatibility
+        for (key, value) in extraProperties {
+#if canImport(Darwin)
+            propertyList.setValue(value, forKey: key)
+#else
+            propertyList[key] = value
+#endif
+        }
+
         return propertyList
     }
 }
