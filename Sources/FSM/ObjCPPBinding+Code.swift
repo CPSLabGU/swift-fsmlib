@@ -39,8 +39,8 @@ public func objcppMachineHeader(for llfsm: LLFSM, named name: String) -> Code {
                 virtual ~\(name)();
                 virtual CLState * const * states() const { return _states; }
                 virtual int numberOfStates() const { return \(stateCount); }
-                #include \"\(name)_Variables.h\"
-                #include \"\(name)_Methods.h\"
+    #           include \"\(name)_Variables.h\"
+    #           include \"\(name)_Methods.h\"
             };
         }
     }
@@ -117,18 +117,35 @@ public func objcppMachineImplementation(for llfsm: LLFSM, named name: String) ->
 ///   - name: The name of the machine.
 /// - Returns: The generated Objective-C++ state header code.
 public func objcppStateHeader(for state: State, llfsm: LLFSM, named name: String) -> Code {
-    let transitionCount = llfsm.transitionsFrom(state.id).count
+    let stateTransitionIDs = llfsm.transitionsFrom(state.id)
+    let transitionCount = stateTransitionIDs.count
     let className = state.name
     var transitions = ""
-    for i in 0..<transitionCount {
-        transitions +=
-            "                    class Transition_\(i): public CLTransition\n" +
-            "                    {\n" +
-            "                    public:\n" +
-            "                        Transition_\(i)(int toState = 0): CLTransition(toState) {}\n" +
-            "\n" +
-            "                        virtual bool check(CLMachine *, CLState *) const;\n" +
-            "                    };\n"
+    for (i, transitionID) in stateTransitionIDs.enumerated() {
+        // Get the target state ID and find the index in the states array
+        if let targetStateID = llfsm.targetState(for: transitionID),
+           let targetStateIndex = llfsm.states.firstIndex(of: targetStateID) {
+            transitions +=
+                "                class Transition_\(i): public CLTransition\n" +
+                "                {\n" +
+                "                public:\n" +
+                "                    Transition_\(i)(int toState = \(targetStateIndex)): CLTransition(toState) {}\n" +
+                "\n" +
+                "                    virtual bool check(CLMachine *, CLState *) const;\n" +
+                "                };\n" +
+                "\n"
+        } else {
+            // Fallback to 0 if we can't find the target state
+            transitions +=
+                "                class Transition_\(i): public CLTransition\n" +
+                "                {\n" +
+                "                public:\n" +
+                "                    Transition_\(i)(int toState = 0): CLTransition(toState) {}\n" +
+                "\n" +
+                "                    virtual bool check(CLMachine *, CLState *) const;\n" +
+                "                };\n" +
+                "\n"
+        }
     }
     return """
     //
@@ -180,6 +197,8 @@ public func objcppStateHeader(for state: State, llfsm: LLFSM, named name: String
                     {
                         virtual void perform(CLMachine *, CLState *) const;
                     };
+
+    \(transitions)
                     CLTransition *_transitions[\(transitionCount)];
 
                     public:
@@ -189,8 +208,8 @@ public func objcppStateHeader(for state: State, llfsm: LLFSM, named name: String
                         virtual CLTransition * const *transitions() const { return _transitions; }
                         virtual int numberOfTransitions() const { return \(transitionCount); }
 
-                        #include "State_\(className)_Variables.h"
-                        #include "State_\(className)_Methods.h"
+    #                   include "State_\(className)_Variables.h"
+    #                   include "State_\(className)_Methods.h"
                 };
             }
           }

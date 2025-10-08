@@ -137,6 +137,8 @@ public extension ObjCPPBinding {
     @inlinable
     func add(boilerplate: any Boilerplate, to wrapper: MachineWrapper) throws {
         CBoilerplate(boilerplate).add(to: wrapper)
+        // Add ObjC++ specific files (VarRefs.mm and FuncRefs.mm)
+        addObjCPPMachineBoilerplate(boilerplate, to: wrapper)
     }
     /// Write the given state boilerplate to the given URL
     /// - Parameters:
@@ -145,6 +147,8 @@ public extension ObjCPPBinding {
     ///   - stateName: The name of the state to add the boilerplate for.
     func add(stateBoilerplate: any Boilerplate, to wrapper: MachineWrapper, for stateName: String) throws {
         CBoilerplate(stateBoilerplate).add(state: stateName, to: wrapper)
+        // Add ObjC++ specific files (VarRefs.mm and FuncRefs.mm)
+        addObjCPPStateBoilerplate(stateBoilerplate, to: wrapper, for: stateName)
     }
     /// Add the interface for the given LLFSM to the given `MachineWrapper`.
     ///
@@ -645,4 +649,112 @@ public func boilerplateofObjCPPState(_ state: StateName, of machineWrapper: Mach
         boilerplate.sections[section] = machineWrapper.stringContents(of: fileName)
     }
     return boilerplate
+}
+
+/// Add ObjC++ machine-level boilerplate files (VarRefs.mm and FuncRefs.mm)
+@usableFromInline
+func addObjCPPMachineBoilerplate(_ boilerplate: any Boilerplate, to wrapper: MachineWrapper) {
+    let machineName = wrapper.name
+    let cBoilerplate = CBoilerplate(boilerplate)
+
+    // Generate Machine_X_VarRefs.mm from variables section
+    let varRefsContent = objcppVarRefsContent(
+        from: cBoilerplate.sections[.variables] ?? "",
+        className: machineName,
+        variableName: "_m"
+    )
+    let varRefsWrapper = FileWrapper(regularFileWithContents: Data(varRefsContent.utf8))
+    varRefsWrapper.preferredFilename = "\(machineName)_VarRefs.mm"
+    wrapper.replaceFileWrapper(varRefsWrapper)
+
+    // Generate Machine_X_FuncRefs.mm from functions section
+    let funcRefsFileName = "\(machineName)_FuncRefs.mm"
+    let funcRefsContent = objcppFuncRefsContent(from: cBoilerplate.sections[.functions] ?? "", fileName: funcRefsFileName)
+    let funcRefsWrapper = FileWrapper(regularFileWithContents: Data(funcRefsContent.utf8))
+    funcRefsWrapper.preferredFilename = funcRefsFileName
+    wrapper.replaceFileWrapper(funcRefsWrapper)
+}
+
+/// Add ObjC++ state-level boilerplate files (VarRefs.mm and FuncRefs.mm)
+@usableFromInline
+func addObjCPPStateBoilerplate(_ boilerplate: any Boilerplate, to wrapper: MachineWrapper, for stateName: String) {
+    let cBoilerplate = CBoilerplate(boilerplate)
+
+    // Generate State_X_VarRefs.mm from variables section
+    let varRefsContent = objcppVarRefsContent(
+        from: cBoilerplate.sections[.variables] ?? "",
+        className: stateName,
+        variableName: "_s"
+    )
+    let varRefsWrapper = FileWrapper(regularFileWithContents: Data(varRefsContent.utf8))
+    varRefsWrapper.preferredFilename = "State_\(stateName)_VarRefs.mm"
+    wrapper.replaceFileWrapper(varRefsWrapper)
+
+    // Generate State_X_FuncRefs.mm from functions section
+    let funcRefsFileName = "State_\(stateName)_FuncRefs.mm"
+    let funcRefsContent = objcppFuncRefsContent(from: cBoilerplate.sections[.functions] ?? "", fileName: funcRefsFileName)
+    let funcRefsWrapper = FileWrapper(regularFileWithContents: Data(funcRefsContent.utf8))
+    funcRefsWrapper.preferredFilename = funcRefsFileName
+    wrapper.replaceFileWrapper(funcRefsWrapper)
+}
+
+/// Generate VarRefs.mm content from variables section
+@usableFromInline
+func objcppVarRefsContent(from variables: String, className: String, variableName: String) -> String {
+    // Convert variable declarations to references
+    // e.g., "int counter;" becomes "int &counter = _m->counter;"
+    let varRefs = variables.split(separator: "\n").compactMap { line -> String? in
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, !trimmed.hasPrefix("//") else { return trimmed.isEmpty ? nil : String(line) }
+
+        // Match pattern: type varName; or type varName; ///< comment
+        if let match = trimmed.range(of: #"^([^;]+?)\s+(\w+)\s*;(.*)$"#, options: .regularExpression) {
+            let matched = String(trimmed[match])
+            let parts = matched.components(separatedBy: ";")
+            if parts.count >= 1 {
+                let declPart = parts[0].trimmingCharacters(in: .whitespaces)
+                let comment = parts.count > 1 ? parts[1...].joined(separator: ";") : ""
+                // Find last word in declaration (the variable name)
+                let declComponents = declPart.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+                if let varName = declComponents.last, declComponents.count >= 2 {
+                    let type = declComponents.dropLast().joined(separator: "\t")
+                    return "\(type)\t&\(varName) = \(variableName)->\(varName);\(comment)"
+                }
+            }
+        }
+        return String(line)
+    }.joined(separator: "\n")
+
+    let fileName = variableName == "_m" ? "\(className)_VarRefs.mm" : "State_\(className)_VarRefs.mm"
+    return """
+    //
+    // \(fileName)
+    //
+    // Automatically created through MiCASE -- do not change manually!
+    //
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wunused-variable"
+    #pragma clang diagnostic ignored "-Wshadow"
+
+    \(className) *\(variableName) = static_cast<\(className) *>(_\(variableName == "_m" ? "machine" : "state"));
+
+    \(varRefs.isEmpty ? "" : varRefs + "\n")
+    #pragma clang diagnostic pop
+    """
+}
+
+/// Generate FuncRefs.mm content from functions section
+@usableFromInline
+func objcppFuncRefsContent(from functions: String, fileName: String = "FuncRefs.mm") -> String {
+    return """
+    //
+    // \(fileName)
+    //
+    // Automatically created through MiCASE -- do not change manually!
+    //
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wc++98-compat"
+
+    \(functions.isEmpty ? "" : functions + "\n")#pragma clang diagnostic pop
+    """
 }
