@@ -149,7 +149,8 @@ final class MachineSerialisationTests: XCTestCase {
             zoomedOnExitHeight: 50,
             zoomedInternalHeight: 100,
             zoomedOnSuspendHeight: 40,
-            zoomedOnResumeHeight: 40
+            zoomedOnResumeHeight: 40,
+            extraProperties: [:]
         )
         machine.stateLayout = [state.id: stateLayout]
 
@@ -212,7 +213,8 @@ final class MachineSerialisationTests: XCTestCase {
             zoomedOnExitHeight: 50,
             zoomedInternalHeight: 100,
             zoomedOnSuspendHeight: 40,
-            zoomedOnResumeHeight: 40
+            zoomedOnResumeHeight: 40,
+            extraProperties: [:]
         )
         machine.stateLayout = [state1.id: stateLayout]
 

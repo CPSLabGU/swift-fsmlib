@@ -174,7 +174,8 @@ final class LayoutTests: XCTestCase {
                                        zoomedOnExitHeight: 40,
                                        zoomedInternalHeight: 80,
                                        zoomedOnSuspendHeight: 30,
-                                       zoomedOnResumeHeight: 30)
+                                       zoomedOnResumeHeight: 30,
+                                       extraProperties: [:])
 
         // Test basic properties
         XCTAssertFalse(stateLayout.isOpen)
