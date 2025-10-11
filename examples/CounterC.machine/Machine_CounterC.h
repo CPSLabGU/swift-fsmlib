@@ -25,6 +25,7 @@
 #pragma clang diagnostic ignored "-Wunused-macros"
 
 #define MACHINE_COUNTERC_NUMBER_OF_STATES 5
+#define MACHINE_COUNTERC_NUMBER_OF_TRANSITIONS 4
 
 #define MACHINE_COUNTERC_IS_SUSPENSIBLE 1
 
