@@ -14,7 +14,7 @@
 #define NULL ((void*)0)
 #endif
 
-#define MACHINE_COUNTER_NUMBER_OF_TRANSITIONS 5
+#define MACHINE_COUNTER_STATE_SUSPENDED_NUMBER_OF_TRANSITIONS 0
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunknown-pragmas"

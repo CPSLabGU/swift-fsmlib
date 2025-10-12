@@ -1,5 +1,5 @@
 //
-// Suspend_Variables.h
+// SuspendCounter_Variables.h
 //
 // Automatically created through MiCASE -- do not change manually!
 //

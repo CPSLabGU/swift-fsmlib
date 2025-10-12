@@ -7,7 +7,7 @@
 #define LLFSM_STATIC_ARRANGEMENT_SUSPENDCOUNTER_H
 
 #include "Arrangement_SuspendCounter.h"
-#include "Suspend.machine/Machine_Suspend.h"
+#include "SuspendCounter.machine/Machine_SuspendCounter.h"
 #include "Counter.machine/Machine_Counter.h"
 
 #define STATIC_ARRANGEMENT_SUSPENDCOUNTER_NUMBER_OF_INSTANCES 2
@@ -24,16 +24,16 @@
 struct LLFSMachine;
 struct LLFSMArrangement;
 
-/// Static instantiation of a Suspend LLFSM.
-extern struct Machine_Suspend static_fsm_suspend;
-/// Static instantiation of the Suspend LLFSM state InitialPseudoState.
-extern struct FSMSuspend_State_InitialPseudoState static_suspend_state_InitialPseudoState;
-/// Static instantiation of the Suspend LLFSM state Initial.
-extern struct FSMSuspend_State_Initial static_suspend_state_Initial;
-/// Static instantiation of the Suspend LLFSM state Suspend_Counter.
-extern struct FSMSuspend_State_Suspend_Counter static_suspend_state_Suspend_Counter;
-/// Static instantiation of the Suspend LLFSM state Resume_Counter.
-extern struct FSMSuspend_State_Resume_Counter static_suspend_state_Resume_Counter;
+/// Static instantiation of a SuspendCounter LLFSM.
+extern struct Machine_SuspendCounter static_fsm_suspendcounter;
+/// Static instantiation of the SuspendCounter LLFSM state InitialPseudoState.
+extern struct FSMSuspendCounter_State_InitialPseudoState static_suspendcounter_state_InitialPseudoState;
+/// Static instantiation of the SuspendCounter LLFSM state Initial.
+extern struct FSMSuspendCounter_State_Initial static_suspendcounter_state_Initial;
+/// Static instantiation of the SuspendCounter LLFSM state Suspend_Counter.
+extern struct FSMSuspendCounter_State_Suspend_Counter static_suspendcounter_state_Suspend_Counter;
+/// Static instantiation of the SuspendCounter LLFSM state Resume_Counter.
+extern struct FSMSuspendCounter_State_Resume_Counter static_suspendcounter_state_Resume_Counter;
 /// Static instantiation of a Counter LLFSM.
 extern struct Machine_Counter static_fsm_counter;
 /// Static instantiation of the Counter LLFSM state InitialPseudoState.

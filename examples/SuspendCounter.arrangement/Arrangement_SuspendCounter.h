@@ -25,8 +25,8 @@ struct Arrangement_SuspendCounter
         struct LLFSMachine *machines[2];
         struct
         {
-            /// An instance of the Suspend LLFSM.
-            struct Machine_Suspend *fsm_suspend;
+            /// An instance of the SuspendCounter LLFSM.
+            struct Machine_SuspendCounter *fsm_suspendcounter;
             /// An instance of the Counter LLFSM.
             struct Machine_Counter *fsm_counter;
         };

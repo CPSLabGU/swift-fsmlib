@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(Suspend C)
+project(SuspendCounter C)
 
 # Require the C standard to be C17,
 # but allow extensions.
@@ -15,14 +15,14 @@ endif()
 
 include(project.cmake)
 
-add_library(Suspend_fsm STATIC ${Suspend_FSM_SOURCES})
-target_include_directories(Suspend_fsm PRIVATE
+add_library(SuspendCounter_fsm STATIC ${SuspendCounter_FSM_SOURCES})
+target_include_directories(SuspendCounter_fsm PRIVATE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
   $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
-  $<INSTALL_INTERFACE:include/fsms/Suspend.machine>
-  $<INSTALL_INTERFACE:fsms/Suspend.machine>
+  $<INSTALL_INTERFACE:include/fsms/SuspendCounter.machine>
+  $<INSTALL_INTERFACE:fsms/SuspendCounter.machine>
   "$GUNAO_DIR/Common"
   "$GUNAO_DIR/posix/gusimplewhiteboard"
   "$GUNAO_DIR/posix/gufsm/clfsm"

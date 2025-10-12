@@ -7,17 +7,17 @@
 #include "Machine_Common.h"
 #include "Arrangement_SuspendCounter.h"
 #include "Static_Arrangement_SuspendCounter.h"
-#include "Suspend.machine/Machine_Suspend.h"
-#include "Suspend.machine/State_InitialPseudoState.h"
-#include "Suspend.machine/State_Initial.h"
-#include "Suspend.machine/State_Suspend_Counter.h"
-#include "Suspend.machine/State_Resume_Counter.h"
 #include "Counter.machine/Machine_Counter.h"
 #include "Counter.machine/State_InitialPseudoState.h"
 #include "Counter.machine/State_Initial.h"
 #include "Counter.machine/State_CountUp.h"
 #include "Counter.machine/State_Print.h"
 #include "Counter.machine/State_SUSPENDED.h"
+#include "SuspendCounter.machine/Machine_SuspendCounter.h"
+#include "SuspendCounter.machine/State_InitialPseudoState.h"
+#include "SuspendCounter.machine/State_Initial.h"
+#include "SuspendCounter.machine/State_Suspend_Counter.h"
+#include "SuspendCounter.machine/State_Resume_Counter.h"
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-macros"
@@ -27,58 +27,58 @@
 #endif
 #include <stdbool.h>
 
-/// Static instantiation of a Suspend LLFSM.
-struct Machine_Suspend static_fsm_suspend = 
+/// Static instantiation of a SuspendCounter LLFSM.
+struct Machine_SuspendCounter static_fsm_suspendcounter = 
 {
-    .current_state = (struct LLFSMState *) &static_suspend_state_InitialPseudoState,
+    .current_state = (struct LLFSMState *) &static_suspendcounter_state_InitialPseudoState,
     .states =
     {
-        (struct LLFSMState *) &static_suspend_state_InitialPseudoState,
-        (struct LLFSMState *) &static_suspend_state_Initial,
-        (struct LLFSMState *) &static_suspend_state_Suspend_Counter,
-        (struct LLFSMState *) &static_suspend_state_Resume_Counter
+        (struct LLFSMState *) &static_suspendcounter_state_InitialPseudoState,
+        (struct LLFSMState *) &static_suspendcounter_state_Initial,
+        (struct LLFSMState *) &static_suspendcounter_state_Suspend_Counter,
+        (struct LLFSMState *) &static_suspendcounter_state_Resume_Counter
     }
 };
 
-/// Static instantiation of the Suspend LLFSM state InitialPseudoState.
-struct FSMSuspend_State_InitialPseudoState static_suspend_state_InitialPseudoState = 
+/// Static instantiation of the SuspendCounter LLFSM state InitialPseudoState.
+struct FSMSuspendCounter_State_InitialPseudoState static_suspendcounter_state_InitialPseudoState = 
 {
-    .check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *)) fsm_suspend_initialpseudostate_check_transitions,
-    .on_entry = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_initialpseudostate_on_entry,
-    .on_exit = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_initialpseudostate_on_exit,
-    .internal = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_initialpseudostate_internal,
-    .on_suspend = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_initialpseudostate_on_suspend,
-    .on_resume = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_initialpseudostate_on_resume
+    .check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *)) fsm_suspendcounter_initialpseudostate_check_transitions,
+    .on_entry = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_initialpseudostate_on_entry,
+    .on_exit = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_initialpseudostate_on_exit,
+    .internal = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_initialpseudostate_internal,
+    .on_suspend = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_initialpseudostate_on_suspend,
+    .on_resume = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_initialpseudostate_on_resume
 };
-/// Static instantiation of the Suspend LLFSM state Initial.
-struct FSMSuspend_State_Initial static_suspend_state_Initial = 
+/// Static instantiation of the SuspendCounter LLFSM state Initial.
+struct FSMSuspendCounter_State_Initial static_suspendcounter_state_Initial = 
 {
-    .check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *)) fsm_suspend_initial_check_transitions,
-    .on_entry = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_initial_on_entry,
-    .on_exit = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_initial_on_exit,
-    .internal = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_initial_internal,
-    .on_suspend = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_initial_on_suspend,
-    .on_resume = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_initial_on_resume
+    .check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *)) fsm_suspendcounter_initial_check_transitions,
+    .on_entry = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_initial_on_entry,
+    .on_exit = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_initial_on_exit,
+    .internal = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_initial_internal,
+    .on_suspend = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_initial_on_suspend,
+    .on_resume = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_initial_on_resume
 };
-/// Static instantiation of the Suspend LLFSM state Suspend_Counter.
-struct FSMSuspend_State_Suspend_Counter static_suspend_state_Suspend_Counter = 
+/// Static instantiation of the SuspendCounter LLFSM state Suspend_Counter.
+struct FSMSuspendCounter_State_Suspend_Counter static_suspendcounter_state_Suspend_Counter = 
 {
-    .check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *)) fsm_suspend_suspend_counter_check_transitions,
-    .on_entry = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_suspend_counter_on_entry,
-    .on_exit = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_suspend_counter_on_exit,
-    .internal = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_suspend_counter_internal,
-    .on_suspend = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_suspend_counter_on_suspend,
-    .on_resume = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_suspend_counter_on_resume
+    .check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *)) fsm_suspendcounter_suspend_counter_check_transitions,
+    .on_entry = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_suspend_counter_on_entry,
+    .on_exit = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_suspend_counter_on_exit,
+    .internal = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_suspend_counter_internal,
+    .on_suspend = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_suspend_counter_on_suspend,
+    .on_resume = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_suspend_counter_on_resume
 };
-/// Static instantiation of the Suspend LLFSM state Resume_Counter.
-struct FSMSuspend_State_Resume_Counter static_suspend_state_Resume_Counter = 
+/// Static instantiation of the SuspendCounter LLFSM state Resume_Counter.
+struct FSMSuspendCounter_State_Resume_Counter static_suspendcounter_state_Resume_Counter = 
 {
-    .check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *)) fsm_suspend_resume_counter_check_transitions,
-    .on_entry = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_resume_counter_on_entry,
-    .on_exit = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_resume_counter_on_exit,
-    .internal = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_resume_counter_internal,
-    .on_suspend = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_resume_counter_on_suspend,
-    .on_resume = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspend_resume_counter_on_resume
+    .check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *)) fsm_suspendcounter_resume_counter_check_transitions,
+    .on_entry = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_resume_counter_on_entry,
+    .on_exit = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_resume_counter_on_exit,
+    .internal = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_resume_counter_internal,
+    .on_suspend = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_resume_counter_on_suspend,
+    .on_resume = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_suspendcounter_resume_counter_on_resume
 };
 /// Static instantiation of a Counter LLFSM.
 struct Machine_Counter static_fsm_counter = 
@@ -150,7 +150,7 @@ struct Arrangement_SuspendCounter static_arrangement_suspendcounter =
 {
     .number_of_instances = STATIC_ARRANGEMENT_SUSPENDCOUNTER_NUMBER_OF_INSTANCES,
     {
-        .fsm_suspend = &static_fsm_suspend,
+        .fsm_suspendcounter = &static_fsm_suspendcounter,
         .fsm_counter = &static_fsm_counter
     },
 };

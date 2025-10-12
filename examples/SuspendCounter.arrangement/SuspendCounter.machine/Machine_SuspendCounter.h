@@ -1,21 +1,21 @@
 //
-// Machine_Suspend.h
+// Machine_SuspendCounter.h
 //
 // Automatically created using fsmconvert -- do not change manually!
 //
-#ifndef LLFSM_MACHINE_SUSPEND_H
-#define LLFSM_MACHINE_SUSPEND_H
+#ifndef LLFSM_MACHINE_SUSPENDCOUNTER_H
+#define LLFSM_MACHINE_SUSPENDCOUNTER_H
 
 #include <inttypes.h>
 #include <stdbool.h>
-#include "Machine_Suspend_Includes.h"
+#include "Machine_SuspendCounter_Includes.h"
 
 #ifdef INCLUDE_MACHINE_CUSTOM
 #include "Machine_Custom.h"
 #endif
 
-#ifdef INCLUDE_MACHINE_SUSPEND_CUSTOM
-#include "Machine_Suspend_Custom.h"
+#ifdef INCLUDE_MACHINE_SUSPENDCOUNTER_CUSTOM
+#include "Machine_SuspendCounter_Custom.h"
 #endif
 
 #pragma GCC diagnostic push
@@ -24,9 +24,10 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-macros"
 
-#define MACHINE_SUSPEND_NUMBER_OF_STATES 4
+#define MACHINE_SUSPENDCOUNTER_NUMBER_OF_STATES 4
+#define MACHINE_SUSPENDCOUNTER_NUMBER_OF_TRANSITIONS 3
 
-#define MACHINE_SUSPEND_IS_SUSPENSIBLE 1
+#define MACHINE_SUSPENDCOUNTER_IS_SUSPENSIBLE 1
 
 #ifndef RESTART
 #define RESTART(m) (((m)->previous_state = (m)->current_state) && ((m)->current_state = (m)->states[0]))
@@ -49,30 +50,30 @@ struct LLFSMArrangement;
 struct LLFSMState;
 struct LLFSMachine;
 
-/// A Suspend LLFSM.
-struct Machine_Suspend
+/// A SuspendCounter LLFSM.
+struct Machine_SuspendCounter
 {
     struct LLFSMState *current_state;
     struct LLFSMState *previous_state;
     uintptr_t          state_time;
     struct LLFSMState *suspend_state;
     struct LLFSMState *resume_state;
-    struct LLFSMState * const states[MACHINE_SUSPEND_NUMBER_OF_STATES];
+    struct LLFSMState * const states[MACHINE_SUSPENDCOUNTER_NUMBER_OF_STATES];
 
-#   include "Machine_Suspend_Variables.h"
+#   include "Machine_SuspendCounter_Variables.h"
 };
 
-/// Initialise a `Machine_Suspend` LLFSM.
+/// Initialise a `Machine_SuspendCounter` LLFSM.
 ///
 /// - Parameter machine: The LLFSM to initialise.
-void fsm_suspend_init(struct Machine_Suspend *);
+void fsm_suspendcounter_init(struct Machine_SuspendCounter *);
 
-/// Validate a `Machine_Suspend` LLFSM.
+/// Validate a `Machine_SuspendCounter` LLFSM.
 ///
 /// - Parameter machine: The LLFSM to initialise.
-bool fsm_suspend_validate(struct Machine_Suspend *);
+bool fsm_suspendcounter_validate(struct Machine_SuspendCounter *);
 
 #pragma clang diagnostic pop
 #pragma GCC diagnostic pop
 
-#endif /* LLFSM_MACHINE_SUSPEND_H */
+#endif /* LLFSM_MACHINE_SUSPENDCOUNTER_H */
