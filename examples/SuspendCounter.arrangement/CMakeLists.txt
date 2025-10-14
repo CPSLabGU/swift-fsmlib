@@ -22,8 +22,8 @@ target_include_directories(run_SuspendCounter_arrangement PRIVATE
   ${SuspendCounter_ARRANGEMENT_INCDIRS}
   ${SuspendCounter_ARRANGEMENT_INSTALL_INCDIRS}
 )
-add_subdirectory(Counter.machine)
 add_subdirectory(SuspendCounter.machine)
+add_subdirectory(Counter.machine)
 target_link_libraries(run_SuspendCounter_arrangement
     SuspendCounter_static_arrangement
     SuspendCounter_arrangement
