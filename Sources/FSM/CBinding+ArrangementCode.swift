@@ -138,12 +138,12 @@ public func cStaticArrangementInterface(for instances: [Instance], named name: S
     let machineTypes = Array(Set(instances.map(\.typeName)))
     return """
     //
-    // Static_Arrangement_\(name).h
+    // Static_Arrangement.h
     //
     // Automatically created using fsmconvert -- do not change manually!
     //
 
-    """ + .includeFile(named: "LLFSM_STATIC_ARRANGEMENT_" + upperName + "_H") {
+    """ + .includeFile(named: "LLFSM_STATIC_ARRANGEMENT_H") {
         "#include \"Arrangement_" + name + ".h\""
         Code.forEach(machineTypes) { machine in
             "#include \"" + machine + ".machine/Machine_" + machine + ".h\""
@@ -199,7 +199,7 @@ public func cStaticArrangementCode(for instances: [Instance], named name: String
     #include <stdbool.h>
     #include \"Machine_Common.h\"
     #include \"Arrangement_\(name).h\"
-    #include \"Static_Arrangement_\(name).h\"
+    #include \"Static_Arrangement.h\"
 
     """ + Code.forEach(machines) { machine, instance in
         let fsm = instance.machine.llfsm
@@ -685,7 +685,7 @@ public func cStaticArrangementMainCode(for instances: [Instance], named name: St
 
     #include \"Machine_Common.h\"
     #include \"Arrangement_\(name).h\"
-    #include \"Static_Arrangement_\(name).h\"
+    #include \"Static_Arrangement.h\"
 
     int main(int argc, char *argv[])
     """ + Code.bracedBlock {

@@ -5,8 +5,8 @@
 //
 #include "Machine_Common.h"
 #include "Arrangement_SuspendCounter.h"
-#include "Counter.machine/Machine_Counter.h"
 #include "SuspendCounter.machine/Machine_SuspendCounter.h"
+#include "Counter.machine/Machine_Counter.h"
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-macros"
 

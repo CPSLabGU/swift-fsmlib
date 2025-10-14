@@ -326,7 +326,7 @@ public extension ObjCPPBinding {
         wrapper.replaceFileWrapper(cmakeWrapper)
         // Static arrangement support
         let staticInterface = objcppStaticArrangementInterface(for: instances, named: name, isSuspensible: isSuspensible)
-        let staticInterfaceWrapper = fileWrapper(named: "Static_Arrangement_\(name).h", from: staticInterface)
+        let staticInterfaceWrapper = fileWrapper(named: "Static_Arrangement.h", from: staticInterface)
         wrapper.replaceFileWrapper(staticInterfaceWrapper)
         let staticCode = objcppStaticArrangementCode(for: instances, named: name, isSuspensible: isSuspensible)
         let staticCodeWrapper = fileWrapper(named: "Static_Arrangement_\(name).c", from: staticCode)

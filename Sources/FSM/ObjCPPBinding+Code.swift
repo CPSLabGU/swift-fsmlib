@@ -435,12 +435,12 @@ public func objcppStaticArrangementInterface(for instances: [Instance], named na
     }
     return """
 //
-// Static_Arrangement_\(name).h
+// Static_Arrangement.h
 //
 // Automatically created through MiCASE -- do not change manually!
 //
-#ifndef clfsm_static_arrangement_\(name)_h
-#define clfsm_static_arrangement_\(name)_h
+#ifndef clfsm_static_arrangement_h
+#define clfsm_static_arrangement_h
 
 #include "Arrangement_\(name).h"
 \(includes)
@@ -508,7 +508,7 @@ public func objcppStaticArrangementMainCode(for instances: [Instance], named nam
 // Automatically created through MiCASE -- do not change manually!
 //
 #include <stdio.h>
-#include "Static_Arrangement_\(name).h"
+#include "Static_Arrangement.h"
 
 int main(void)
 {

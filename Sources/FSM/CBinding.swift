@@ -262,7 +262,7 @@ public extension CBinding {
         let arrangementWrapper = fileWrapper(named: "Arrangement_\(name).h", from: arrangementInterface)
         wrapper.replaceFileWrapper(arrangementWrapper)
         let staticInterface = cStaticArrangementInterface(for: instances, named: name, isSuspensible: isSuspensible)
-        let staticWrapper = fileWrapper(named: "Static_Arrangement_\(name).h", from: staticInterface)
+        let staticWrapper = fileWrapper(named: "Static_Arrangement.h", from: staticInterface)
         wrapper.replaceFileWrapper(staticWrapper)
     }
     /// Add the arrangment implementation to the given .

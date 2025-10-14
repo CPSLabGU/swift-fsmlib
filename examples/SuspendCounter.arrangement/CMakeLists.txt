@@ -27,6 +27,6 @@ add_subdirectory(SuspendCounter.machine)
 target_link_libraries(run_SuspendCounter_arrangement
     SuspendCounter_static_arrangement
     SuspendCounter_arrangement
-    Counter_fsm
     SuspendCounter_fsm
+    Counter_fsm
 )

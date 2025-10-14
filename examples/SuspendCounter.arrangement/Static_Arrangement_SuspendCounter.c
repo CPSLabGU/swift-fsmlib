@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include "Machine_Common.h"
 #include "Arrangement_SuspendCounter.h"
-#include "Static_Arrangement_SuspendCounter.h"
+#include "Static_Arrangement.h"
 #include "Counter.machine/Machine_Counter.h"
 #include "Counter.machine/State_InitialPseudoState.h"
 #include "Counter.machine/State_Initial.h"

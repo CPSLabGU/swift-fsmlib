@@ -9,7 +9,7 @@
 
 #include "Machine_Common.h"
 #include "Arrangement_SuspendCounter.h"
-#include "Static_Arrangement_SuspendCounter.h"
+#include "Static_Arrangement.h"
 
 int main(int argc, char *argv[]){
     uintptr_t num_runs = (uintptr_t)(argc > 1 ? strtoull(argv[1], NULL, 10) : ~0ULL);
