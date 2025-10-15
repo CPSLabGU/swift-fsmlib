@@ -34,8 +34,8 @@ final class ObjCPPBindingArrangementCodeTests: XCTestCase {
         let code = objcppArrangementImplementation(for: instances, named: "TestArrangement", isSuspensible: false)
         XCTAssertTrue(code.contains("#include \"Arrangement_TestArrangement.h\""))
         XCTAssertTrue(code.contains("arrangement->number_of_instances = ARRANGEMENT_TESTARRANGEMENT_NUMBER_OF_INSTANCES;"))
-        XCTAssertTrue(code.contains("fsm_test_init(arrangement->fsm_instance1);"))
-        XCTAssertTrue(code.contains("fsm_test_validate(arrangement->fsm_instance1);"))
+        // C++ uses constructors, so validate just checks pointers
+        XCTAssertTrue(code.contains("arrangement->fsmInstance1 != nullptr"))
     }
 
     /// Test implementation generation for multiple instances with different types.
@@ -49,10 +49,9 @@ final class ObjCPPBindingArrangementCodeTests: XCTestCase {
         let code = objcppArrangementImplementation(for: instances, named: "Multi", isSuspensible: false)
         XCTAssertTrue(code.contains("#include \"Alpha.machine/Alpha.h\""))
         XCTAssertTrue(code.contains("#include \"Beta.machine/Beta.h\""))
-        XCTAssertTrue(code.contains("fsm_alpha_init(arrangement->fsm_alpha);"))
-        XCTAssertTrue(code.contains("fsm_beta_init(arrangement->fsm_beta);"))
-        XCTAssertTrue(code.contains("fsm_alpha_validate(arrangement->fsm_alpha)"))
-        XCTAssertTrue(code.contains("fsm_beta_validate(arrangement->fsm_beta)"))
+        // C++ uses constructors, so validate just checks pointers
+        XCTAssertTrue(code.contains("arrangement->fsmAlpha != nullptr"))
+        XCTAssertTrue(code.contains("arrangement->fsmBeta != nullptr"))
     }
 
     /// Test generation for suspensible arrangement (should still generate code, as suspensible is a flag).

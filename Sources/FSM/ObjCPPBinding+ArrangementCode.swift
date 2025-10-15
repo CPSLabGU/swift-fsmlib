@@ -35,9 +35,9 @@ public func objcppArrangementHeader(for instances: [Instance], named name: Strin
         class CLMachine;
         class StateMachineVector;
         namespace CLM {
-    """ + Array(Set(instances.map { $0.typeName })).sorted().map { machine in
+    """ + "\n" + Array(Set(instances.map { $0.typeName })).sorted().map { machine in
         "            class \(machine);"
-    }.joined(separator: "\n") + """
+    }.joined(separator: "\n") + "\n" + """
         }
     }
     #endif
@@ -47,20 +47,32 @@ public func objcppArrangementHeader(for instances: [Instance], named name: Strin
     {
         /// The number of instances in this arrangement.
         uintptr_t number_of_instances;
-    #ifdef __cplusplus
         union {
+    #ifdef __cplusplus
             /// The machines in this arrangement.
             FSM::CLMachine *machines[\(instances.count)];
+    #else
+            /// The machines in this arrangement.
+            void *machines[\(instances.count)];
+    #endif
             struct {
+
     """ + instances.map { instance in
-        let varName = "fsm" + instance.name.prefix(1).uppercased() + instance.name.dropFirst()
-        return "                /// An instance of the \(instance.typeName) CLFSM.\n                FSM::CLM::\(instance.typeName) *\(varName);"
+        let camelCaseName = "fsm" + instance.name.prefix(1).uppercased() + instance.name.dropFirst()
+        let snakeCaseName = "fsm_" + instance.name.lowercased()
+        return """
+    #ifdef __cplusplus
+                    /// An instance of the \(instance.typeName) CLFSM.
+                    FSM::CLM::\(instance.typeName) *\(camelCaseName);
+    #else
+                    /// An instance of the \(instance.typeName) CLFSM.
+                    void *\(snakeCaseName);
+    #endif
+    """
     }.joined(separator: "\n") + """
+
             };
         };
-    #else
-        void *machines[\(instances.count)];
-    #endif
     };
 
     #ifdef __cplusplus
@@ -100,6 +112,12 @@ public func objcppArrangementImplementation(for instances: [Instance], named nam
     for machine in machineTypes {
         includes += "#include \"\(machine).machine/\(machine).h\"\n"
     }
+    // Build validate section - check that all machine pointers are valid
+    var validateSection = ""
+    for (i, instance) in instances.enumerated() {
+        let camelCaseName = "fsm" + instance.name.prefix(1).uppercased() + instance.name.dropFirst()
+        validateSection += "        arrangement->\(camelCaseName) != nullptr\(i < instances.count - 1 ? " &&\n        " : ";")\n"
+    }
     return """
     //
     // Arrangement_\(name).mm
@@ -119,7 +137,6 @@ public func objcppArrangementImplementation(for instances: [Instance], named nam
         /// Initialise the \(name) CLFSM arrangement.
         ///
         /// - Parameter arrangement: The machine arrangement to initialise.
-        /// - Note: For C++, machine instances are initialized elsewhere.
         void arrangement_\(lowerName)_init(struct Arrangement_\(name) * const arrangement)
         {
             arrangement->number_of_instances = ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES;
@@ -131,8 +148,7 @@ public func objcppArrangementImplementation(for instances: [Instance], named nam
         bool arrangement_\(lowerName)_validate(struct Arrangement_\(name) * const arrangement)
         {
             return arrangement->number_of_instances == ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES &&
-            arrangement->machines[0] != nullptr;
-        }
+    \(validateSection)        }
     }
 
     #pragma clang diagnostic pop
