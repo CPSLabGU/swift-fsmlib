@@ -342,12 +342,18 @@ public func objcppCMakeLists(for fsm: LLFSM, named name: String, boilerplate: an
         "   set(CMAKE_BUILD_TYPE Debug)"
         "endif()"
         ""
+        if isSuspensible {
+            "# Define FSM_SUPPORT_SUSPEND for suspensible machines"
+            "add_definitions(-DFSM_SUPPORT_SUSPEND)"
+            ""
+        }
         "include(project.cmake)"
         ""
         "add_library(\(name)_fsm STATIC ${\(name)_FSM_SOURCES})"
         "target_include_directories(\(name)_fsm PRIVATE"
         "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
         "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/infrastructure>"
         "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
         "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
         "  $<INSTALL_INTERFACE:include/fsms/\(name).machine>"
@@ -368,12 +374,32 @@ public func objcppCMakeLists(for fsm: LLFSM, named name: String, boilerplate: an
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The CMakeLists.txt code fragment.
 public func objcppArrangementCMakeFragment(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
+    let machines = Array(Set(instances.map(\.typeName)))
     return .block {
         "# Sources for the \(name) Objective-C++ FSM arrangement."
         "set(\(name)_ARRANGEMENT_SOURCES"
         "    Arrangement_\(name).mm"
-        Code.forEach(instances) { instance in
-            "    \(instance.typeName).machine/\(instance.typeName).mm"
+        "    Static_Arrangement_\(name).mm"
+        ")"
+        ""
+        "# Infrastructure sources for the FSM C++ runtime."
+        "set(INFRASTRUCTURE_SOURCES"
+        "    infrastructure/StateMachineVector.cc"
+        if isSuspensible {
+            "    infrastructure/SuspensibleMachine.cc"
+        }
+        ")"
+        ""
+        "# Include directories for building \(name)."
+        "set(\(name)_ARRANGEMENT_INCDIRS"
+        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/infrastructure>"
+        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
+        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
+        Code.forEach(machines) { machine in
+            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/\(machine).machine/include>"
+            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/\(machine).machine>"
         }
         ")"
         ""
@@ -388,7 +414,8 @@ public func objcppArrangementCMakeFragment(for instances: [Instance], named name
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The CMakeLists.txt code.
 public func objcppArrangementCMakeLists(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
-    .block {
+    let machines = Array(Set(instances.map(\.typeName)))
+    return .block {
         "cmake_minimum_required(VERSION 3.21)"
         ""
         "project(\(name)_arrangement CXX)"
@@ -402,14 +429,24 @@ public func objcppArrangementCMakeLists(for instances: [Instance], named name: S
         "   set(CMAKE_BUILD_TYPE Debug)"
         "endif()"
         ""
+        if isSuspensible {
+            "# Define FSM_SUPPORT_SUSPEND for suspensible machines"
+            "add_definitions(-DFSM_SUPPORT_SUSPEND)"
+            ""
+        }
         "include(project.cmake)"
         ""
-        "add_executable(\(name)_arrangement ${\(name)_ARRANGEMENT_SOURCES})"
-        "target_include_directories(\(name)_arrangement PRIVATE"
-        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
-        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
-        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
+        Code.forEach(machines) { machine in
+            "add_subdirectory(\(machine).machine)"
+        }
+        "add_executable(run_\(name)_arrangement static_main.cc ${\(name)_ARRANGEMENT_SOURCES} ${INFRASTRUCTURE_SOURCES})"
+        "target_include_directories(run_\(name)_arrangement PRIVATE"
+        "  ${\(name)_ARRANGEMENT_INCDIRS}"
+        ")"
+        "target_link_libraries(run_\(name)_arrangement"
+        Code.forEach(machines) { machine in
+            "    \(machine)_fsm"
+        }
         ")"
         ""
     }
@@ -424,44 +461,45 @@ public func objcppArrangementCMakeLists(for instances: [Instance], named name: S
 /// - Returns: The static arrangement interface code.
 public func objcppStaticArrangementInterface(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
     let upperName = name.uppercased()
+    let lowerName = name.lowercased()
     let machineTypes = Array(Set(instances.map { $0.typeName }))
-    var includes = ""
-    for machine in machineTypes {
-        includes += "#include \"\(machine).machine/\(machine).h\"\n"
-    }
-    var externs = ""
-    for instance in instances {
-        externs += "extern struct \(instance.typeName) static_fsm_\(instance.name.lowercased());\n"
-    }
+    let machineIncludes = machineTypes.map { machine in
+        "#include \"\(machine).machine/\(machine).h\""
+    }.joined(separator: "\n")
     return """
-//
-// Static_Arrangement.h
-//
-// Automatically created through MiCASE -- do not change manually!
-//
-#ifndef clfsm_static_arrangement_h
-#define clfsm_static_arrangement_h
+    //
+    // Static_Arrangement.h
+    //
+    // Automatically created using fsmconvert -- do not change manually!
+    //
+    #ifndef clfsm_static_arrangement_\(lowerName)_h
+    #define clfsm_static_arrangement_\(lowerName)_h
 
-#include "Arrangement_\(name).h"
-\(includes)
-#define STATIC_ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES \(instances.count)
-#ifndef SUSPEND_ALL
-#define SUSPEND_ALL() fsm_arrangement_suspend_all((struct CLFSMArrangement *)&static_arrangement_\(name.lowercased()))
-#endif // SUSPEND_ALL
-#ifndef RESUME_ALL
-#define RESUME_ALL() fsm_arrangement_resume_all((struct CLFSMArrangement *)&static_arrangement_\(name.lowercased()))
-#endif // RESUME_ALL
-#ifndef RESTART_ALL
-#define RESTART_ALL() fsm_arrangement_restart_all((struct CLFSMArrangement *)&static_arrangement_\(name.lowercased()))
-#endif // RESTART_ALL
+    \(isSuspensible ? "#ifndef FSM_SUPPORT_SUSPEND\n#define FSM_SUPPORT_SUSPEND\n#endif\n" : "")
+    #include "Arrangement_\(name).h"
+    \(machineIncludes)
 
-struct CLMachine;
-struct CLFSMArrangement;
-\(externs)
-extern struct Arrangement_\(name) static_arrangement_\(name.lowercased());
 
-#endif
-"""
+    #define STATIC_ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES \(instances.count)
+
+    #ifdef __cplusplus
+    extern "C" {
+    #endif
+
+    /// Get a pointer to the static \(name) arrangement.
+    struct Arrangement_\(name) *static_arrangement_\(lowerName)(void);
+
+    #ifdef __cplusplus
+    }
+
+    namespace FSM {
+        /// Get the StateMachineVector for the static \(name) arrangement.
+        StateMachineVector *static_arrangement_\(lowerName)_vector(void);
+    }
+    #endif
+
+    #endif // clfsm_static_arrangement_\(lowerName)_h
+    """
 }
 
 /// Create the Objective-C++ static arrangement code.
@@ -472,25 +510,83 @@ extern struct Arrangement_\(name) static_arrangement_\(name.lowercased());
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The static arrangement code.
 public func objcppStaticArrangementCode(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
-    let machineTypes = Array(Set(instances.map { $0.typeName }))
-    var includes = "#include <stdbool.h>\n#include \"Arrangement_\(name).h\"\n"
-    for machine in machineTypes {
-        includes += "#include \"\(machine).machine/\(machine).h\"\n"
-    }
-    var staticDecls = ""
-    for instance in instances {
-        staticDecls += "struct \(instance.typeName) static_fsm_\(instance.name.lowercased()) = {0};\n"
-    }
+    let lowerName = name.lowercased()
+    let upperName = name.uppercased()
+    let machines = Dictionary(instances.map { ($0.typeName, $0) }, uniquingKeysWith: { a,_ in a })
+
     return """
-//
-// Static_Arrangement_\(name).c
-//
-// Automatically created through MiCASE -- do not change manually!
-//
-\(includes)
-\(staticDecls)
-struct Arrangement_\(name) static_arrangement_\(name.lowercased()) = {0};
-"""
+    //
+    // Static_Arrangement_\(name).mm
+    //
+    // Automatically created using fsmconvert -- do not change manually!
+    //
+    #include <cstddef>
+    #include "Static_Arrangement.h"
+    #include "StateMachineVector.h"
+    """ + "\n" + machines.keys.sorted().map { machine in
+        "#include \"\(machine).machine/\(machine).h\""
+    }.joined(separator: "\n") + """
+
+
+
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wunused-macros"
+
+    #ifndef NULL
+    #define NULL nullptr
+    #endif
+
+    using namespace FSM::CLM;
+
+    """ + Code.enumerating(array: instances) { i, instance in
+        let machineName = instance.typeName
+        let varName = "fsm" + instance.name.prefix(1).uppercased() + instance.name.dropFirst()
+
+        "/// Static instantiation of a \(machineName) CLFSM."
+        "static \(machineName) \(varName)(\(i), \"\(instance.name)\");"
+    } + """
+
+    /// Static instantiation of the \(name) CLFSM Arrangement.
+    static Arrangement_\(name) static_arrangement = {
+        .number_of_instances = STATIC_ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES,
+        {
+    """ + Code.enumerating(array: instances) { i, instance in
+        let varName = "fsm" + instance.name.prefix(1).uppercased() + instance.name.dropFirst()
+        "        .\(varName) = &\(varName)\(i < instances.count - 1 ? "," : "")"
+    } + """
+        }
+    };
+
+    /// Static machine vector for the arrangement.
+    static FSM::CLMachine *machine_vector[\(instances.count)] = {
+    """ + Code.enumerating(array: instances) { i, instance in
+        let varName = "fsm" + instance.name.prefix(1).uppercased() + instance.name.dropFirst()
+        "    &\(varName)\(i < instances.count - 1 ? "," : "")"
+    } + """
+    };
+
+    /// Static StateMachineVector for the arrangement.
+    static FSM::StateMachineVector static_vector(machine_vector, \(instances.count));
+
+    extern "C" {
+        /// Get a pointer to the static \(name) arrangement.
+        struct Arrangement_\(name) *static_arrangement_\(lowerName)(void)
+        {
+            return &static_arrangement;
+        }
+    }
+
+    namespace FSM {
+        /// Get the StateMachineVector for the static \(name) arrangement.
+        StateMachineVector *static_arrangement_\(lowerName)_vector(void)
+        {
+            set_global_machine_vector(&static_vector);
+            return &static_vector;
+        }
+    }
+
+    #pragma clang diagnostic pop
+    """
 }
 
 /// Create the Objective-C++ static arrangement main code.
@@ -501,21 +597,40 @@ struct Arrangement_\(name) static_arrangement_\(name.lowercased()) = {0};
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The static arrangement main code.
 public func objcppStaticArrangementMainCode(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
+    let lowerName = name.lowercased()
     return """
 //
-// static_main.c
+// static_main.cc
 //
-// Automatically created through MiCASE -- do not change manually!
+// Automatically created using fsmconvert -- do not change manually!
 //
-#include <stdio.h>
+#include <cstdio>
+#include <cstdlib>
 #include "Static_Arrangement.h"
+#include "StateMachineVector.h"
 
-int main(void)
+/// Main function to run the static \(name) arrangement.
+///
+/// - Parameter argc: The number of command line arguments.
+/// - Parameter argv: The command line arguments. If argc > 1, argv[1] is the number of runs.
+/// - Returns: EXIT_SUCCESS if the arrangement validates and runs successfully, EXIT_FAILURE otherwise.
+int main(int argc, char *argv[])
 {
-    arrangement_\(name.lowercased())_init(&static_arrangement_\(name.lowercased()));
-    arrangement_\(name.lowercased())_validate(&static_arrangement_\(name.lowercased()));
-    printf("Static arrangement \"%s\" initialised and validated.\n", "\(name)");
-    return 0;
+    unsigned long num_runs = argc > 1 ? strtoull(argv[1], nullptr, 10) : ~0UL;
+
+    struct Arrangement_\(name) *arrangement = static_arrangement_\(lowerName)();
+    if (!arrangement_\(lowerName)_validate(arrangement)) {
+        printf("Error: 'static_arrangement_\(lowerName)' does not validate!\\n");
+        return EXIT_FAILURE;
+    }
+
+    FSM::StateMachineVector *vector = FSM::static_arrangement_\(lowerName)_vector();
+
+    while (num_runs--) {
+        vector->executeOnce();
+    }
+
+    return EXIT_SUCCESS;
 }
 """
 }
@@ -528,11 +643,33 @@ int main(void)
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The CMakeLists.txt code fragment.
 public func objcppStaticArrangementCMakeFragment(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
+    let machineTypes = Array(Set(instances.map { $0.typeName }))
     return .block {
         "# Sources for the \(name) Objective-C++ static arrangement."
         "set(\(name)_STATIC_ARRANGEMENT_SOURCES"
-        "    Static_Arrangement_\(name).c"
-        "    static_main.c"
+        "    Static_Arrangement_\(name).mm"
+        "    static_main.cc"
+        ")"
+        ""
+        "# Infrastructure sources for the FSM C++ runtime."
+        "set(INFRASTRUCTURE_SOURCES"
+        "    infrastructure/StateMachineVector.cc"
+        if isSuspensible {
+            "    infrastructure/SuspensibleMachine.cc"
+        }
+        ")"
+        ""
+        "# Include directories for building \(name)."
+        "set(\(name)_STATIC_ARRANGEMENT_INCDIRS"
+        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/infrastructure>"
+        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
+        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
+        Code.forEach(machineTypes) { machine in
+            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/\(machine).machine/include>"
+            "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/\(machine).machine>"
+        }
         ")"
         ""
     }
@@ -546,28 +683,44 @@ public func objcppStaticArrangementCMakeFragment(for instances: [Instance], name
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The CMakeLists.txt code.
 public func objcppStaticArrangementCMakeLists(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
-    .block {
+    let machineTypes = Array(Set(instances.map { $0.typeName }))
+    return .block {
         "cmake_minimum_required(VERSION 3.21)"
         ""
-        "project(\(name)_static_arrangement C)"
+        "project(\(name)_static_arrangement CXX)"
         ""
-        "set(CMAKE_C_STANDARD 17)"
-        "set(CMAKE_C_STANDARD_REQUIRED ON)"
-        "set(CMAKE_C_EXTENSIONS ON)"
+        "# Require the C++ standard to be C++17,"
+        "# but allow extensions."
+        "set(CMAKE_CXX_STANDARD 17)"
+        "set(CMAKE_CXX_STANDARD_REQUIRED ON)"
+        "set(CMAKE_CXX_EXTENSIONS ON)"
         ""
         "# Set the default build type to Debug."
         "if(NOT CMAKE_BUILD_TYPE)"
         "   set(CMAKE_BUILD_TYPE Debug)"
         "endif()"
         ""
+        if isSuspensible {
+            "# Define FSM_SUPPORT_SUSPEND for suspensible machines"
+            "add_definitions(-DFSM_SUPPORT_SUSPEND)"
+            ""
+        }
         "include(project.cmake)"
         ""
-        "add_executable(\(name)_static_arrangement ${\(name)_STATIC_ARRANGEMENT_SOURCES})"
-        "target_include_directories(\(name)_static_arrangement PRIVATE"
-        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-        "  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
-        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
-        "  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>"
+        "# Build machine type libraries"
+        Code.forEach(machineTypes) { machine in
+            "add_subdirectory(\(machine).machine)"
+        }
+        ""
+        "# Build static arrangement executable"
+        "add_executable(run_\(name)_arrangement ${\(name)_STATIC_ARRANGEMENT_SOURCES} ${INFRASTRUCTURE_SOURCES})"
+        "target_include_directories(run_\(name)_arrangement PRIVATE"
+        "  ${\(name)_STATIC_ARRANGEMENT_INCDIRS}"
+        ")"
+        "target_link_libraries(run_\(name)_arrangement"
+        Code.forEach(machineTypes) { machine in
+            "    \(machine)_fsm"
+        }
         ")"
         ""
     }

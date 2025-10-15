@@ -30,24 +30,42 @@ public func objcppArrangementHeader(for instances: [Instance], named name: Strin
 
     #define ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES \(instances.count)
 
-    struct CLMachine;
-    struct CLFSMArrangement;
+    #ifdef __cplusplus
+    namespace FSM {
+        class CLMachine;
+        class StateMachineVector;
+        namespace CLM {
+    """ + Array(Set(instances.map { $0.typeName })).sorted().map { machine in
+        "            class \(machine);"
+    }.joined(separator: "\n") + """
+        }
+    }
+    #endif
 
     /// A \(name) CLFSM Arrangement.
     struct Arrangement_\(name)
     {
         /// The number of instances in this arrangement.
         uintptr_t number_of_instances;
+    #ifdef __cplusplus
         union {
             /// The machines in this arrangement.
-            struct CLMachine *machines[\(instances.count)];
+            FSM::CLMachine *machines[\(instances.count)];
             struct {
     """ + instances.map { instance in
-        "                /// An instance of the \(instance.typeName) CLFSM.\n                struct \(instance.typeName) *fsm_\(instance.name.lowercased());"
+        let varName = "fsm" + instance.name.prefix(1).uppercased() + instance.name.dropFirst()
+        return "                /// An instance of the \(instance.typeName) CLFSM.\n                FSM::CLM::\(instance.typeName) *\(varName);"
     }.joined(separator: "\n") + """
             };
         };
+    #else
+        void *machines[\(instances.count)];
+    #endif
     };
+
+    #ifdef __cplusplus
+    extern "C" {
+    #endif
 
     /// Initialise the \(name) CLFSM arrangement.
     ///
@@ -58,6 +76,10 @@ public func objcppArrangementHeader(for instances: [Instance], named name: Strin
     ///
     /// - Parameter arrangement: The machine arrangement to validate.
     bool arrangement_\(lowerName)_validate(struct Arrangement_\(name) * const arrangement);
+
+    #ifdef __cplusplus
+    }
+    #endif
 
     #endif // clfsm_arrangement_\(name)_h
     """
@@ -78,19 +100,11 @@ public func objcppArrangementImplementation(for instances: [Instance], named nam
     for machine in machineTypes {
         includes += "#include \"\(machine).machine/\(machine).h\"\n"
     }
-    var initSection = ""
-    for instance in instances {
-        initSection += "    fsm_\(instance.typeName.lowercased())_init(arrangement->fsm_\(instance.name.lowercased()));\n"
-    }
-    var validateSection = ""
-    for (i, instance) in instances.enumerated() {
-        validateSection += "    fsm_\(instance.typeName.lowercased())_validate(arrangement->fsm_\(instance.name.lowercased()))\(i < instances.count - 1 ? " &&" : ";")\n"
-    }
     return """
     //
     // Arrangement_\(name).mm
     //
-    // Automatically created through MiCASE -- do not change manually!
+    // Automatically created using fsmconvert -- do not change manually!
     //
     #include "Arrangement_\(name).h"
     \(includes)
@@ -98,23 +112,29 @@ public func objcppArrangementImplementation(for instances: [Instance], named nam
     #pragma clang diagnostic ignored "-Wunused-macros"
 
     #ifndef NULL
-    #define NULL ((void*)0)
+    #define NULL nullptr
     #endif
 
-    /// Initialise the \(name) CLFSM arrangement.
-    ///
-    /// - Parameter arrangement: The machine arrangement to initialise.
-    void arrangement_\(lowerName)_init(struct Arrangement_\(name) * const arrangement)
-    {
-        arrangement->number_of_instances = ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES;
-    \(initSection)}
+    extern "C" {
+        /// Initialise the \(name) CLFSM arrangement.
+        ///
+        /// - Parameter arrangement: The machine arrangement to initialise.
+        /// - Note: For C++, machine instances are initialized elsewhere.
+        void arrangement_\(lowerName)_init(struct Arrangement_\(name) * const arrangement)
+        {
+            arrangement->number_of_instances = ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES;
+        }
 
-    /// Validate the \(name) CLFSM arrangement.
-    ///
-    /// - Parameter arrangement: The machine arrangement to validate.
-    bool arrangement_\(lowerName)_validate(struct Arrangement_\(name) * const arrangement)
-    {
-        return arrangement->number_of_instances == ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES &&
-    \(validateSection)}
+        /// Validate the \(name) CLFSM arrangement.
+        ///
+        /// - Parameter arrangement: The machine arrangement to validate.
+        bool arrangement_\(lowerName)_validate(struct Arrangement_\(name) * const arrangement)
+        {
+            return arrangement->number_of_instances == ARRANGEMENT_\(upperName)_NUMBER_OF_INSTANCES &&
+            arrangement->machines[0] != nullptr;
+        }
+    }
+
+    #pragma clang diagnostic pop
     """
 }

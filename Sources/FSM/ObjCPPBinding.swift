@@ -329,17 +329,28 @@ public extension ObjCPPBinding {
         let staticInterfaceWrapper = fileWrapper(named: "Static_Arrangement.h", from: staticInterface)
         wrapper.replaceFileWrapper(staticInterfaceWrapper)
         let staticCode = objcppStaticArrangementCode(for: instances, named: name, isSuspensible: isSuspensible)
-        let staticCodeWrapper = fileWrapper(named: "Static_Arrangement_\(name).c", from: staticCode)
+        let staticCodeWrapper = fileWrapper(named: "Static_Arrangement_\(name).mm", from: staticCode)
         wrapper.replaceFileWrapper(staticCodeWrapper)
         let staticMain = objcppStaticArrangementMainCode(for: instances, named: name, isSuspensible: isSuspensible)
-        let staticMainWrapper = fileWrapper(named: "static_main.c", from: staticMain)
+        let staticMainWrapper = fileWrapper(named: "static_main.cc", from: staticMain)
         wrapper.replaceFileWrapper(staticMainWrapper)
-        let staticCMakeFragment = objcppStaticArrangementCMakeFragment(for: instances, named: name, isSuspensible: isSuspensible)
-        let staticCMakeFragmentWrapper = fileWrapper(named: "static_project.cmake", from: staticCMakeFragment)
-        wrapper.replaceFileWrapper(staticCMakeFragmentWrapper)
-        let staticCMakeLists = objcppStaticArrangementCMakeLists(for: instances, named: name, isSuspensible: isSuspensible)
-        let staticCMakeListsWrapper = fileWrapper(named: "Static_CMakeLists.txt", from: staticCMakeLists)
-        wrapper.replaceFileWrapper(staticCMakeListsWrapper)
+        // Add infrastructure headers and implementations
+        let infrastructureWrapper = FileWrapper(directoryWithFileWrappers: [:])
+        infrastructureWrapper.preferredFilename = "infrastructure"
+        // Add header files
+        infrastructureWrapper.replaceFileWrapper(fileWrapper(named: "CLAction.h", from: objcppInfrastructureCLActionHeader()))
+        infrastructureWrapper.replaceFileWrapper(fileWrapper(named: "CLTransition.h", from: objcppInfrastructureCLTransitionHeader()))
+        infrastructureWrapper.replaceFileWrapper(fileWrapper(named: "CLState.h", from: objcppInfrastructureCLStateHeader()))
+        infrastructureWrapper.replaceFileWrapper(fileWrapper(named: "CLMachine.h", from: objcppInfrastructureCLMachineHeader(isSuspensible: isSuspensible)))
+        infrastructureWrapper.replaceFileWrapper(fileWrapper(named: "CLMacros.h", from: objcppInfrastructureCLMacrosHeader()))
+        infrastructureWrapper.replaceFileWrapper(fileWrapper(named: "StateMachineVector.h", from: objcppInfrastructureStateMachineVectorHeader()))
+        infrastructureWrapper.replaceFileWrapper(fileWrapper(named: "Machine_Common.h", from: objcppInfrastructureMachineCommonHeader()))
+        // Add implementation files
+        infrastructureWrapper.replaceFileWrapper(fileWrapper(named: "StateMachineVector.cc", from: objcppInfrastructureStateMachineVectorImplementation()))
+        if isSuspensible {
+            infrastructureWrapper.replaceFileWrapper(fileWrapper(named: "SuspensibleMachine.cc", from: objcppInfrastructureSuspensibleMachineImplementation()))
+        }
+        wrapper.replaceFileWrapper(infrastructureWrapper)
     }
 }
 
