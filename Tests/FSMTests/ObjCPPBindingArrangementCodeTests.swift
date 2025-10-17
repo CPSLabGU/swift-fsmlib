@@ -17,7 +17,7 @@ final class ObjCPPBindingArrangementCodeTests: XCTestCase {
         XCTAssertTrue(code.contains("#ifndef clfsm_arrangement_TestArrangement_h"))
         XCTAssertTrue(code.contains("ARRANGEMENT_TESTARRANGEMENT_NUMBER_OF_INSTANCES 1"))
         XCTAssertTrue(code.contains("void arrangement_testarrangement_init(struct Arrangement_TestArrangement * const arrangement);"))
-        XCTAssertTrue(code.contains("bool arrangement_testarrangement_validate(struct Arrangement_TestArrangement * const arrangement);"))
+        XCTAssertTrue(code.contains("bool arrangement_testarrangement_validate(const struct Arrangement_TestArrangement * const arrangement);"))
     }
 
     /// Test header generation for an empty arrangement.
