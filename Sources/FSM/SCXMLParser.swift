@@ -153,29 +153,29 @@ public final class SCXMLParser: NSObject {
 
     private func parseScxmlAttributes(_ element: XMLElement) throws {
         // Version (required)
-        guard let version = element.attribute(forName: "version")?.stringValue else {
+        guard let version = element.attributeValue(forName: "version") else {
             throw SCXMLParserError.missingRequiredAttribute(element: "scxml", attribute: "version")
         }
         boilerplate.scxmlVersion = version
 
         // Name (optional)
-        boilerplate.name = element.attribute(forName: "name")?.stringValue
+        boilerplate.name = element.attributeValue(forName: "name")
 
         // Datamodel (optional, defaults to "null")
-        boilerplate.datamodel = element.attribute(forName: "datamodel")?.stringValue ?? "null"
+        boilerplate.datamodel = element.attributeValue(forName: "datamodel") ?? "null"
 
         // Binding (optional, defaults to "early")
-        boilerplate.binding = element.attribute(forName: "binding")?.stringValue ?? "early"
+        boilerplate.binding = element.attributeValue(forName: "binding") ?? "early"
     }
 
     private func parseDatamodel(_ element: XMLElement) throws {
         for dataElem in element.elements(forName: "data") {
-            guard let id = dataElem.attribute(forName: "id")?.stringValue else {
+            guard let id = dataElem.attributeValue(forName: "id") else {
                 throw SCXMLParserError.missingRequiredAttribute(element: "data", attribute: "id")
             }
 
-            let expr = dataElem.attribute(forName: "expr")?.stringValue
-            let src = dataElem.attribute(forName: "src")?.stringValue
+            let expr = dataElem.attributeValue(forName: "expr")
+            let src = dataElem.attributeValue(forName: "src")
             let content = dataElem.stringValue
 
             let declaration = DataDeclaration(
@@ -213,7 +213,7 @@ public final class SCXMLParser: NSObject {
     private func parseState(
         _ element: XMLElement, parent parentStateID: StateID?, isParallel: Bool, isFinal: Bool
     ) throws {
-        guard let stateIDString = element.attribute(forName: "id")?.stringValue else {
+        guard let stateIDString = element.attributeValue(forName: "id") else {
             throw SCXMLParserError.missingRequiredAttribute(
                 element: element.name ?? "state", attribute: "id")
         }
@@ -236,7 +236,7 @@ public final class SCXMLParser: NSObject {
         metadata.isFinal = isFinal
 
         // Parse initial attribute
-        if element.attribute(forName: "initial")?.stringValue != nil {
+        if element.attributeValue(forName: "initial") != nil {
             // Will resolve after all states parsed
             metadata.initialChild = nil  // Placeholder
         }
@@ -264,12 +264,12 @@ public final class SCXMLParser: NSObject {
     }
 
     private func parseHistoryState(_ element: XMLElement, parent parentStateID: StateID?) throws {
-        guard let historyID = element.attribute(forName: "id")?.stringValue else {
+        guard let historyID = element.attributeValue(forName: "id") else {
             throw SCXMLParserError.missingRequiredAttribute(element: "history", attribute: "id")
         }
 
         let historyType: HistoryType =
-            element.attribute(forName: "type")?.stringValue == "deep" ? .deep : .shallow
+            element.attributeValue(forName: "type") == "deep" ? .deep : .shallow
 
         let stateID = StateID()
         let state = State(id: stateID, name: historyID)
@@ -282,7 +282,7 @@ public final class SCXMLParser: NSObject {
 
         // Parse default transition
         if let transitionElem = element.elements(forName: "transition").first,
-            transitionElem.attribute(forName: "target")?.stringValue != nil
+            transitionElem.attributeValue(forName: "target") != nil
         {
             // Will resolve after all states parsed
         }
@@ -328,33 +328,33 @@ public final class SCXMLParser: NSObject {
                     actions.append(.script(script))
                 }
             case "assign":
-                guard let location = elem.attribute(forName: "location")?.stringValue,
-                    let expr = elem.attribute(forName: "expr")?.stringValue
+                guard let location = elem.attributeValue(forName: "location"),
+                    let expr = elem.attributeValue(forName: "expr")
                 else {
                     throw SCXMLParserError.missingRequiredAttribute(
                         element: "assign", attribute: "location or expr")
                 }
                 actions.append(.assign(location: location, expr: expr))
             case "raise":
-                guard let event = elem.attribute(forName: "event")?.stringValue else {
+                guard let event = elem.attributeValue(forName: "event") else {
                     throw SCXMLParserError.missingRequiredAttribute(
                         element: "raise", attribute: "event")
                 }
                 actions.append(.raise(event: event))
             case "send":
-                guard let event = elem.attribute(forName: "event")?.stringValue else {
+                guard let event = elem.attributeValue(forName: "event") else {
                     throw SCXMLParserError.missingRequiredAttribute(
                         element: "send", attribute: "event")
                 }
-                let target = elem.attribute(forName: "target")?.stringValue
-                let delay = elem.attribute(forName: "delay")?.stringValue
+                let target = elem.attributeValue(forName: "target")
+                let delay = elem.attributeValue(forName: "delay")
                 actions.append(.send(event: event, target: target, delay: delay))
             case "log":
-                let expr = elem.attribute(forName: "expr")?.stringValue ?? ""
-                let label = elem.attribute(forName: "label")?.stringValue
+                let expr = elem.attributeValue(forName: "expr") ?? ""
+                let label = elem.attributeValue(forName: "label")
                 actions.append(.log(expr: expr, label: label))
             case "if":
-                guard let cond = elem.attribute(forName: "cond")?.stringValue else {
+                guard let cond = elem.attributeValue(forName: "cond") else {
                     throw SCXMLParserError.missingRequiredAttribute(
                         element: "if", attribute: "cond")
                 }
@@ -377,13 +377,13 @@ public final class SCXMLParser: NSObject {
         var invocations: [Invocation] = []
 
         for invokeElem in element.elements(forName: "invoke") {
-            guard let type = invokeElem.attribute(forName: "type")?.stringValue else {
+            guard let type = invokeElem.attributeValue(forName: "type") else {
                 continue
             }
 
-            let src = invokeElem.attribute(forName: "src")?.stringValue
-            let id = invokeElem.attribute(forName: "id")?.stringValue
-            let autoForward = invokeElem.attribute(forName: "autoforward")?.stringValue == "true"
+            let src = invokeElem.attributeValue(forName: "src")
+            let id = invokeElem.attributeValue(forName: "id")
+            let autoForward = invokeElem.attributeValue(forName: "autoforward") == "true"
 
             let invocation = Invocation(type: type, src: src, id: id, autoForward: autoForward)
             invocations.append(invocation)
@@ -402,23 +402,23 @@ public final class SCXMLParser: NSObject {
         var height: Double = 80
 
         // ScxmlEditor uses se:x, se:y, etc.
-        if let xAttr = element.attribute(forName: "x")?.stringValue
-            ?? element.attribute(forName: "se:x")?.stringValue
+        if let xAttr = element.attributeValue(forName: "x")
+            ?? element.attributeValue(forName: "se:x")
         {
             x = Double(xAttr) ?? 0
         }
-        if let yAttr = element.attribute(forName: "y")?.stringValue
-            ?? element.attribute(forName: "se:y")?.stringValue
+        if let yAttr = element.attributeValue(forName: "y")
+            ?? element.attributeValue(forName: "se:y")
         {
             y = Double(yAttr) ?? 0
         }
-        if let wAttr = element.attribute(forName: "width")?.stringValue
-            ?? element.attribute(forName: "se:width")?.stringValue
+        if let wAttr = element.attributeValue(forName: "width")
+            ?? element.attributeValue(forName: "se:width")
         {
             width = Double(wAttr) ?? 120
         }
-        if let hAttr = element.attribute(forName: "height")?.stringValue
-            ?? element.attribute(forName: "se:height")?.stringValue
+        if let hAttr = element.attributeValue(forName: "height")
+            ?? element.attributeValue(forName: "se:height")
         {
             height = Double(hAttr) ?? 80
         }
@@ -465,7 +465,7 @@ public final class SCXMLParser: NSObject {
         let transitionID = TransitionID()
 
         // Parse target
-        guard let targetString = element.attribute(forName: "target")?.stringValue else {
+        guard let targetString = element.attributeValue(forName: "target") else {
             // Targetless transitions are valid in SCXML (self-transitions)
             let transition = Transition(
                 id: transitionID, label: "", source: sourceStateID, target: sourceStateID)
@@ -478,17 +478,17 @@ public final class SCXMLParser: NSObject {
         }
 
         // Create basic transition
-        let label = element.attribute(forName: "cond")?.stringValue ?? ""
+        let label = element.attributeValue(forName: "cond") ?? ""
         let transition = Transition(
             id: transitionID, label: label, source: sourceStateID, target: targetStateID)
         transitions.append(transition)
 
         // Parse SCXML metadata
         var metadata = SCXMLTransitionMetadata()
-        metadata.event = element.attribute(forName: "event")?.stringValue
-        metadata.condition = element.attribute(forName: "cond")?.stringValue
+        metadata.event = element.attributeValue(forName: "event")
+        metadata.condition = element.attributeValue(forName: "cond")
         metadata.type =
-            element.attribute(forName: "type")?.stringValue == "internal" ? .internal : .external
+            element.attributeValue(forName: "type") == "internal" ? .internal : .external
 
         // Parse executable content
         metadata.actions = try parseExecutableContent(element)
@@ -498,7 +498,7 @@ public final class SCXMLParser: NSObject {
 
     private func determineInitialState(_ root: XMLElement) throws -> StateID {
         // Check initial attribute
-        if let initialAttr = root.attribute(forName: "initial")?.stringValue,
+        if let initialAttr = root.attributeValue(forName: "initial"),
             let initialStateID = stateMap[initialAttr]
         {
             return initialStateID
@@ -507,7 +507,7 @@ public final class SCXMLParser: NSObject {
         // Check for <initial> element
         if let initialElem = root.elements(forName: "initial").first,
             let transitionElem = initialElem.elements(forName: "transition").first,
-            let target = transitionElem.attribute(forName: "target")?.stringValue,
+            let target = transitionElem.attributeValue(forName: "target"),
             let targetStateID = stateMap[target]
         {
             return targetStateID
@@ -527,7 +527,7 @@ public final class SCXMLParser: NSObject {
     }
 
     private func findElement(byID id: String, in parent: XMLElement) -> XMLElement? {
-        if parent.attribute(forName: "id")?.stringValue == id {
+        if parent.attributeValue(forName: "id") == id {
             return parent
         }
 
@@ -590,3 +590,43 @@ public final class SCXMLParser: NSObject {
         return code
     }
 }
+
+// MARK: - XMLElement Extension for Linux Compatibility
+
+/// Workaround for FoundationXML bug on Linux where attribute(forName:) returns nil
+/// when the document has a namespace declaration.
+/// See: https://github.com/swiftlang/swift-corelibs-foundation/issues/4943
+#if canImport(FoundationXML)
+extension XMLElement {
+    /// Get attribute value with fallback for namespace bug on Linux.
+    ///
+    /// On Linux with FoundationXML, when an XML document has a namespace declaration
+    /// like `xmlns="http://www.w3.org/2005/07/scxml"`, the standard `attribute(forName:)`
+    /// method incorrectly returns nil even when attributes exist.
+    ///
+    /// This method provides a workaround by manually iterating through the attributes
+    /// array when the standard method fails.
+    fileprivate func attributeValue(forName name: String) -> String? {
+        // Try standard method first (works on macOS and Linux without xmlns)
+        if let value = attribute(forName: name)?.stringValue {
+            return value
+        }
+
+        // Fallback: manually search attributes array (for Linux with xmlns)
+        for attr in attributes ?? [] {
+            if attr.name == name {
+                return attr.stringValue
+            }
+        }
+
+        return nil
+    }
+}
+#else
+extension XMLElement {
+    /// Get attribute value - on Darwin platforms, just use the standard method.
+    fileprivate func attributeValue(forName name: String) -> String? {
+        return attribute(forName: name)?.stringValue
+    }
+}
+#endif
