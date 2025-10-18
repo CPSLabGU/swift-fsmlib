@@ -1,0 +1,589 @@
+//
+//  SCXMLParser.swift
+//
+//  Created by Rene Hexel on 18/10/2025.
+//  Copyright © 2025 Rene Hexel. All rights reserved.
+//
+import Foundation
+
+/// SCXML parsing errors.
+public enum SCXMLParserError: Error, CustomStringConvertible {
+    case invalidXML(String)
+    case missingRequiredAttribute(element: String, attribute: String)
+    case invalidStateReference(String)
+    case invalidTransitionTarget(String)
+    case circularStateHierarchy(String)
+    case duplicateStateID(String)
+    case unsupportedDatamodel(String)
+    case parsingFailed(String)
+
+    public var description: String {
+        switch self {
+        case .invalidXML(let msg): return "Invalid XML: \(msg)"
+        case .missingRequiredAttribute(let elem, let attr):
+            return "Missing required attribute '\(attr)' on element '\(elem)'"
+        case .invalidStateReference(let ref): return "Invalid state reference: \(ref)"
+        case .invalidTransitionTarget(let target): return "Invalid transition target: \(target)"
+        case .circularStateHierarchy(let state):
+            return "Circular state hierarchy detected: \(state)"
+        case .duplicateStateID(let id): return "Duplicate state ID: \(id)"
+        case .unsupportedDatamodel(let dm): return "Unsupported datamodel: \(dm)"
+        case .parsingFailed(let msg): return "Parsing failed: \(msg)"
+        }
+    }
+}
+
+/// SCXML parser for converting SCXML XML documents to Machine objects.
+///
+/// This class handles parsing of SCXML 1.0 documents, supporting:
+/// - Basic states and transitions
+/// - Compound and parallel states
+/// - History states (shallow/deep)
+/// - Final states
+/// - Data models
+/// - Executable content (onentry/onexit/script/assign/send/raise)
+/// - Layout preservation from visual editors
+public final class SCXMLParser: NSObject {
+    // MARK: - Parsing State
+
+    private var xmlDoc: XMLDocument?
+    private var stateMap: [String: StateID] = [:]
+    private var states: [State] = []
+    private var transitions: [Transition] = []
+    private var stateMetadata: SCXMLStateMetadataMap = [:]
+    private var transitionMetadata: SCXMLTransitionMetadataMap = [:]
+    private var boilerplate: SCXMLBoilerplate = SCXMLBoilerplate()
+    private var activities: StateActivitiesSourceCode = StateActivitiesSourceCode()
+    private var stateLayouts: StateLayouts = [:]
+    private var transitionLayouts: TransitionLayouts = [:]
+
+    // MARK: - Parsing
+
+    /// Parse SCXML data into a Machine object.
+    ///
+    /// - Parameter data: SCXML XML data
+    /// - Returns: Parsed Machine object
+    /// - Throws: SCXMLParserError on parsing failure
+    public func parse(_ data: Data) throws -> Machine {
+        // Reset state
+        reset()
+
+        // Parse XML
+        do {
+            xmlDoc = try XMLDocument(data: data, options: [])
+        } catch {
+            throw SCXMLParserError.invalidXML(error.localizedDescription)
+        }
+
+        guard let root = xmlDoc?.rootElement(), root.name == "scxml" else {
+            throw SCXMLParserError.invalidXML("Root element must be <scxml>")
+        }
+
+        // Parse scxml attributes
+        try parseScxmlAttributes(root)
+
+        // Parse datamodel
+        if let datamodelElem = root.elements(forName: "datamodel").first {
+            try parseDatamodel(datamodelElem)
+        }
+
+        // Parse initial script
+        if let scriptElem = root.elements(forName: "script").first {
+            boilerplate.initialScript = scriptElem.stringValue
+        }
+
+        // Parse states (recursive)
+        try parseStates(root, parent: nil)
+
+        // Determine initial state
+        _ = try determineInitialState(root)
+
+        // Parse transitions
+        try parseTransitions()
+
+        // Build LLFSM
+        let llfsm = LLFSM(
+            states: states,
+            transitions: transitions,
+            suspendState: nil
+        )
+
+        // Store metadata in boilerplate
+        boilerplate.stateMetadata = stateMetadata
+        boilerplate.transitionMetadata = transitionMetadata
+
+        // Create Machine
+        let machine = Machine()
+        machine.llfsm = llfsm
+        machine.boilerplate = boilerplate
+        machine.activities = activities
+        machine.stateLayout = stateLayouts
+        machine.transitionLayout = transitionLayouts
+
+        return machine
+    }
+
+    /// Parse SCXML from file URL.
+    ///
+    /// - Parameter url: File URL to SCXML document
+    /// - Returns: Parsed Machine object
+    /// - Throws: SCXMLParserError on parsing failure
+    public func parse(contentsOf url: URL) throws -> Machine {
+        let data = try Data(contentsOf: url)
+        return try parse(data)
+    }
+
+    // MARK: - Private Parsing Methods
+
+    private func reset() {
+        xmlDoc = nil
+        stateMap = [:]
+        states = []
+        transitions = []
+        stateMetadata = [:]
+        transitionMetadata = [:]
+        boilerplate = SCXMLBoilerplate()
+        activities = StateActivitiesSourceCode()
+        stateLayouts = [:]
+        transitionLayouts = [:]
+    }
+
+    private func parseScxmlAttributes(_ element: XMLElement) throws {
+        // Version (required)
+        guard let version = element.attribute(forName: "version")?.stringValue else {
+            throw SCXMLParserError.missingRequiredAttribute(element: "scxml", attribute: "version")
+        }
+        boilerplate.scxmlVersion = version
+
+        // Name (optional)
+        boilerplate.name = element.attribute(forName: "name")?.stringValue
+
+        // Datamodel (optional, defaults to "null")
+        boilerplate.datamodel = element.attribute(forName: "datamodel")?.stringValue ?? "null"
+
+        // Binding (optional, defaults to "early")
+        boilerplate.binding = element.attribute(forName: "binding")?.stringValue ?? "early"
+    }
+
+    private func parseDatamodel(_ element: XMLElement) throws {
+        for dataElem in element.elements(forName: "data") {
+            guard let id = dataElem.attribute(forName: "id")?.stringValue else {
+                throw SCXMLParserError.missingRequiredAttribute(element: "data", attribute: "id")
+            }
+
+            let expr = dataElem.attribute(forName: "expr")?.stringValue
+            let src = dataElem.attribute(forName: "src")?.stringValue
+            let content = dataElem.stringValue
+
+            let declaration = DataDeclaration(
+                id: id,
+                expr: expr,
+                src: src,
+                content: content?.isEmpty == false ? content : nil
+            )
+            boilerplate.dataDeclarations.append(declaration)
+        }
+    }
+
+    private func parseStates(_ parent: XMLElement, parent parentStateID: StateID?) throws {
+        // Parse <state> elements
+        for stateElem in parent.elements(forName: "state") {
+            try parseState(stateElem, parent: parentStateID, isParallel: false, isFinal: false)
+        }
+
+        // Parse <parallel> elements
+        for parallelElem in parent.elements(forName: "parallel") {
+            try parseState(parallelElem, parent: parentStateID, isParallel: true, isFinal: false)
+        }
+
+        // Parse <final> elements
+        for finalElem in parent.elements(forName: "final") {
+            try parseState(finalElem, parent: parentStateID, isParallel: false, isFinal: true)
+        }
+
+        // Parse <history> elements
+        for historyElem in parent.elements(forName: "history") {
+            try parseHistoryState(historyElem, parent: parentStateID)
+        }
+    }
+
+    private func parseState(
+        _ element: XMLElement, parent parentStateID: StateID?, isParallel: Bool, isFinal: Bool
+    ) throws {
+        guard let stateIDString = element.attribute(forName: "id")?.stringValue else {
+            throw SCXMLParserError.missingRequiredAttribute(
+                element: element.name ?? "state", attribute: "id")
+        }
+
+        // Check for duplicate
+        if stateMap[stateIDString] != nil {
+            throw SCXMLParserError.duplicateStateID(stateIDString)
+        }
+
+        // Create state
+        let stateID = StateID()
+        let state = State(id: stateID, name: stateIDString)
+        states.append(state)
+        stateMap[stateIDString] = stateID
+
+        // Create metadata
+        var metadata = SCXMLStateMetadata()
+        metadata.parentState = parentStateID
+        metadata.isParallel = isParallel
+        metadata.isFinal = isFinal
+
+        // Parse initial attribute
+        if element.attribute(forName: "initial")?.stringValue != nil {
+            // Will resolve after all states parsed
+            metadata.initialChild = nil  // Placeholder
+        }
+
+        // Parse child states
+        let childElements =
+            element.elements(forName: "state") + element.elements(forName: "parallel")
+            + element.elements(forName: "final") + element.elements(forName: "history")
+        if !childElements.isEmpty {
+            metadata.childStates = []
+            try parseStates(element, parent: stateID)
+        }
+
+        // Parse onentry/onexit
+        try parseStateActions(element, stateID: stateID)
+
+        // Parse layout metadata (custom attributes)
+        parseLayoutMetadata(element, stateID: stateID)
+
+        // Store metadata
+        stateMetadata[stateID] = metadata
+
+        // Parse invokes
+        parseInvokes(element, stateID: stateID)
+    }
+
+    private func parseHistoryState(_ element: XMLElement, parent parentStateID: StateID?) throws {
+        guard let historyID = element.attribute(forName: "id")?.stringValue else {
+            throw SCXMLParserError.missingRequiredAttribute(element: "history", attribute: "id")
+        }
+
+        let historyType: HistoryType =
+            element.attribute(forName: "type")?.stringValue == "deep" ? .deep : .shallow
+
+        let stateID = StateID()
+        let state = State(id: stateID, name: historyID)
+        states.append(state)
+        stateMap[historyID] = stateID
+
+        var metadata = SCXMLStateMetadata()
+        metadata.parentState = parentStateID
+        metadata.historyType = historyType
+
+        // Parse default transition
+        if let transitionElem = element.elements(forName: "transition").first,
+            transitionElem.attribute(forName: "target")?.stringValue != nil
+        {
+            // Will resolve after all states parsed
+        }
+
+        stateMetadata[stateID] = metadata
+    }
+
+    private func parseStateActions(_ element: XMLElement, stateID: StateID) throws {
+        // Parse onentry
+        var onEntryCode = ""
+        for onentryElem in element.elements(forName: "onentry") {
+            let actions = try parseExecutableContent(onentryElem)
+            onEntryCode += executableActionsToCode(actions)
+        }
+
+        // Parse onexit
+        var onExitCode = ""
+        for onexitElem in element.elements(forName: "onexit") {
+            let actions = try parseExecutableContent(onexitElem)
+            onExitCode += executableActionsToCode(actions)
+        }
+
+        // Store activities as array [onEntry, onExit, internal, onSuspend, onResume]
+        var stateActions: [String] = []
+        stateActions.append(onEntryCode)
+        stateActions.append(onExitCode)
+        stateActions.append("")  // internal (not used in SCXML typically)
+        stateActions.append("")  // onSuspend
+        stateActions.append("")  // onResume
+
+        activities.actions[stateID] = stateActions
+    }
+
+    private func parseExecutableContent(_ parent: XMLElement) throws -> [ExecutableAction] {
+        var actions: [ExecutableAction] = []
+
+        for child in parent.children ?? [] {
+            guard let elem = child as? XMLElement else { continue }
+
+            switch elem.name {
+            case "script":
+                if let script = elem.stringValue {
+                    actions.append(.script(script))
+                }
+            case "assign":
+                guard let location = elem.attribute(forName: "location")?.stringValue,
+                    let expr = elem.attribute(forName: "expr")?.stringValue
+                else {
+                    throw SCXMLParserError.missingRequiredAttribute(
+                        element: "assign", attribute: "location or expr")
+                }
+                actions.append(.assign(location: location, expr: expr))
+            case "raise":
+                guard let event = elem.attribute(forName: "event")?.stringValue else {
+                    throw SCXMLParserError.missingRequiredAttribute(
+                        element: "raise", attribute: "event")
+                }
+                actions.append(.raise(event: event))
+            case "send":
+                guard let event = elem.attribute(forName: "event")?.stringValue else {
+                    throw SCXMLParserError.missingRequiredAttribute(
+                        element: "send", attribute: "event")
+                }
+                let target = elem.attribute(forName: "target")?.stringValue
+                let delay = elem.attribute(forName: "delay")?.stringValue
+                actions.append(.send(event: event, target: target, delay: delay))
+            case "log":
+                let expr = elem.attribute(forName: "expr")?.stringValue ?? ""
+                let label = elem.attribute(forName: "label")?.stringValue
+                actions.append(.log(expr: expr, label: label))
+            case "if":
+                guard let cond = elem.attribute(forName: "cond")?.stringValue else {
+                    throw SCXMLParserError.missingRequiredAttribute(
+                        element: "if", attribute: "cond")
+                }
+                let thenActions = try parseExecutableContent(elem)
+                // Parse else blocks
+                let elseActions: [ExecutableAction]? = nil  // TODO: parse else/elseif
+                actions.append(.if(condition: cond, actions: thenActions, elseActions: elseActions))
+            default:
+                // Unknown executable content - store as script
+                if let content = elem.stringValue, !content.isEmpty {
+                    actions.append(.script("/* \(elem.name ?? "unknown") */\n\(content)"))
+                }
+            }
+        }
+
+        return actions
+    }
+
+    private func parseInvokes(_ element: XMLElement, stateID: StateID) {
+        var invocations: [Invocation] = []
+
+        for invokeElem in element.elements(forName: "invoke") {
+            guard let type = invokeElem.attribute(forName: "type")?.stringValue else {
+                continue
+            }
+
+            let src = invokeElem.attribute(forName: "src")?.stringValue
+            let id = invokeElem.attribute(forName: "id")?.stringValue
+            let autoForward = invokeElem.attribute(forName: "autoforward")?.stringValue == "true"
+
+            let invocation = Invocation(type: type, src: src, id: id, autoForward: autoForward)
+            invocations.append(invocation)
+        }
+
+        if !invocations.isEmpty {
+            boilerplate.invocations[stateID.uuidString] = invocations
+        }
+    }
+
+    private func parseLayoutMetadata(_ element: XMLElement, stateID: StateID) {
+        // Parse common visual editor attributes
+        var x: Double = 0
+        var y: Double = 0
+        var width: Double = 120
+        var height: Double = 80
+
+        // ScxmlEditor uses se:x, se:y, etc.
+        if let xAttr = element.attribute(forName: "x")?.stringValue
+            ?? element.attribute(forName: "se:x")?.stringValue
+        {
+            x = Double(xAttr) ?? 0
+        }
+        if let yAttr = element.attribute(forName: "y")?.stringValue
+            ?? element.attribute(forName: "se:y")?.stringValue
+        {
+            y = Double(yAttr) ?? 0
+        }
+        if let wAttr = element.attribute(forName: "width")?.stringValue
+            ?? element.attribute(forName: "se:width")?.stringValue
+        {
+            width = Double(wAttr) ?? 120
+        }
+        if let hAttr = element.attribute(forName: "height")?.stringValue
+            ?? element.attribute(forName: "se:height")?.stringValue
+        {
+            height = Double(hAttr) ?? 80
+        }
+
+        // Create a basic StateLayout with default values
+        // Full layout conversion from SCXML visual metadata will be implemented in future iterations
+        let topLeft = Coordinate2D(x, y)
+        let dimensions = Dimensions2D(width, height)
+        let layout = StateLayout(
+            isOpen: true,
+            openLayout: Rectangle(topLeft: topLeft, dimensions: dimensions),
+            closedLayout: Ellipse(topLeft: topLeft, dimensions: dimensions),
+            onEntryHeight: 0,
+            onExitHeight: 0,
+            onSuspendHeight: 0,
+            onResumeHeight: 0,
+            internalHeight: 0,
+            zoomedOnEntryHeight: 0,
+            zoomedOnExitHeight: 0,
+            zoomedInternalHeight: 0,
+            zoomedOnSuspendHeight: 0,
+            zoomedOnResumeHeight: 0,
+            extraProperties: [:]
+        )
+        stateLayouts[stateID] = layout
+    }
+
+    private func parseTransitions() throws {
+        // Parse transitions from all states
+        for state in states {
+            guard let stateIDString = states.first(where: { $0.id == state.id })?.name,
+                let elem = findElement(byID: stateIDString)
+            else {
+                continue
+            }
+
+            for transitionElem in elem.elements(forName: "transition") {
+                try parseTransition(transitionElem, sourceStateID: state.id)
+            }
+        }
+    }
+
+    private func parseTransition(_ element: XMLElement, sourceStateID: StateID) throws {
+        let transitionID = TransitionID()
+
+        // Parse target
+        guard let targetString = element.attribute(forName: "target")?.stringValue else {
+            // Targetless transitions are valid in SCXML (self-transitions)
+            let transition = Transition(
+                id: transitionID, label: "", source: sourceStateID, target: sourceStateID)
+            transitions.append(transition)
+            return
+        }
+
+        guard let targetStateID = stateMap[targetString] else {
+            throw SCXMLParserError.invalidTransitionTarget(targetString)
+        }
+
+        // Create basic transition
+        let label = element.attribute(forName: "cond")?.stringValue ?? ""
+        let transition = Transition(
+            id: transitionID, label: label, source: sourceStateID, target: targetStateID)
+        transitions.append(transition)
+
+        // Parse SCXML metadata
+        var metadata = SCXMLTransitionMetadata()
+        metadata.event = element.attribute(forName: "event")?.stringValue
+        metadata.condition = element.attribute(forName: "cond")?.stringValue
+        metadata.type =
+            element.attribute(forName: "type")?.stringValue == "internal" ? .internal : .external
+
+        // Parse executable content
+        metadata.actions = try parseExecutableContent(element)
+
+        transitionMetadata[transitionID] = metadata
+    }
+
+    private func determineInitialState(_ root: XMLElement) throws -> StateID {
+        // Check initial attribute
+        if let initialAttr = root.attribute(forName: "initial")?.stringValue,
+            let initialStateID = stateMap[initialAttr]
+        {
+            return initialStateID
+        }
+
+        // Check for <initial> element
+        if let initialElem = root.elements(forName: "initial").first,
+            let transitionElem = initialElem.elements(forName: "transition").first,
+            let target = transitionElem.attribute(forName: "target")?.stringValue,
+            let targetStateID = stateMap[target]
+        {
+            return targetStateID
+        }
+
+        // Default to first state
+        guard let firstState = states.first else {
+            throw SCXMLParserError.parsingFailed("No states found in SCXML document")
+        }
+
+        return firstState.id
+    }
+
+    private func findElement(byID id: String) -> XMLElement? {
+        guard let root = xmlDoc?.rootElement() else { return nil }
+        return findElement(byID: id, in: root)
+    }
+
+    private func findElement(byID id: String, in parent: XMLElement) -> XMLElement? {
+        if parent.attribute(forName: "id")?.stringValue == id {
+            return parent
+        }
+
+        for child in parent.children ?? [] {
+            if let elem = child as? XMLElement,
+                let found = findElement(byID: id, in: elem)
+            {
+                return found
+            }
+        }
+
+        return nil
+    }
+
+    private func executableActionsToCode(_ actions: [ExecutableAction]) -> String {
+        var code = ""
+        for action in actions {
+            switch action {
+            case .script(let script):
+                code += script + "\n"
+            case .assign(let location, let expr):
+                code += "\(location) = \(expr);\n"
+            case .raise(let event):
+                code += "raise('\(event)');\n"
+            case .send(let event, let target, let delay):
+                var sendCode = "send('\(event)'"
+                if let tgt = target {
+                    sendCode += ", target: '\(tgt)'"
+                }
+                if let dly = delay {
+                    sendCode += ", delay: '\(dly)'"
+                }
+                sendCode += ");\n"
+                code += sendCode
+            case .log(let expr, let label):
+                if let lbl = label {
+                    code += "console.log('\(lbl):', \(expr));\n"
+                } else {
+                    code += "console.log(\(expr));\n"
+                }
+            case .if(let cond, let thenActions, let elseActions):
+                code += "if (\(cond)) {\n"
+                code += executableActionsToCode(thenActions)
+                if let elseActs = elseActions {
+                    code += "} else {\n"
+                    code += executableActionsToCode(elseActs)
+                }
+                code += "}\n"
+            case .forEach(let array, let item, let index, let actions):
+                let indexVar = index ?? "_index"
+                code +=
+                    "for (let \(indexVar) = 0; \(indexVar) < \(array).length; \(indexVar)++) {\n"
+                code += "  let \(item) = \(array)[\(indexVar)];\n"
+                code += executableActionsToCode(actions)
+                code += "}\n"
+            case .cancel(let sendId):
+                code += "cancel('\(sendId)');\n"
+            }
+        }
+        return code
+    }
+}
