@@ -5,6 +5,9 @@
 //  Copyright © 2025 Rene Hexel. All rights reserved.
 //
 import Foundation
+#if canImport(FoundationXML)
+import FoundationXML
+#endif
 
 /// SCXML parsing errors.
 public enum SCXMLParserError: Error, CustomStringConvertible {
