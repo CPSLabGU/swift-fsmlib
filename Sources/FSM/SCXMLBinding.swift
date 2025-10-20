@@ -309,6 +309,21 @@ public struct SCXMLBinding: OutputLanguage {
         return scxmlBoilerplate
     }
 
+    /// Convert machine boilerplate from another language binding.
+    ///
+    /// This override captures the source language name in the targetLanguage field
+    /// to enable proper round-trip conversion.
+    public func convertBoilerplate(
+        from source: any Boilerplate,
+        sourceLanguage: any LanguageBinding
+    ) -> any Boilerplate {
+        let sections = sourceLanguage.extractSections(from: source)
+        var scxmlBoilerplate = SCXMLBoilerplate()
+        scxmlBoilerplate.genericSections = sections
+        scxmlBoilerplate.targetLanguage = sourceLanguage.name
+        return scxmlBoilerplate
+    }
+
     /// Create SCXMLBoilerplate for state boilerplate.
     ///
     /// States also use SCXMLBoilerplate with genericSections to avoid CBoilerplate dependency.
