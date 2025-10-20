@@ -175,11 +175,9 @@ public struct SCXMLBinding: OutputLanguage {
 
     /// Create a file wrapper at the given URL.
     public func createWrapper(at url: URL, for machine: Machine?) throws -> any MachineStorage {
-        // For SCXML, ideally we would create a MachineFileWrapper for single-file storage
-        // But for now, create an empty directory wrapper that will be populated with SCXML
+        // SCXML is a single-file format, so we use MachineFileWrapper
         let machine = machine ?? Machine()
-        let wrapper = MachineDirectoryWrapper(directoryWithFileWrappers: [:], for: machine, named: url.lastPathComponent)
-        return wrapper
+        return MachineFileWrapper(machine: machine, named: url.lastPathComponent)
     }
 
     /// Create an arrangement wrapper at the given URL.
@@ -189,11 +187,7 @@ public struct SCXMLBinding: OutputLanguage {
 
     /// Add language information to the wrapper.
     public func addLanguage(to wrapper: FileWrapper) throws {
-        // For SCXML in directory wrapper, add a Language file
-        let languageData = "scxml\n".data(using: .utf8)!
-        let languageWrapper = FileWrapper(regularFileWithContents: languageData)
-        languageWrapper.preferredFilename = "Language"
-        wrapper.addFileWrapper(languageWrapper)
+        // SCXML is self-describing, no separate Language file needed
     }
 
     /// Add layout information.
