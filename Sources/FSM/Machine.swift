@@ -58,8 +58,33 @@ public class Machine {
     public var boilerplate: any Boilerplate
     /// State boilerplate
     public var stateBoilerplate: [StateID: any Boilerplate]
-    /// Source code of OnEntry/OnExit/Internal actions of states
-    public var activities: StateActivitiesSourceCode
+
+    // MARK: - Convenience Methods for State Activities
+
+    /// Get state activities as sections dictionary.
+    ///
+    /// - Parameter stateID: The ID of the state.
+    /// - Returns: Dictionary mapping section names to their content.
+    public func stateActivities(for stateID: StateID) -> [StandardBoilerplateSection: String] {
+        guard let stateName = llfsm.stateName(for: stateID),
+              let boilerplate = stateBoilerplate[stateID] else {
+            return [:]
+        }
+        return language.extractStateSections(from: boilerplate, stateName: stateName)
+    }
+
+    /// Set state activities from sections dictionary.
+    ///
+    /// - Parameters:
+    ///   - sections: Dictionary mapping section names to their content.
+    ///   - stateID: The ID of the state.
+    public func setStateActivities(_ sections: [StandardBoilerplateSection: String], for stateID: StateID) {
+        guard let stateName = llfsm.stateName(for: stateID) else { return }
+        stateBoilerplate[stateID] = language.createStateBoilerplate(
+            from: sections,
+            stateName: stateName
+        )
+    }
 
     /// Constructor for reading an FSM from a given URL.
     ///
@@ -84,7 +109,6 @@ public class Machine {
         language = languageBinding(for: machineWrapper)
         boilerplate = language.boilerplate(for: machineWrapper)
         windowLayout = language.windowLayout(for: machineWrapper)
-        activities = StateActivitiesSourceCode()
         let names = stateNames(for: machineWrapper, statesFilename: .states)
         let states = names.map { State(id: StateID(), name: $0) }
         let susp = language.suspendState(for: machineWrapper, states: states)
@@ -149,7 +173,43 @@ public class Machine {
         windowLayout = nil
         boilerplate = CBoilerplate()
         stateBoilerplate = [:]
-        activities = StateActivitiesSourceCode()
+    }
+
+    /// Copy constructor for creating a new machine from an existing one.
+    ///
+    /// This creates a new Machine instance with the same LLFSM, layouts,
+    /// boilerplate, and activities as the original machine. Optionally,
+    /// a different language binding can be specified.
+    ///
+    /// - Parameters:
+    ///   - machine: The machine to copy
+    ///   - language: Optional language binding (uses original's language if nil)
+    @inlinable
+    public init(copying machine: Machine, language: (any LanguageBinding)? = nil) {
+        let targetLanguage = language ?? machine.language
+        self.language = targetLanguage
+        self.llfsm = machine.llfsm
+        self.stateLayout = machine.stateLayout
+        self.transitionLayout = machine.transitionLayout
+        self.windowLayout = machine.windowLayout
+
+        // Convert machine boilerplate through language binding
+        self.boilerplate = targetLanguage.convertBoilerplate(
+            from: machine.boilerplate,
+            sourceLanguage: machine.language
+        )
+
+        // Convert state boilerplate
+        var convertedStateBoilerplate: [StateID: any Boilerplate] = [:]
+        for (stateID, boilerplate) in machine.stateBoilerplate {
+            guard let stateName = machine.llfsm.stateName(for: stateID) else { continue }
+            convertedStateBoilerplate[stateID] = targetLanguage.convertStateBoilerplate(
+                from: boilerplate,
+                sourceLanguage: machine.language,
+                stateName: stateName
+            )
+        }
+        self.stateBoilerplate = convertedStateBoilerplate
     }
 
     /// Write the FSM to the given URL.

@@ -146,6 +146,32 @@ public struct SCXMLBoilerplate: Boilerplate, Equatable, Codable {
     /// Machine name attribute.
     public var name: String?
 
+    /// Target language for code generation (fsm:language attribute).
+    ///
+    /// Specifies the target programming language when the SCXML document
+    /// contains embedded C/C++ boilerplate for round-trip conversion.
+    /// Typical values: "c", "c++", "objc", "objc++", nil for pure SCXML.
+    public var targetLanguage: String?
+
+    /// Embedded C/C++ boilerplate from fsm:boilerplate element.
+    ///
+    /// When converting from C/C++ machines to SCXML, the original C/C++
+    /// boilerplate (includes, variables, functions) is embedded in the SCXML
+    /// document using the fsm: namespace. This allows full round-trip conversion
+    /// without data loss.
+    ///
+    /// **Note**: This is deprecated in favor of `genericSections` which provides
+    /// language-independent storage.
+    @available(*, deprecated, message: "Use genericSections for language-independent storage")
+    public var embeddedCBoilerplate: CBoilerplate?
+
+    /// Generic boilerplate sections for round-trip conversion.
+    ///
+    /// This property stores boilerplate sections in a language-independent format,
+    /// enabling round-trip conversion between any language binding and SCXML.
+    /// Sections are stored in the fsm: namespace during XML serialization.
+    public var genericSections: [StandardBoilerplateSection: String]?
+
     // MARK: - Layout and Visual Metadata
 
     /// Tool-specific visual metadata (layout, colors, etc.).
@@ -176,6 +202,9 @@ public struct SCXMLBoilerplate: Boilerplate, Equatable, Codable {
         self.datamodel = "null"
         self.binding = "early"
         self.name = nil
+        self.targetLanguage = nil
+        self.embeddedCBoilerplate = nil
+        self.genericSections = nil
         self.visualMetadata = [:]
         self.unknownElements = [:]
     }
@@ -192,6 +221,9 @@ public struct SCXMLBoilerplate: Boilerplate, Equatable, Codable {
     ///   - datamodel: Datamodel type (default: "null")
     ///   - binding: Binding semantics (default: "early")
     ///   - name: Machine name (default: nil)
+    ///   - targetLanguage: Target language for code generation (default: nil)
+    ///   - embeddedCBoilerplate: Embedded C/C++ boilerplate (default: nil, deprecated)
+    ///   - genericSections: Generic boilerplate sections (default: nil)
     ///   - visualMetadata: Visual metadata (default: empty)
     ///   - unknownElements: Unknown elements (default: empty)
     public init(
@@ -204,6 +236,9 @@ public struct SCXMLBoilerplate: Boilerplate, Equatable, Codable {
         datamodel: String = "null",
         binding: String = "early",
         name: String? = nil,
+        targetLanguage: String? = nil,
+        embeddedCBoilerplate: CBoilerplate? = nil,
+        genericSections: [StandardBoilerplateSection: String]? = nil,
         visualMetadata: [String: String] = [:],
         unknownElements: [String: String] = [:]
     ) {
@@ -217,6 +252,9 @@ public struct SCXMLBoilerplate: Boilerplate, Equatable, Codable {
         self.datamodel = datamodel
         self.binding = binding
         self.name = name
+        self.targetLanguage = targetLanguage
+        self.embeddedCBoilerplate = embeddedCBoilerplate
+        self.genericSections = genericSections
         self.visualMetadata = visualMetadata
         self.unknownElements = unknownElements
     }

@@ -13,6 +13,7 @@ macOS and Linux and is designed for research and production use.
   transitions, state activities, language bindings, and code generation.
 - **fsmconvert**: Command-line tool for converting machines between
   language formats and creating arrangements from multiple FSMs.
+- **SCXML Support**: Full round-trip conversion between directory-based `.machine` and single-file `.scxml` formats.
 
 ## Features
 
@@ -23,8 +24,8 @@ macOS and Linux and is designed for research and production use.
 - Arrangements for composing multiple FSMs into coordinated systems
 - CMake build system integration for generated code
 - Layout and geometry types for graphical FSM editors
-- Round-trip serialisation via `.machine` and `.arrangement` directory
-  bundles
+- Round-trip serialisation via `.machine`, `.arrangement`, and `.scxml` formats
+- Multi-namespace SCXML compatible with ScxmlEditor, Qt Creator, and other tools
 
 ## Installation
 
@@ -75,6 +76,12 @@ Convert a machine to a different language format:
 swift run fsmconvert MyMachine.machine -f c -o MyMachine_C.machine
 ```
 
+Convert a machine to SCXML format:
+
+```bash
+swift run fsmconvert MyMachine.machine -f scxml -o MyMachine.scxml
+```
+
 Create an arrangement from multiple machines:
 
 ```bash
@@ -101,6 +108,11 @@ The `examples/` directory contains pre-built machines and arrangements:
 See `examples/README.md` for detailed descriptions.
 
 ## Documentation
+
+Generate DocC documentation locally:
+
+### Format-Specific Documentation
+- [SCXML.md](SCXML.md) - SCXML support and usage guide
 
 Generate DocC documentation locally:
 

@@ -83,6 +83,71 @@ public struct ObjCPPBinding: OutputLanguage {
         boilerplateofObjCPPState(stateName, of: machineWrapper)
     }
 
+    // MARK: - Section-Based Boilerplate Access
+
+    /// Extract all sections from CBoilerplate.
+    ///
+    /// ObjC++ uses the same boilerplate structure as C.
+    ///
+    /// - Parameter boilerplate: The boilerplate to extract sections from.
+    /// - Returns: Dictionary mapping section names to their content.
+    public func extractSections(from boilerplate: any Boilerplate) -> [StandardBoilerplateSection: String] {
+        guard let cBoilerplate = boilerplate as? CBoilerplate else {
+            return [:]  // Can't extract from unknown type
+        }
+
+        var sections: [StandardBoilerplateSection: String] = [:]
+        for section in StandardBoilerplateSection.allCases {
+            if let sectionName = CBoilerplate.SectionName(rawValue: section.rawValue),
+               let content = cBoilerplate.sections[sectionName] {
+                sections[section] = content
+            }
+        }
+        return sections
+    }
+
+    /// Extract sections from state boilerplate.
+    ///
+    /// For ObjCPPBinding, state sections use the same structure as machine sections.
+    ///
+    /// - Parameters:
+    ///   - boilerplate: The state boilerplate to extract sections from.
+    ///   - stateName: The name of the state.
+    /// - Returns: Dictionary mapping section names to their content.
+    public func extractStateSections(
+        from boilerplate: any Boilerplate,
+        stateName: StateName
+    ) -> [StandardBoilerplateSection: String] {
+        // For ObjCPPBinding, state boilerplate uses same structure
+        return extractSections(from: boilerplate)
+    }
+
+    /// Extract activities from ObjCPPBoilerplate (which is CBoilerplate).
+    @inlinable
+    public func extractActivities(from boilerplate: any Boilerplate, stateName: StateName) -> [String]? {
+        guard let cBoilerplate = boilerplate as? CBoilerplate else { return nil }
+
+        // Find the last section that exists (is not nil)
+        guard let lastIndex = CBinding.activitySections.lastIndex(where: { cBoilerplate.sections[$0] != nil }) else {
+            return nil  // No sections exist
+        }
+
+        // Build array up to and including the last existing section
+        return CBinding.activitySections.prefix(lastIndex + 1).map { cBoilerplate.sections[$0] ?? "" }
+    }
+
+    /// Create ObjCPPBoilerplate (which is CBoilerplate) from activities.
+    @inlinable
+    public func createStateBoilerplate(from activities: [String], stateName: StateName) -> any Boilerplate {
+        var boilerplate = CBoilerplate()
+
+        for (activity, section) in zip(activities, CBinding.activitySections) {
+            boilerplate.sections[section] = activity
+        }
+
+        return boilerplate
+    }
+
     /// Objective-C++ binding from URL and state name to number of transitions.
     ///
     /// This URL-based closure provides backward compatibility for reading

@@ -44,15 +44,23 @@ public final class SCXMLWriter {
         // XML declaration
         xml += "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
 
-        // SCXML root element
+        // SCXML root element with multi-namespace support
         xml += "<scxml"
         xml += " xmlns=\"http://www.w3.org/2005/07/scxml\""
+        xml += " xmlns:fsm=\"http://mipal.net.au/fsmlib\""
+        xml += " xmlns:qt=\"http://www.qt.io/2015/02/scxml-ext\""
+        xml += " xmlns:se=\"http://scxmleditor.sf.net\""
         xml += " version=\"\(scxmlBoilerplate.scxmlVersion)\""
         xml += " datamodel=\"\(scxmlBoilerplate.datamodel)\""
         xml += " binding=\"\(scxmlBoilerplate.binding)\""
 
         if let name = scxmlBoilerplate.name {
             xml += " name=\"\(name.xmlEscaped)\""
+        }
+
+        // FSMLib language attribute for round-trip conversion
+        if let targetLanguage = scxmlBoilerplate.targetLanguage {
+            xml += " fsm:language=\"\(targetLanguage.xmlEscaped)\""
         }
 
         // Initial state
@@ -64,6 +72,11 @@ public final class SCXMLWriter {
 
         xml += ">\n"
         indentLevel += 1
+
+        // FSMLib boilerplate for round-trip conversion
+        if let genericSections = scxmlBoilerplate.genericSections, !genericSections.isEmpty {
+            xml += generateFSMLibBoilerplateFromSections(genericSections)
+        }
 
         // Datamodel
         if !scxmlBoilerplate.dataDeclarations.isEmpty {
@@ -118,17 +131,60 @@ public final class SCXMLWriter {
         String(repeating: indentString, count: indentLevel)
     }
 
+    /// Generate FSMLib boilerplate section for C/C++ round-trip conversion.
+    private func generateFSMLibBoilerplate(_ cBoilerplate: CBoilerplate) -> String {
+        var xml = ""
+
+        xml += indent() + "<fsm:boilerplate>\n"
+        indentLevel += 1
+
+        // Include path
+        if let includePath = cBoilerplate.sections[.includePath], !includePath.isEmpty {
+            xml += indent() + "<fsm:includePath><![CDATA[\n"
+            xml += includePath
+            if !includePath.hasSuffix("\n") { xml += "\n" }
+            xml += indent() + "]]></fsm:includePath>\n"
+        }
+
+        // Includes
+        if let includes = cBoilerplate.sections[.includes], !includes.isEmpty {
+            xml += indent() + "<fsm:includes><![CDATA[\n"
+            xml += includes
+            if !includes.hasSuffix("\n") { xml += "\n" }
+            xml += indent() + "]]></fsm:includes>\n"
+        }
+
+        // Variables
+        if let variables = cBoilerplate.sections[.variables], !variables.isEmpty {
+            xml += indent() + "<fsm:variables><![CDATA[\n"
+            xml += variables
+            if !variables.hasSuffix("\n") { xml += "\n" }
+            xml += indent() + "]]></fsm:variables>\n"
+        }
+
+        // Functions
+        if let functions = cBoilerplate.sections[.functions], !functions.isEmpty {
+            xml += indent() + "<fsm:functions><![CDATA[\n"
+            xml += functions
+            if !functions.hasSuffix("\n") { xml += "\n" }
+            xml += indent() + "]]></fsm:functions>\n"
+        }
+
+        indentLevel -= 1
+        xml += indent() + "</fsm:boilerplate>\n"
+
+        return xml
+    }
+
     private func generateFromGenericMachine(_ machine: Machine) throws -> String {
         // Generate basic SCXML from non-SCXML machine
-        var boilerplate = SCXMLBoilerplate()
-        boilerplate.name = "Machine"
-        boilerplate.datamodel = "null"
-
         indentLevel = 0
         var xml = ""
 
         xml += "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-        xml += "<scxml xmlns=\"http://www.w3.org/2005/07/scxml\" version=\"1.0\" datamodel=\"null\""
+        xml += "<scxml xmlns=\"http://www.w3.org/2005/07/scxml\""
+        xml += " xmlns:fsm=\"http://mipal.net.au/fsmlib\""
+        xml += " version=\"1.0\" datamodel=\"null\""
 
         if let initialState = machine.llfsm.states.first,
             let initialStateName = machine.llfsm.stateName(for: initialState)
@@ -139,14 +195,60 @@ public final class SCXMLWriter {
         xml += ">\n"
         indentLevel += 1
 
+        // Embed machine boilerplate sections if they exist
+        let machineSections = machine.language.extractSections(from: machine.boilerplate)
+        if !machineSections.isEmpty {
+            xml += generateFSMLibBoilerplateFromSections(machineSections)
+        }
+
         for stateID in machine.llfsm.states {
             guard let state = machine.llfsm.stateMap[stateID] else { continue }
-            xml += try generateState(state, machine: machine)
+            xml += try generateStateWithActivities(state, machine: machine)
         }
 
         indentLevel -= 1
         xml += "</scxml>\n"
 
+        return xml
+    }
+
+    /// Generate FSMLib extension sections from generic sections dictionary.
+    ///
+    /// This writes extension sections (non-standard SCXML sections) as `<fsm:section name="...">`.
+    /// Standard SCXML sections (onEntry, onExit) are NOT written here - they're handled
+    /// in state generation.
+    ///
+    /// Extension sections include:
+    /// - includePath, includes, variables, functions (machine boilerplate)
+    /// - internal, onSuspend, onResume (state activities not in standard SCXML)
+    ///
+    /// IMPORTANT: Empty sections are preserved for round-trip fidelity.
+    private func generateFSMLibBoilerplateFromSections(_ sections: [StandardBoilerplateSection: String]) -> String {
+        // Define which sections are extensions (not standard SCXML)
+        let extensionSections: Set<StandardBoilerplateSection> = [
+            .includePath, .includes, .variables, .functions,
+            .internal, .onSuspend, .onResume
+        ]
+
+        // Filter to only extension sections (preserve empty strings!)
+        let filteredSections = sections.filter { extensionSections.contains($0.key) }
+        guard !filteredSections.isEmpty else { return "" }
+
+        var xml = indent() + "<fsm:boilerplate>\n"
+        indentLevel += 1
+
+        for section in StandardBoilerplateSection.allCases where extensionSections.contains(section) {
+            if let content = sections[section] {
+                // Write section even if empty - preserve for round-trip
+                xml += indent() + "<fsm:section name=\"\(section.rawValue)\"><![CDATA[\n"
+                xml += content
+                if !content.hasSuffix("\n") { xml += "\n" }
+                xml += indent() + "]]></fsm:section>\n"
+            }
+        }
+
+        indentLevel -= 1
+        xml += indent() + "</fsm:boilerplate>\n"
         return xml
     }
 
@@ -189,14 +291,14 @@ public final class SCXMLWriter {
             xml += " initial=\"\(initialChildName.xmlEscaped)\""
         }
 
-        // Layout metadata (custom attributes for visual editors)
+        // Layout metadata for visual editors
+        // ScxmlEditor attributes (se: namespace)
         if let layout = machine.stateLayout[state.id] {
-            let x = layout.openLayout.topLeft.x
-            let y = layout.openLayout.topLeft.y
-            let width = layout.openLayout.dimensions.w
-            let height = layout.openLayout.dimensions.h
-            xml +=
-                " se:x=\"\(Int(x))\" se:y=\"\(Int(y))\" se:width=\"\(Int(width))\" se:height=\"\(Int(height))\""
+            let x = Int(layout.openLayout.topLeft.x)
+            let y = Int(layout.openLayout.topLeft.y)
+            let width = Int(layout.openLayout.dimensions.w)
+            let height = Int(layout.openLayout.dimensions.h)
+            xml += " se:x=\"\(x)\" se:y=\"\(y)\" se:width=\"\(width)\" se:height=\"\(height)\""
         }
 
         let hasChildren = metadata?.childStates != nil && metadata?.childStates?.isEmpty == false
@@ -210,13 +312,16 @@ public final class SCXMLWriter {
         xml += ">\n"
         indentLevel += 1
 
+        // Get state sections through language binding
+        let sections = machine.stateActivities(for: state.id)
+
         // OnEntry
-        if let actions = machine.activities.actions[state.id], !actions.onEntry.isEmpty {
+        if let onEntry = sections[.onEntry], !onEntry.isEmpty {
             xml += indent() + "<onentry>\n"
             indentLevel += 1
             xml += indent() + "<script>\n"
             indentLevel += 1
-            xml += indent() + actions.onEntry.xmlEscaped + "\n"
+            xml += indent() + onEntry.xmlEscaped + "\n"
             indentLevel -= 1
             xml += indent() + "</script>\n"
             indentLevel -= 1
@@ -224,16 +329,29 @@ public final class SCXMLWriter {
         }
 
         // OnExit
-        if let actions = machine.activities.actions[state.id], !actions.onExit.isEmpty {
+        if let onExit = sections[.onExit], !onExit.isEmpty {
             xml += indent() + "<onexit>\n"
             indentLevel += 1
             xml += indent() + "<script>\n"
             indentLevel += 1
-            xml += indent() + actions.onExit.xmlEscaped + "\n"
+            xml += indent() + onExit.xmlEscaped + "\n"
             indentLevel -= 1
             xml += indent() + "</script>\n"
             indentLevel -= 1
             xml += indent() + "</onexit>\n"
+        }
+
+        // FSMLib extension sections for complete round-trip support
+        // Use generic <fsm:section name="..."> for extension sections
+        // IMPORTANT: Preserve empty sections for round-trip fidelity
+        let extensionSections: [StandardBoilerplateSection] = [.internal, .onSuspend, .onResume]
+        for section in extensionSections {
+            if let content = sections[section] {
+                xml += indent() + "<fsm:section name=\"\(section.rawValue)\"><![CDATA[\n"
+                xml += content
+                if !content.hasSuffix("\n") { xml += "\n" }
+                xml += indent() + "]]></fsm:section>\n"
+            }
         }
 
         // Invocations
@@ -291,10 +409,9 @@ public final class SCXMLWriter {
 
     private func hasStateContent(_ state: State, machine: Machine) -> Bool {
         // Check if state has onentry/onexit actions
-        if let actions = machine.activities.actions[state.id] {
-            if !actions.onEntry.isEmpty || !actions.onExit.isEmpty {
-                return true
-            }
+        let sections = machine.stateActivities(for: state.id)
+        if sections.values.contains(where: { !$0.isEmpty }) {
+            return true
         }
 
         // Check if state has invocations
@@ -445,6 +562,80 @@ public final class SCXMLWriter {
         case .cancel(let sendId):
             xml += indent() + "<cancel sendid=\"\(sendId.xmlEscaped)\"/>\n"
         }
+
+        return xml
+    }
+
+    /// Generate a state with activities from a generic (non-SCXML) machine.
+    /// This extracts activities from state boilerplate via the language binding.
+    private func generateStateWithActivities(_ state: State, machine: Machine) throws -> String {
+        var xml = indent() + "<state id=\"\(state.name.xmlEscaped)\""
+
+        // Check if state has any content
+        let sections = machine.stateActivities(for: state.id)
+        let hasActivities = sections.values.contains(where: { !$0.isEmpty })
+        let hasTransitions = machine.llfsm.transitions.contains { transitionID in
+            guard let transition = machine.llfsm.transitionMap[transitionID] else { return false }
+            return transition.source == state.id
+        }
+
+        if !hasActivities && !hasTransitions {
+            xml += "/>\n"
+            return xml
+        }
+
+        xml += ">\n"
+        indentLevel += 1
+
+        // OnEntry
+        if let onEntry = sections[.onEntry], !onEntry.isEmpty {
+            xml += indent() + "<onentry>\n"
+            indentLevel += 1
+            xml += indent() + "<script><![CDATA[\n"
+            xml += onEntry
+            if !onEntry.hasSuffix("\n") { xml += "\n" }
+            xml += indent() + "]]></script>\n"
+            indentLevel -= 1
+            xml += indent() + "</onentry>\n"
+        }
+
+        // OnExit
+        if let onExit = sections[.onExit], !onExit.isEmpty {
+            xml += indent() + "<onexit>\n"
+            indentLevel += 1
+            xml += indent() + "<script><![CDATA[\n"
+            xml += onExit
+            if !onExit.hasSuffix("\n") { xml += "\n" }
+            xml += indent() + "]]></script>\n"
+            indentLevel -= 1
+            xml += indent() + "</onexit>\n"
+        }
+
+        // FSMLib extension sections for complete round-trip support
+        // Use generic <fsm:section name="..."> for extension sections
+        // IMPORTANT: Preserve empty sections for round-trip fidelity
+        let extensionSections: [StandardBoilerplateSection] = [.internal, .onSuspend, .onResume]
+        for section in extensionSections {
+            if let content = sections[section] {
+                xml += indent() + "<fsm:section name=\"\(section.rawValue)\"><![CDATA[\n"
+                xml += content
+                if !content.hasSuffix("\n") { xml += "\n" }
+                xml += indent() + "]]></fsm:section>\n"
+            }
+        }
+
+        // Transitions
+        for transitionID in machine.llfsm.transitions {
+            guard let transition = machine.llfsm.transitionMap[transitionID],
+                transition.source == state.id
+            else {
+                continue
+            }
+            xml += try generateBasicTransition(transition, machine: machine)
+        }
+
+        indentLevel -= 1
+        xml += indent() + "</state>\n"
 
         return xml
     }

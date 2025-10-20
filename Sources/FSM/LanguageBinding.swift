@@ -6,6 +6,38 @@
 //
 import Foundation
 
+/// Standard boilerplate sections supported across all language bindings.
+///
+/// These sections define the common boilerplate structure used for both
+/// machine-level and state-level code generation. Language bindings can
+/// extract and create boilerplate using these standardized sections,
+/// enabling format-independent conversion and round-trip preservation.
+public enum StandardBoilerplateSection: String, CaseIterable, Codable {
+    // Common sections (valid for both machines and states)
+
+    /// Include path for header files
+    case includePath
+    /// Code containing `#include` or `import` directives
+    case includes
+    /// Variable and member declarations
+    case variables
+    /// Function and method definitions
+    case functions
+
+    // State activity sections
+
+    /// Code executed when entering a state
+    case onEntry
+    /// Code executed when exiting a state
+    case onExit
+    /// Internal state processing code
+    case `internal`
+    /// Code executed when suspending a state machine
+    case onSuspend
+    /// Code executed when resuming a state machine
+    case onResume
+}
+
 /// Import/Export binding for a particular programming language
 public protocol LanguageBinding: Equatable {
     /// The canonical name of the language binding.
@@ -60,6 +92,85 @@ public protocol LanguageBinding: Equatable {
     /// - Parameter machineWrapper: The machine wrapper to read from.
     /// - Returns: The window layout for the given machine.
     func windowLayout(for machineWrapper: MachineWrapper) -> Data?
+
+    // MARK: - Section-Based Boilerplate Access
+
+    /// Extract all sections from machine boilerplate.
+    ///
+    /// This method extracts boilerplate sections into a standardized dictionary format,
+    /// enabling format-independent conversion between language bindings.
+    ///
+    /// - Parameter boilerplate: The machine boilerplate to extract sections from.
+    /// - Returns: Dictionary mapping section names to their content.
+    func extractSections(from boilerplate: any Boilerplate) -> [StandardBoilerplateSection: String]
+
+    /// Extract all sections from state boilerplate.
+    ///
+    /// This method extracts state-specific boilerplate sections into a standardized
+    /// dictionary format.
+    ///
+    /// - Parameters:
+    ///   - boilerplate: The state boilerplate to extract sections from.
+    ///   - stateName: The name of the state.
+    /// - Returns: Dictionary mapping section names to their content.
+    func extractStateSections(
+        from boilerplate: any Boilerplate,
+        stateName: StateName
+    ) -> [StandardBoilerplateSection: String]
+
+    /// Create machine boilerplate from sections.
+    ///
+    /// This method creates a boilerplate object from a standardized sections dictionary.
+    /// The default implementation builds a CBoilerplate with the provided sections.
+    ///
+    /// - Parameter sections: Dictionary mapping section names to their content.
+    /// - Returns: Boilerplate object appropriate for this language binding.
+    func createBoilerplate(from sections: [StandardBoilerplateSection: String]) -> any Boilerplate
+
+    /// Create state boilerplate from sections.
+    ///
+    /// This method creates state-specific boilerplate from a standardized sections dictionary.
+    /// The default implementation builds a CBoilerplate with the provided sections.
+    ///
+    /// - Parameters:
+    ///   - sections: Dictionary mapping section names to their content.
+    ///   - stateName: The name of the state.
+    /// - Returns: State boilerplate object appropriate for this language binding.
+    func createStateBoilerplate(
+        from sections: [StandardBoilerplateSection: String],
+        stateName: StateName
+    ) -> any Boilerplate
+
+    /// Convert machine boilerplate from another language binding.
+    ///
+    /// This method converts boilerplate from one language binding to another through
+    /// the standardized sections dictionary. The default implementation extracts
+    /// sections from the source and creates new boilerplate for this binding.
+    ///
+    /// - Parameters:
+    ///   - source: The source boilerplate to convert.
+    ///   - sourceLanguage: The language binding that created the source boilerplate.
+    /// - Returns: Boilerplate object appropriate for this language binding.
+    func convertBoilerplate(
+        from source: any Boilerplate,
+        sourceLanguage: any LanguageBinding
+    ) -> any Boilerplate
+
+    /// Convert state boilerplate from another language binding.
+    ///
+    /// This method converts state-specific boilerplate from one language binding to
+    /// another through the standardized sections dictionary.
+    ///
+    /// - Parameters:
+    ///   - source: The source state boilerplate to convert.
+    ///   - sourceLanguage: The language binding that created the source boilerplate.
+    ///   - stateName: The name of the state.
+    /// - Returns: State boilerplate object appropriate for this language binding.
+    func convertStateBoilerplate(
+        from source: any Boilerplate,
+        sourceLanguage: any LanguageBinding,
+        stateName: StateName
+    ) -> any Boilerplate
 }
 
 /// Default implementations
@@ -80,6 +191,63 @@ public extension LanguageBinding {
     @inlinable
     func windowLayout(for machineWrapper: MachineWrapper) -> Data? {
         machineWrapper.fileWrappers?[.windowLayout]?.regularFileContents
+    }
+
+    // MARK: - Default Section-Based Implementations
+
+    /// Default implementation: Build CBoilerplate with sections.
+    ///
+    /// This default implementation creates a CBoilerplate object populated with
+    /// the provided sections. Language bindings can override this to create
+    /// their own boilerplate types.
+    func createBoilerplate(from sections: [StandardBoilerplateSection: String]) -> any Boilerplate {
+        var boilerplate = CBoilerplate()
+        for (section, content) in sections {
+            if let sectionName = CBoilerplate.SectionName(rawValue: section.rawValue) {
+                boilerplate.sections[sectionName] = content
+            }
+        }
+        return boilerplate
+    }
+
+    /// Default implementation: Build CBoilerplate with sections for states.
+    ///
+    /// This default implementation creates a CBoilerplate object for state-specific
+    /// boilerplate. For most language bindings, state boilerplate uses the same
+    /// structure as machine boilerplate.
+    func createStateBoilerplate(
+        from sections: [StandardBoilerplateSection: String],
+        stateName: StateName
+    ) -> any Boilerplate {
+        // Default: states use same structure as machines
+        return createBoilerplate(from: sections)
+    }
+
+    /// Default implementation: Convert boilerplate through sections dictionary.
+    ///
+    /// This default implementation converts boilerplate from one language binding
+    /// to another by extracting sections from the source and creating new boilerplate
+    /// for this binding.
+    func convertBoilerplate(
+        from source: any Boilerplate,
+        sourceLanguage: any LanguageBinding
+    ) -> any Boilerplate {
+        let sections = sourceLanguage.extractSections(from: source)
+        return createBoilerplate(from: sections)
+    }
+
+    /// Default implementation: Convert state boilerplate through sections.
+    ///
+    /// This default implementation converts state-specific boilerplate from one
+    /// language binding to another by extracting sections and creating new
+    /// state boilerplate.
+    func convertStateBoilerplate(
+        from source: any Boilerplate,
+        sourceLanguage: any LanguageBinding,
+        stateName: StateName
+    ) -> any Boilerplate {
+        let sections = sourceLanguage.extractStateSections(from: source, stateName: stateName)
+        return createStateBoilerplate(from: sections, stateName: stateName)
     }
 }
 

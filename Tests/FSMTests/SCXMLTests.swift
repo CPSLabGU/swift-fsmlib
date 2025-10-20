@@ -89,15 +89,14 @@ final class SCXMLTests: XCTestCase {
         XCTAssertEqual(machine.llfsm.states.count, 1)
 
         // Find the Active state
-        guard let activeState = machine.llfsm.states.first,
-            let actions = machine.activities.actions[activeState]
-        else {
-            XCTFail("Expected state actions")
+        guard let activeState = machine.llfsm.states.first else {
+            XCTFail("Expected state")
             return
         }
 
-        XCTAssertTrue(actions.onEntry.contains("Entered Active"))
-        XCTAssertTrue(actions.onExit.contains("Exited Active"))
+        let sections = machine.stateActivities(for: activeState)
+        XCTAssertTrue(sections[StandardBoilerplateSection.onEntry]?.contains("Entered Active") ?? false)
+        XCTAssertTrue(sections[StandardBoilerplateSection.onExit]?.contains("Exited Active") ?? false)
     }
 
     /// Test parsing SCXML with event-driven transitions
@@ -190,13 +189,10 @@ final class SCXMLTests: XCTestCase {
             suspendState: nil
         )
 
-        machine.activities.actions[state.id] = [
-            "console.log('entry');",
-            "console.log('exit');",
-            "",
-            "",
-            "",
-        ]
+        machine.setStateActivities([
+            StandardBoilerplateSection.onEntry: "console.log('entry');",
+            StandardBoilerplateSection.onExit: "console.log('exit');",
+        ], for: state.id)
 
         let boilerplate = SCXMLBoilerplate()
         machine.boilerplate = boilerplate

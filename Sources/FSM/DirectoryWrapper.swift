@@ -32,7 +32,7 @@ open class DirectoryWrapper: FileWrapper {
     /// The directory name without the file extension,
     /// useful for converting to types or identifiers
     /// or for display or other processing purposes.
-    @usableFromInline var name: String {
+    public var name: String {
         let dirName = directoryName
         return dirName.lastIndex(of: ".").map {
             String(dirName[dirName.startIndex..<$0])

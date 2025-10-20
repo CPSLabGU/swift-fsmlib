@@ -24,12 +24,40 @@ public enum Format: String, RawRepresentable, Hashable, CaseIterable, Codable {
     case objCX = "objc++"
     /// An Objective-C++ FSM
     case objCPP = "objcpp"
+    /// An SCXML FSM
+    case scxml
     /// A Swift FSM
     case swift
     /// A Verilog FSM
     case verilog
     /// A VHDL FSM
     case vhdl
+
+    /// Return the file extension for this format.
+    public var fileExtension: String {
+        switch self {
+        case .scxml:
+            return rawValue
+        case .c, .cx, .cpp, .cxx, .objC, .objCX, .objCPP:
+            return "machine"
+        case .swift:
+            return "swift.machine"
+        case .verilog:
+            return "verilog.machine"
+        case .vhdl:
+            return "vhdl.machine"
+        }
+    }
+
+    /// Return whether this format uses single-file storage (vs directory-based).
+    public var isSingleFile: Bool {
+        switch self {
+        case .scxml:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 /// Format to language binding mapping.
@@ -41,6 +69,7 @@ public enum Format: String, RawRepresentable, Hashable, CaseIterable, Codable {
     .objC: ObjCPPBinding(),
     .objCX: ObjCPPBinding(),
     .objCPP: ObjCPPBinding(),
+    .scxml: SCXMLBinding(),
     //    .swift: SwiftBinding(),
     //    .verilog: VerilogBinding(),
     //    .vhdl: VHDLBinding(),

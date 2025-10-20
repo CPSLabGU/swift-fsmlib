@@ -56,7 +56,7 @@ public final class SCXMLParser: NSObject {
     private var stateMetadata: SCXMLStateMetadataMap = [:]
     private var transitionMetadata: SCXMLTransitionMetadataMap = [:]
     private var boilerplate: SCXMLBoilerplate = SCXMLBoilerplate()
-    private var activities: StateActivitiesSourceCode = StateActivitiesSourceCode()
+    private var stateBoilerplate: [StateID: any Boilerplate] = [:]
     private var stateLayouts: StateLayouts = [:]
     private var transitionLayouts: TransitionLayouts = [:]
 
@@ -84,6 +84,9 @@ public final class SCXMLParser: NSObject {
 
         // Parse scxml attributes
         try parseScxmlAttributes(root)
+
+        // Parse FSMLib boilerplate (fsm: namespace)
+        parseFSMLibBoilerplate(root)
 
         // Parse datamodel
         if let datamodelElem = root.elements(forName: "datamodel").first {
@@ -117,9 +120,10 @@ public final class SCXMLParser: NSObject {
 
         // Create Machine
         let machine = Machine()
+        machine.language = SCXMLBinding()
         machine.llfsm = llfsm
         machine.boilerplate = boilerplate
-        machine.activities = activities
+        machine.stateBoilerplate = stateBoilerplate
         machine.stateLayout = stateLayouts
         machine.transitionLayout = transitionLayouts
 
@@ -146,7 +150,7 @@ public final class SCXMLParser: NSObject {
         stateMetadata = [:]
         transitionMetadata = [:]
         boilerplate = SCXMLBoilerplate()
-        activities = StateActivitiesSourceCode()
+        stateBoilerplate = [:]
         stateLayouts = [:]
         transitionLayouts = [:]
     }
@@ -166,6 +170,69 @@ public final class SCXMLParser: NSObject {
 
         // Binding (optional, defaults to "early")
         boilerplate.binding = element.attributeValue(forName: "binding") ?? "early"
+
+        // FSMLib language attribute (fsm:language)
+        boilerplate.targetLanguage = element.attributeValue(forName: "fsm:language")
+    }
+
+    private func parseFSMLibBoilerplate(_ root: XMLElement) {
+
+        // Look for fsm:boilerplate element
+        for child in root.children ?? [] {
+            guard let elem = child as? XMLElement,
+                  elem.name == "fsm:boilerplate" || elem.name == "boilerplate"
+            else {
+                continue
+            }
+
+
+            // Parse generic fsm:section elements
+            // IMPORTANT: Preserve empty sections for round-trip fidelity
+            var genericSections: [StandardBoilerplateSection: String] = [:]
+
+            let fsmSections = elem.elements(forName: "fsm:section")
+
+            for sectionElem in fsmSections {
+                guard let sectionName = sectionElem.attributeValue(forName: "name"),
+                      let section = StandardBoilerplateSection(rawValue: sectionName) else {
+                    continue
+                }
+                // Preserve empty content (don't filter out empty strings)
+                let content = sectionElem.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                genericSections[section] = content
+            }
+
+            // Also support old format for backwards compatibility
+            // IMPORTANT: Preserve empty sections
+            // Parse fsm:includePath (legacy)
+            if let includePathElem = elem.elements(forName: "fsm:includePath").first ?? elem.elements(forName: "includePath").first {
+                let content = includePathElem.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                genericSections[.includePath] = content
+            }
+
+            // Parse fsm:includes (legacy)
+            if let includesElem = elem.elements(forName: "fsm:includes").first ?? elem.elements(forName: "includes").first {
+                let content = includesElem.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                genericSections[.includes] = content
+            }
+
+            // Parse fsm:variables (legacy)
+            if let variablesElem = elem.elements(forName: "fsm:variables").first ?? elem.elements(forName: "variables").first {
+                let content = variablesElem.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                genericSections[.variables] = content
+            }
+
+            // Parse fsm:functions (legacy)
+            if let functionsElem = elem.elements(forName: "fsm:functions").first ?? elem.elements(forName: "functions").first {
+                let content = functionsElem.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                genericSections[.functions] = content
+            }
+
+            if !genericSections.isEmpty {
+                boilerplate.genericSections = genericSections
+            }
+            break
+        }
     }
 
     private func parseDatamodel(_ element: XMLElement) throws {
@@ -291,29 +358,79 @@ public final class SCXMLParser: NSObject {
     }
 
     private func parseStateActions(_ element: XMLElement, stateID: StateID) throws {
-        // Parse onentry
-        var onEntryCode = ""
-        for onentryElem in element.elements(forName: "onentry") {
-            let actions = try parseExecutableContent(onentryElem)
-            onEntryCode += executableActionsToCode(actions)
+        // Store state activities in SCXMLBoilerplate with genericSections
+        var genericSections: [StandardBoilerplateSection: String] = [:]
+
+        // Parse onentry (standard SCXML)
+        let onentryElems = element.elements(forName: "onentry")
+        if !onentryElems.isEmpty {
+            var onEntryCode = ""
+            for onentryElem in onentryElems {
+                let actions = try parseExecutableContent(onentryElem)
+                onEntryCode += executableActionsToCode(actions)
+            }
+            genericSections[.onEntry] = onEntryCode
         }
 
-        // Parse onexit
-        var onExitCode = ""
-        for onexitElem in element.elements(forName: "onexit") {
-            let actions = try parseExecutableContent(onexitElem)
-            onExitCode += executableActionsToCode(actions)
+        // Parse onexit (standard SCXML)
+        let onexitElems = element.elements(forName: "onexit")
+        if !onexitElems.isEmpty {
+            var onExitCode = ""
+            for onexitElem in onexitElems {
+                let actions = try parseExecutableContent(onexitElem)
+                onExitCode += executableActionsToCode(actions)
+            }
+            genericSections[.onExit] = onExitCode
         }
 
-        // Store activities as array [onEntry, onExit, internal, onSuspend, onResume]
-        var stateActions: [String] = []
-        stateActions.append(onEntryCode)
-        stateActions.append(onExitCode)
-        stateActions.append("")  // internal (not used in SCXML typically)
-        stateActions.append("")  // onSuspend
-        stateActions.append("")  // onResume
+        // Parse generic FSMLib extension sections (new format)
+        for sectionElem in element.elements(forName: "fsm:section") {
+            guard let sectionName = sectionElem.attributeValue(forName: "name"),
+                  let section = StandardBoilerplateSection(rawValue: sectionName),
+                  let content = sectionElem.stringValue else {
+                continue
+            }
+            genericSections[section] = content
+        }
 
-        activities.actions[stateID] = stateActions
+        // Parse FSMLib extensions (legacy format for backwards compatibility)
+        let internalElems = element.elements(forName: "fsm:internal")
+        if !internalElems.isEmpty {
+            var internalCode = ""
+            for internalElem in internalElems {
+                if let code = internalElem.stringValue {
+                    internalCode += code
+                }
+            }
+            genericSections[.internal] = internalCode
+        }
+
+        let suspendElems = element.elements(forName: "fsm:onSuspend")
+        if !suspendElems.isEmpty {
+            var onSuspendCode = ""
+            for suspendElem in suspendElems {
+                if let code = suspendElem.stringValue {
+                    onSuspendCode += code
+                }
+            }
+            genericSections[.onSuspend] = onSuspendCode
+        }
+
+        let resumeElems = element.elements(forName: "fsm:onResume")
+        if !resumeElems.isEmpty {
+            var onResumeCode = ""
+            for resumeElem in resumeElems {
+                if let code = resumeElem.stringValue {
+                    onResumeCode += code
+                }
+            }
+            genericSections[.onResume] = onResumeCode
+        }
+
+        // Create SCXMLBoilerplate for state
+        var scxmlBoilerplate = SCXMLBoilerplate()
+        scxmlBoilerplate.genericSections = genericSections.isEmpty ? nil : genericSections
+        stateBoilerplate[stateID] = scxmlBoilerplate
     }
 
     private func parseExecutableContent(_ parent: XMLElement) throws -> [ExecutableAction] {

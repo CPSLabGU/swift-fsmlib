@@ -11,6 +11,9 @@ public struct CBinding: OutputLanguage {
     /// The canonical name of the language binding.
     public let name = Format.c.rawValue
 
+    /// Ordered list of activity sections for state boilerplate
+    public static let activitySections: [CBoilerplate.SectionName] = [.onEntry, .onExit, .internal, .onSuspend, .onResume]
+
     /// Designated initialiser.
     @inlinable
     public init() {}
@@ -79,6 +82,71 @@ public struct CBinding: OutputLanguage {
     @inlinable
     public func stateBoilerplate(for machineWrapper: MachineWrapper, stateName: StateName) -> any Boilerplate {
         boilerplateofCState(stateName, of: machineWrapper)
+    }
+
+    // MARK: - Section-Based Boilerplate Access
+
+    /// Extract all sections from CBoilerplate.
+    ///
+    /// - Parameter boilerplate: The boilerplate to extract sections from.
+    /// - Returns: Dictionary mapping section names to their content.
+    public func extractSections(from boilerplate: any Boilerplate) -> [StandardBoilerplateSection: String] {
+        guard let cBoilerplate = boilerplate as? CBoilerplate else {
+            return [:]  // Can't extract from unknown type
+        }
+
+        var sections: [StandardBoilerplateSection: String] = [:]
+        for section in StandardBoilerplateSection.allCases {
+            if let sectionName = CBoilerplate.SectionName(rawValue: section.rawValue),
+               let content = cBoilerplate.sections[sectionName] {
+                sections[section] = content
+            }
+        }
+        return sections
+    }
+
+    /// Extract sections from state boilerplate.
+    ///
+    /// For CBinding, state sections use the same structure as machine sections.
+    ///
+    /// - Parameters:
+    ///   - boilerplate: The state boilerplate to extract sections from.
+    ///   - stateName: The name of the state.
+    /// - Returns: Dictionary mapping section names to their content.
+    public func extractStateSections(
+        from boilerplate: any Boilerplate,
+        stateName: StateName
+    ) -> [StandardBoilerplateSection: String] {
+        // For CBinding, state boilerplate uses same structure
+        return extractSections(from: boilerplate)
+    }
+
+    /// Extract activities from CBoilerplate.
+    /// Returns array exactly long enough to include the last non-nil section.
+    @inlinable
+    public func extractActivities(from boilerplate: any Boilerplate, stateName: StateName) -> [String]? {
+        guard let cBoilerplate = boilerplate as? CBoilerplate else { return nil }
+
+        // Find the last section that exists (is not nil)
+        guard let lastIndex = Self.activitySections.lastIndex(where: { cBoilerplate.sections[$0] != nil }) else {
+            return nil  // No sections exist
+        }
+
+        // Build array up to and including the last existing section
+        return Self.activitySections.prefix(lastIndex + 1).map { cBoilerplate.sections[$0] ?? "" }
+    }
+
+    /// Create CBoilerplate from activities.
+    /// Array length determines which sections exist.
+    @inlinable
+    public func createStateBoilerplate(from activities: [String], stateName: StateName) -> any Boilerplate {
+        var boilerplate = CBoilerplate()
+
+        for (activity, section) in zip(activities, Self.activitySections) {
+            boilerplate.sections[section] = activity
+        }
+
+        return boilerplate
     }
 }
 

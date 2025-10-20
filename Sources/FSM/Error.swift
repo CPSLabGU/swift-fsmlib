@@ -13,6 +13,10 @@
 public enum FSMError: String, Error, RawRepresentable, Codable {
     /// Unsupported output format.
     case unsupportedOutputFormat = "Unsupported output format"
+    /// Unsupported input format.
+    case unsupportedInputFormat = "Unsupported input format"
     /// Not a directory
     case notADirectory = "Not a directory"
+    /// Not a regular file
+    case notARegularFile = "Not a regular file"
 }
