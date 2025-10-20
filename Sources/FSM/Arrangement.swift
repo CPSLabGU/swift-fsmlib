@@ -52,7 +52,7 @@ public struct Arrangement {
     @inlinable
     public init(from arrangementWrapper: ArrangementWrapper) throws {
         let instances = arrangementWrapper.fileWrappers?.compactMap { element in
-            MachineWrapper(element.value).map { Instance(name: element.key, typeFile: arrangementWrapper.name, machine: $0.machine) }
+            MachineDirectoryWrapper(element.value).map { Instance(name: element.key, typeFile: arrangementWrapper.name, machine: $0.machine) }
         } ?? []
         self.init(namedInstances: instances)
     }
@@ -105,7 +105,7 @@ public extension Arrangement {
         try language.addArrangementCMakeFile(for: instances, to: wrapper, isSuspensible: isSuspensible)
         try language.addArrangementMachine(instances: instances, to: wrapper, isSuspensible: isSuspensible)
         return machineFiles.map {
-            $0.hasSuffix(MachineWrapper.dottedSuffix) ? $0 : ($0 + MachineWrapper.dottedSuffix)
+            $0.hasSuffix(MachineDirectoryWrapper.dottedSuffix) ? $0 : ($0 + MachineDirectoryWrapper.dottedSuffix)
         }
     }
     /// Read the names of machines from the given ``ArrangementWrapper``.

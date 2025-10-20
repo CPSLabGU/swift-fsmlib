@@ -19,68 +19,86 @@ public struct ObjCPPBinding: OutputLanguage {
     /// Objective-C++ binding from URL and state name to number of transitions.
     ///
     /// - Parameters:
-    ///   - machineWrapper: The MachineWrapper to examine.
+    ///   - storage: The machine storage to examine.
     ///   - stateName: The name of the state to examine.
     /// - Returns: The number of transitions in the given state.
     @inlinable
-    public func numberOfTransitions(for machineWrapper: MachineWrapper, stateName: StateName) -> Int {
-        numberOfObjCPPTransitions(for: machineWrapper, state: stateName)
+    public func numberOfTransitions(for storage: any MachineStorage, stateName: StateName) -> Int {
+        guard let machineWrapper = storage.fileWrapper as? MachineDirectoryWrapper else {
+            return 0
+        }
+        return numberOfObjCPPTransitions(for: machineWrapper, state: stateName)
     }
 
     /// Objective-C++ binding from URL, state name, and transition to expression.
     ///
     /// - Parameters:
     ///   - transitionNumber: The transition number to examine.
-    ///   - machineWrapper: The MachineWrapper to examine.
+    ///   - storage: The machine storage to examine.
     ///   - stateName: The name of the state to examine.
     /// - Returns: The expression of the given transition.
     @inlinable
-    public func expression(of transitionNumber: Int, for machineWrapper: MachineWrapper, stateName: StateName) -> String {
-        expressionOfObjCPPTransition(transitionNumber, state: stateName, for: machineWrapper)
+    public func expression(of transitionNumber: Int, for storage: any MachineStorage, stateName: StateName) -> String {
+        guard let machineWrapper = storage.fileWrapper as? MachineDirectoryWrapper else {
+            return ""
+        }
+        return expressionOfObjCPPTransition(transitionNumber, state: stateName, for: machineWrapper)
     }
 
     /// Objective-C++ binding from URL, states, source state name, and transition to target state ID.
     ///
     /// - Parameters:
     ///   - transitionNumber: The transition number to examine.
-    ///   - machineWrapper: The MachineWrapper to examine.
+    ///   - storage: The machine storage to examine.
     ///   - stateName: The name of the state to examine.
     ///   - states: The states of the machine.
     /// - Returns: The target state ID of the given transition.
     @inlinable
-    public func target(of transitionNumber: Int, for machineWrapper: MachineWrapper, stateName: StateName, with states: [State]) -> StateID? {
-        targetOfObjCPPTransition(transitionNumber, state: stateName, for: machineWrapper, with: states)
+    public func target(of transitionNumber: Int, for storage: any MachineStorage, stateName: StateName, with states: [State]) -> StateID? {
+        guard let machineWrapper = storage.fileWrapper as? MachineDirectoryWrapper else {
+            return nil
+        }
+        return targetOfObjCPPTransition(transitionNumber, state: stateName, for: machineWrapper, with: states)
     }
 
     /// Objective-C++ binding from URL, states to suspend state ID.
     ///
     /// - Parameters:
-    ///   - machineWrapper: The MachineWrapper to examine.
+    ///   - storage: The machine storage to examine.
     ///   - states: The states of the machine.
     /// - Returns: The suspend state ID of the given machine.
     @inlinable
-    public func suspendState(for machineWrapper: MachineWrapper, states: [State]) -> StateID? {
-        suspendStateOfObjCPPMachine(machineWrapper, states: states)
+    public func suspendState(for storage: any MachineStorage, states: [State]) -> StateID? {
+        guard let machineWrapper = storage.fileWrapper as? MachineDirectoryWrapper else {
+            return nil
+        }
+        return suspendStateOfObjCPPMachine(machineWrapper, states: states)
     }
 
     /// Objective-C++ binding from URL to machine boilerplate.
     ///
-    /// - Parameter machineWrapper: The MachineWrapper to examine.
+    /// - Parameter storage: The machine storage to examine.
     /// - Returns: The boilerplate for the given machine.
     @inlinable
-    public func boilerplate(for machineWrapper: MachineWrapper) -> any Boilerplate {
-        boilerplateofObjCPPMachine(for: machineWrapper)
+    public func boilerplate(for storage: any MachineStorage) -> any Boilerplate {
+        guard let machineWrapper = storage.fileWrapper as? MachineDirectoryWrapper else {
+            return CBoilerplate()
+        }
+        return boilerplateofObjCPPMachine(for: machineWrapper)
     }
 
     /// Objective-C++ binding from URL and state name to state boilerplate.
     ///
     /// - Parameters:
-    ///   - machineWrapper: The MachineWrapper to examine.
+    ///   - storage: The machine storage to examine.
     ///   - stateName: The name of the state to examine.
     /// - Returns: The boilerplate for the given state.
     @inlinable
-    public func stateBoilerplate(for machineWrapper: MachineWrapper, stateName: StateName) -> any Boilerplate {
-        boilerplateofObjCPPState(stateName, of: machineWrapper)
+    public func stateBoilerplate(for storage: any MachineStorage, stateName: StateName) -> any Boilerplate {
+        guard let machineWrapper = storage.fileWrapper as? MachineDirectoryWrapper else {
+            return CBoilerplate()
+        }
+        return boilerplateofObjCPPState(stateName, of: machineWrapper)
     }
 
     // MARK: - Section-Based Boilerplate Access
@@ -96,14 +114,8 @@ public struct ObjCPPBinding: OutputLanguage {
             return [:]  // Can't extract from unknown type
         }
 
-        var sections: [StandardBoilerplateSection: String] = [:]
-        for section in StandardBoilerplateSection.allCases {
-            if let sectionName = CBoilerplate.SectionName(rawValue: section.rawValue),
-               let content = cBoilerplate.sections[sectionName] {
-                sections[section] = content
-            }
-        }
-        return sections
+        // CBoilerplate.sections now uses StandardBoilerplateSection directly
+        return cBoilerplate.sections
     }
 
     /// Extract sections from state boilerplate.
@@ -227,59 +239,71 @@ public struct ObjCPPBinding: OutputLanguage {
 /// - Note: This extension is intended for use with Objective-C++ bindings and
 ///         is not applicable to pure C or Swift FSMs.
 public extension ObjCPPBinding {
-    /// Add the given boilerplate to the given `MachineWrapper`.
+    /// Add the given boilerplate to the given machine storage.
     ///
     /// This function tries to convert the given boilerplate
     /// to an Objective-C++ boilerplate and then adds it
-    /// to the given `MachineWrapper`.
+    /// to the given machine storage.
     ///
     /// - Parameters:
     ///   - boilerplate: The boilerplate to add.
-    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - storage: The machine storage to add to.
     @inlinable
-    func add(boilerplate: any Boilerplate, to wrapper: MachineWrapper) throws {
-        CBoilerplate(boilerplate).add(to: wrapper)
+    func add(boilerplate: any Boilerplate, to storage: any MachineStorage) throws {
+        guard let machineWrapper = storage.fileWrapper as? MachineDirectoryWrapper else {
+            return
+        }
+        CBoilerplate(boilerplate).add(to: machineWrapper)
         // Add ObjC++ specific files (VarRefs.mm and FuncRefs.mm)
-        addObjCPPMachineBoilerplate(boilerplate, to: wrapper)
+        addObjCPPMachineBoilerplate(boilerplate, to: machineWrapper)
     }
     /// Write the given state boilerplate to the given URL
     /// - Parameters:
     ///   - stateBoilerplate: The boilerplate to add.
-    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - storage: The machine storage to add to.
     ///   - stateName: The name of the state to add the boilerplate for.
-    func add(stateBoilerplate: any Boilerplate, to wrapper: MachineWrapper, for stateName: String) throws {
-        CBoilerplate(stateBoilerplate).add(state: stateName, to: wrapper)
+    func add(stateBoilerplate: any Boilerplate, to storage: any MachineStorage, for stateName: String) throws {
+        guard let machineWrapper = storage.fileWrapper as? MachineDirectoryWrapper else {
+            return
+        }
+        CBoilerplate(stateBoilerplate).add(state: stateName, to: machineWrapper)
         // Add ObjC++ specific files (VarRefs.mm and FuncRefs.mm)
-        addObjCPPStateBoilerplate(stateBoilerplate, to: wrapper, for: stateName)
+        addObjCPPStateBoilerplate(stateBoilerplate, to: machineWrapper, for: stateName)
     }
-    /// Add the interface for the given LLFSM to the given `MachineWrapper`.
+    /// Add the interface for the given LLFSM to the given machine storage.
     ///
     /// This method adds the language interface (if any)
-    /// for the given finite-state machine to the given `MachineWrapper`.
+    /// for the given finite-state machine to the given machine storage.
     ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to add.
-    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - storage: The machine storage to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func addInterface(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
-        let name = wrapper.name
+    func addInterface(for llfsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws {
+        guard let machineWrapper = storage.fileWrapper as? MachineDirectoryWrapper else {
+            return
+        }
+        let name = storage.name
         let header = objcppMachineHeader(for: llfsm, named: name)
         let fileWrapper = fileWrapper(named: "\(name).h", from: header)
-        wrapper.replaceFileWrapper(fileWrapper)
+        machineWrapper.replaceFileWrapper(fileWrapper)
     }
-    /// Add the state interface for the given LLFSM to the given `MachineWrapper`.
+    /// Add the state interface for the given LLFSM to the given machine storage.
     ///
     /// This method adds the language interface (if any)
-    /// for the given finite-state machine to the given `MachineWrapper`.
+    /// for the given finite-state machine to the given machine storage.
     ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to add.
-    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - storage: The machine storage to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func addStateInterface(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
-        let name = wrapper.name
+    func addStateInterface(for fsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws {
+        guard let machineWrapper = storage.fileWrapper as? MachineDirectoryWrapper else {
+            return
+        }
+        let name = storage.name
         for stateID in fsm.states {
             guard let state = fsm.stateMap[stateID] else {
                 fputs("Warning: orphaned state ID \(stateID) for \(name)\n", stderr)
@@ -287,37 +311,43 @@ public extension ObjCPPBinding {
             }
             let header = objcppStateHeader(for: state, llfsm: fsm, named: name)
             let fileWrapper = fileWrapper(named: "State_\(state.name).h", from: header)
-            wrapper.replaceFileWrapper(fileWrapper)
+            machineWrapper.replaceFileWrapper(fileWrapper)
         }
     }
-    /// Add the code for the given LLFSM to the given `MachineWrapper`.
+    /// Add the code for the given LLFSM to the given machine storage.
     ///
     /// This method adds the implementation code
-    /// for the given finite-state machine to the given `MachineWrapper`.
+    /// for the given finite-state machine to the given machine storage.
     ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to add.
-    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - storage: The machine storage to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func addCode(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
-        let name = wrapper.name
+    func addCode(for llfsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws {
+        guard let machineWrapper = storage.fileWrapper as? MachineDirectoryWrapper else {
+            return
+        }
+        let name = storage.name
         let impl = objcppMachineImplementation(for: llfsm, named: name)
         let fileWrapper = fileWrapper(named: "\(name).mm", from: impl)
-        wrapper.replaceFileWrapper(fileWrapper)
+        machineWrapper.replaceFileWrapper(fileWrapper)
     }
-    /// Add the state code for the given LLFSM to the given `MachineWrapper`.
+    /// Add the state code for the given LLFSM to the given machine storage.
     ///
     /// This method adds the language interface (if any)
-    /// for the given finite-state machine to the given `MachineWrapper`.
+    /// for the given finite-state machine to the given machine storage.
     ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to add.
-    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - storage: The machine storage to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func addStateCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
-        let name = wrapper.name
+    func addStateCode(for fsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws {
+        guard let machineWrapper = storage.fileWrapper as? MachineDirectoryWrapper else {
+            return
+        }
+        let name = storage.name
         for stateID in fsm.states {
             guard let state = fsm.stateMap[stateID] else {
                 fputs("Warning: orphaned state ID \(stateID) for \(name)\n", stderr)
@@ -325,21 +355,24 @@ public extension ObjCPPBinding {
             }
             let impl = objcppStateImplementation(for: state, llfsm: fsm, named: name)
             let fileWrapper = fileWrapper(named: "State_\(state.name).mm", from: impl)
-            wrapper.replaceFileWrapper(fileWrapper)
+            machineWrapper.replaceFileWrapper(fileWrapper)
         }
     }
-    /// Add the transition expressions for the given LLFSM to the given `MachineWrapper`.
+    /// Add the transition expressions for the given LLFSM to the given machine storage.
     ///
     /// This method adds the transition expressions
-    /// for the given finite-state machine to the given `MachineWrapper`.
+    /// for the given finite-state machine to the given machine storage.
     ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to add.
-    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - storage: The machine storage to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func addTransitionCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
-        let name = wrapper.name
+    func addTransitionCode(for fsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws {
+        guard let machineWrapper = storage.fileWrapper as? MachineDirectoryWrapper else {
+            return
+        }
+        let name = storage.name
         for (i, stateID) in fsm.states.enumerated() {
             guard let state = fsm.stateMap[stateID] else {
                 fputs("Warning: orphaned state \(i) ID \(stateID) for \(name)\n", stderr)
@@ -350,7 +383,7 @@ public extension ObjCPPBinding {
                 guard let transition = fsm.transitionMap[transitionID] else { continue }
                 let expr = transition.label.hasSuffix("\n") ? transition.label : transition.label + "\n"
                 let fileWrapper = fileWrapper(named: "State_\(state.name)_Transition_\(j).expr", from: expr)
-                wrapper.replaceFileWrapper(fileWrapper)
+                machineWrapper.replaceFileWrapper(fileWrapper)
             }
         }
     }
@@ -386,26 +419,29 @@ public extension ObjCPPBinding {
         let fileWrapper = fileWrapper(named: "Arrangement_\(name).mm", from: impl)
         wrapper.replaceFileWrapper(fileWrapper)
     }
-    /// Add a CMakefile for the given LLFSM to the given `MachineWrapper`.
+    /// Add a CMakefile for the given LLFSM to the given `MachineDirectoryWrapper`.
     ///
     /// This method creates a CMakefile to compile the
     /// given finite-state machine locally and adds it
-    /// to the given `MachineWrapper`.
+    /// to the given `MachineDirectoryWrapper`.
     ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to add.
     ///   - boilerplate: The boilerplate containing the include paths.
-    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - storage: The machine storage to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func addCMakeFile(for fsm: LLFSM, boilerplate: any Boilerplate, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
-        let name = wrapper.name
+    func addCMakeFile(for fsm: LLFSM, boilerplate: any Boilerplate, to storage: any MachineStorage, isSuspensible: Bool) throws {
+        guard let machineWrapper = storage.fileWrapper as? MachineDirectoryWrapper else {
+            return
+        }
+        let name = storage.name
         let cmakeFragment = objcppCMakeFragment(for: fsm, named: name, isSuspensible: isSuspensible)
         let fragmentWrapper = fileWrapper(named: "project.cmake", from: cmakeFragment)
-        wrapper.replaceFileWrapper(fragmentWrapper)
+        machineWrapper.replaceFileWrapper(fragmentWrapper)
         let cmakeLists = objcppCMakeLists(for: fsm, named: name, boilerplate: boilerplate, isSuspensible: isSuspensible)
         let cmakeWrapper = fileWrapper(named: "CMakeLists.txt", from: cmakeLists)
-        wrapper.replaceFileWrapper(cmakeWrapper)
+        machineWrapper.replaceFileWrapper(cmakeWrapper)
     }
     /// Add a CMakefile for the given LLFSM arrangement to the given `ArrangementWrapper`.
     ///
@@ -506,7 +542,7 @@ public func contentOfObjCPPStateFor(machine: URL, state: StateName) -> String? {
 ///   - state: The name of the state to examine.
 /// - Returns: The content of the `State.h` file.
 @inlinable
-public func contentOfObjCPPState(for machineWrapper: MachineWrapper, state: StateName) -> String? {
+public func contentOfObjCPPState(for machineWrapper: MachineDirectoryWrapper, state: StateName) -> String? {
     machineWrapper.stringContents(of: "State_\(state).h")
 }
 
@@ -528,7 +564,7 @@ public func numberOfObjCPPTransitionsFor(machine m: URL, state s: StateName) -> 
 ///   - state: The name of the state to examine.
 /// - Returns: The number of transitions leaving the given state.
 @inlinable
-public func numberOfObjCPPTransitions(for wrapper: MachineWrapper, state name: StateName) -> Int {
+public func numberOfObjCPPTransitions(for wrapper: MachineDirectoryWrapper, state name: StateName) -> Int {
     guard let content = contentOfObjCPPState(for: wrapper, state: name) else { return 0 }
     return numberOfObjCPPTransitionsIn(header: content)
 }
@@ -556,10 +592,10 @@ public func expressionOfObjCPPTransitionFor(machine: URL, state: StateName, tran
 /// - Parameters:
 ///   - number: The transition number.
 ///   - state: The name of the state to examine.
-///   - machineWrapper: The MachineWrapper.
+///   - machineWrapper: The MachineDirectoryWrapper.
 /// - Returns: The transition expression.
 @inlinable
-public func expressionOfObjCPPTransition(_ number: Int, state: StateName, for machineWrapper: MachineWrapper) -> String {
+public func expressionOfObjCPPTransition(_ number: Int, state: StateName, for machineWrapper: MachineDirectoryWrapper) -> String {
     let file = "State_\(state)_Transition_\(number).expr"
     guard let expression = machineWrapper.stringContents(of: file) else {
         fputs("Cannot read '\(file)'\n", stderr)
@@ -588,11 +624,11 @@ public func targetOfObjCPPTransitionFor(machine m: URL, states: [State], state n
 /// - Parameters:
 ///   - number:The sequence number of the transition to examine.
 ///   - name: The name of the state to search for.
-///   - machineWrapper: The MachineWrapper to examine.
+///   - machineWrapper: The MachineDirectoryWrapper to examine.
 ///   - states: Array of states to examine.
 /// - Returns: The State ID if found, `nil` otherwise.
 @inlinable
-public func targetOfObjCPPTransition(_ number: Int, state name: StateName, for machineWrapper: MachineWrapper, with states: [State]) -> StateID? {
+public func targetOfObjCPPTransition(_ number: Int, state name: StateName, for machineWrapper: MachineDirectoryWrapper, with states: [State]) -> StateID? {
     guard let content = contentOfObjCPPState(for: machineWrapper, state: name),
           let i = targetStateIndexOfObjCPPTransition(number, inHeader: content),
           i >= 0 && i < states.count else { return nil }
@@ -618,10 +654,10 @@ public func contentOfObjCPPImplementationFor(machine: URL) -> String? {
 }
 
 /// Read the content of the <Machine>.mm file
-/// - Parameter machineWrapper: The MachineWrapper.
+/// - Parameter machineWrapper: The MachineDirectoryWrapper.
 /// - Returns: The content of the machine, or `nil` if not found.
 @inlinable
-public func contentOfObjCPPImplementation(for machineWrapper: MachineWrapper) -> String? {
+public func contentOfObjCPPImplementation(for machineWrapper: MachineDirectoryWrapper) -> String? {
     let file = "\(machineWrapper.name).mm"
     guard let content = machineWrapper.stringContents(of: file) else {
         fputs("Cannot read '\(file)'\n", stderr)
@@ -657,11 +693,11 @@ public func suspendStateOfObjCPPMachine(_ m: URL, states: [State]) -> StateID? {
 
 /// Return the suspend state ID for a given machine
 /// - Parameters:
-///   - machineWrapper: The MachineWrapper to examine.
+///   - machineWrapper: The MachineDirectoryWrapper to examine.
 ///   - states: The states the machine is composed of.
 /// - Returns: The suspend state ID, or `nil` if nonexistent.
 @inlinable
-public func suspendStateOfObjCPPMachine(_ machineWrapper: MachineWrapper, states: [State]) -> StateID? {
+public func suspendStateOfObjCPPMachine(_ machineWrapper: MachineDirectoryWrapper, states: [State]) -> StateID? {
     guard let content = contentOfObjCPPImplementation(for: machineWrapper),
           let i = suspendStateIndexOfObjCPPMachine(inImplementation: content),
           i >= 0 && i < states.count else { return nil }
@@ -699,12 +735,12 @@ public func boilerplateofObjCPPMachine(at machine: URL) -> any Boilerplate {
     return boilerplate
 }
 
-/// Return the boilerplate for a given machine MachineWrapper.
+/// Return the boilerplate for a given machine MachineDirectoryWrapper.
 ///
 /// - Parameter machine: The machine URL.
 /// - Returns: The boilerplate for the given machine.
 @inlinable
-public func boilerplateofObjCPPMachine(for machineWrapper: MachineWrapper) -> any Boilerplate {
+public func boilerplateofObjCPPMachine(for machineWrapper: MachineDirectoryWrapper) -> any Boilerplate {
     var boilerplate = CBoilerplate()
     for (section, fileName) in objCPPboilerplateFileMappings(for: machineWrapper.name) {
         boilerplate.sections[section] = machineWrapper.stringContents(of: fileName)
@@ -749,14 +785,14 @@ public func boilerplateofObjCPPState(at machine: URL, state: StateName) -> any B
     return boilerplate
 }
 
-/// Return the boilerplate for a given machine MachineWrapper.
+/// Return the boilerplate for a given machine MachineDirectoryWrapper.
 ///
 /// - Parameters:
 ///   - state: The name of the state to examine.
-///   - machineWrapper: The MachineWrapper.
+///   - machineWrapper: The MachineDirectoryWrapper.
 /// - Returns: The boilerplate for the given machine.
 @inlinable
-public func boilerplateofObjCPPState(_ state: StateName, of machineWrapper: MachineWrapper) -> any Boilerplate {
+public func boilerplateofObjCPPState(_ state: StateName, of machineWrapper: MachineDirectoryWrapper) -> any Boilerplate {
     var boilerplate = CBoilerplate()
     for (section, fileName) in objCPPStateBoilerplateFileMappings(for: state) {
         boilerplate.sections[section] = machineWrapper.stringContents(of: fileName)
@@ -766,7 +802,7 @@ public func boilerplateofObjCPPState(_ state: StateName, of machineWrapper: Mach
 
 /// Add ObjC++ machine-level boilerplate files (VarRefs.mm and FuncRefs.mm)
 @usableFromInline
-func addObjCPPMachineBoilerplate(_ boilerplate: any Boilerplate, to wrapper: MachineWrapper) {
+func addObjCPPMachineBoilerplate(_ boilerplate: any Boilerplate, to wrapper: MachineDirectoryWrapper) {
     let machineName = wrapper.name
     let cBoilerplate = CBoilerplate(boilerplate)
 
@@ -790,7 +826,7 @@ func addObjCPPMachineBoilerplate(_ boilerplate: any Boilerplate, to wrapper: Mac
 
 /// Add ObjC++ state-level boilerplate files (VarRefs.mm and FuncRefs.mm)
 @usableFromInline
-func addObjCPPStateBoilerplate(_ boilerplate: any Boilerplate, to wrapper: MachineWrapper, for stateName: String) {
+func addObjCPPStateBoilerplate(_ boilerplate: any Boilerplate, to wrapper: MachineDirectoryWrapper, for stateName: String) {
     let cBoilerplate = CBoilerplate(boilerplate)
 
     // Generate State_X_VarRefs.mm from variables section

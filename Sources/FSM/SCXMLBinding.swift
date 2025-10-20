@@ -10,12 +10,12 @@ import Foundation
 ///
 /// This binding provides I/O operations for SCXML format while maintaining
 /// compatibility with the existing FSM architecture. SCXML uses single-file
-/// XML format and works with `SingleFileMachineWrapper` for storage.
+/// XML format and works with `MachineFileWrapper` for storage.
 ///
 /// ## Storage Format
 ///
 /// SCXML documents are stored as single `.scxml` XML files, not directory structures.
-/// The binding uses `SingleFileMachineWrapper` to maintain API compatibility with
+/// The binding uses `MachineFileWrapper` to maintain API compatibility with
 /// directory-based formats while optimizing for single-file storage.
 ///
 /// ## Supported Features
@@ -78,8 +78,8 @@ public struct SCXMLBinding: OutputLanguage {
     // MARK: - LanguageBinding Protocol
 
     /// Return the number of transitions for the given state.
-    public func numberOfTransitions(for machineWrapper: MachineWrapper, stateName: StateName) -> Int {
-        guard let data = scxmlData(from: machineWrapper),
+    public func numberOfTransitions(for storage: any MachineStorage, stateName: StateName) -> Int {
+        guard let data = scxmlData(from: storage.fileWrapper),
               let machine = try? read(from: data),
               let state = machine.llfsm.states.first(where: { machine.llfsm.stateName(for: $0) == stateName })
         else {
@@ -89,8 +89,8 @@ public struct SCXMLBinding: OutputLanguage {
     }
 
     /// Return the expression of the given transition.
-    public func expression(of transitionNumber: Int, for machineWrapper: MachineWrapper, stateName: StateName) -> String {
-        guard let data = scxmlData(from: machineWrapper),
+    public func expression(of transitionNumber: Int, for storage: any MachineStorage, stateName: StateName) -> String {
+        guard let data = scxmlData(from: storage.fileWrapper),
               let machine = try? read(from: data),
               let state = machine.llfsm.states.first(where: { machine.llfsm.stateName(for: $0) == stateName }),
               let scxmlBoilerplate = machine.boilerplate as? SCXMLBoilerplate
@@ -113,8 +113,8 @@ public struct SCXMLBinding: OutputLanguage {
     }
 
     /// Return the target state ID of the given transition.
-    public func target(of transitionNumber: Int, for machineWrapper: MachineWrapper, stateName: StateName, with states: [State]) -> StateID? {
-        guard let data = scxmlData(from: machineWrapper),
+    public func target(of transitionNumber: Int, for storage: any MachineStorage, stateName: StateName, with states: [State]) -> StateID? {
+        guard let data = scxmlData(from: storage.fileWrapper),
               let machine = try? read(from: data),
               let state = machine.llfsm.states.first(where: { machine.llfsm.stateName(for: $0) == stateName })
         else {
@@ -132,14 +132,14 @@ public struct SCXMLBinding: OutputLanguage {
     }
 
     /// Return the suspend state ID for the given machine.
-    public func suspendState(for machineWrapper: MachineWrapper, states: [State]) -> StateID? {
+    public func suspendState(for storage: any MachineStorage, states: [State]) -> StateID? {
         // SCXML doesn't have a built-in suspend state concept
         return nil
     }
 
     /// Return the boilerplate for the given machine.
-    public func boilerplate(for machineWrapper: MachineWrapper) -> any Boilerplate {
-        guard let data = scxmlData(from: machineWrapper),
+    public func boilerplate(for storage: any MachineStorage) -> any Boilerplate {
+        guard let data = scxmlData(from: storage.fileWrapper),
               let machine = try? read(from: data)
         else {
             return SCXMLBoilerplate()
@@ -148,19 +148,19 @@ public struct SCXMLBinding: OutputLanguage {
     }
 
     /// Return the boilerplate for the given state.
-    public func stateBoilerplate(for machineWrapper: MachineWrapper, stateName: StateName) -> any Boilerplate {
+    public func stateBoilerplate(for storage: any MachineStorage, stateName: StateName) -> any Boilerplate {
         // For SCXML, state boilerplate is stored in the machine's stateBoilerplate map
-        // Try to get it from the wrapper's machine first
-        if let stateID = machineWrapper.machine.llfsm.states.first(where: {
-            machineWrapper.machine.llfsm.stateName(for: $0) == stateName
+        // Try to get it from the storage's machine first
+        if let stateID = storage.machine.llfsm.states.first(where: {
+            storage.machine.llfsm.stateName(for: $0) == stateName
         }) {
-            if let boilerplate = machineWrapper.machine.stateBoilerplate[stateID] {
+            if let boilerplate = storage.machine.stateBoilerplate[stateID] {
                 return boilerplate
             }
         }
 
         // Fallback: try to parse from SCXML data in wrapper
-        if let data = scxmlData(from: machineWrapper),
+        if let data = scxmlData(from: storage.fileWrapper),
            let machine = try? read(from: data),
            let stateID = machine.llfsm.states.first(where: { machine.llfsm.stateName(for: $0) == stateName }),
            let boilerplate = machine.stateBoilerplate[stateID] {
@@ -174,16 +174,11 @@ public struct SCXMLBinding: OutputLanguage {
     // MARK: - OutputLanguage Protocol
 
     /// Create a file wrapper at the given URL.
-    public func createWrapper(at url: URL, for machine: Machine?) throws -> MachineWrapper {
-        // For SCXML, we create a SingleFileMachineWrapper
-        // But the protocol requires MachineWrapper return type
-        // So we need to work around this...
-
-        // Actually, since single files aren't directories, we can't use MachineWrapper
-        // We need to return a compatibility wrapper
-        // For now, create an empty directory wrapper that will be populated with SCXML
+    public func createWrapper(at url: URL, for machine: Machine?) throws -> any MachineStorage {
+        // For SCXML, ideally we would create a MachineFileWrapper for single-file storage
+        // But for now, create an empty directory wrapper that will be populated with SCXML
         let machine = machine ?? Machine()
-        let wrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: url.lastPathComponent)
+        let wrapper = MachineDirectoryWrapper(directoryWithFileWrappers: [:], for: machine, named: url.lastPathComponent)
         return wrapper
     }
 
@@ -202,38 +197,38 @@ public struct SCXMLBinding: OutputLanguage {
     }
 
     /// Add layout information.
-    public func add(layout: StateNameLayouts, to wrapper: MachineWrapper) throws {
+    public func add(layout: StateNameLayouts, to storage: any MachineStorage) throws {
         // Layout is embedded in SCXML XML, not separate file
         // This will be handled during XML generation
     }
 
     /// Add window layout.
-    public func add(windowLayout: Data?, to wrapper: MachineWrapper) throws {
+    public func add(windowLayout: Data?, to storage: any MachineStorage) throws {
         // Window layout not used in SCXML
     }
 
     /// Add state names.
-    public func add(stateNames: StateNames, to wrapper: MachineWrapper) throws {
+    public func add(stateNames: StateNames, to storage: any MachineStorage) throws {
         // State names are embedded in SCXML XML
     }
 
     /// Add machine boilerplate.
-    public func add(boilerplate: any Boilerplate, to wrapper: MachineWrapper) throws {
+    public func add(boilerplate: any Boilerplate, to storage: any MachineStorage) throws {
         // Boilerplate is embedded in SCXML XML
     }
 
     /// Add state boilerplate.
-    public func add(stateBoilerplate: any Boilerplate, to wrapper: MachineWrapper, for stateName: String) throws {
+    public func add(stateBoilerplate: any Boilerplate, to storage: any MachineStorage, for stateName: String) throws {
         // State boilerplate is embedded in SCXML XML
     }
 
     /// Add machine interface.
-    public func addInterface(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    public func addInterface(for llfsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws {
         // SCXML doesn't generate separate interface files
     }
 
     /// Add state interface.
-    public func addStateInterface(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    public func addStateInterface(for fsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws {
         // SCXML doesn't generate separate state interface files
     }
 
@@ -243,25 +238,28 @@ public struct SCXMLBinding: OutputLanguage {
     }
 
     /// Add machine code.
-    public func addCode(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
-        // Generate SCXML and add to wrapper
-        let machine = wrapper.machine
+    public func addCode(for llfsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws {
+        // Generate SCXML and add to storage
+        guard let directoryWrapper = storage.fileWrapper as? DirectoryWrapper else {
+            return
+        }
+        let machine = storage.machine
         let writer = SCXMLWriter()
         let xml = try writer.generate(from: machine)
         let xmlData = xml.data(using: .utf8)!
 
         let scxmlWrapper = FileWrapper(regularFileWithContents: xmlData)
         scxmlWrapper.preferredFilename = "document.scxml"
-        wrapper.addFileWrapper(scxmlWrapper)
+        directoryWrapper.addFileWrapper(scxmlWrapper)
     }
 
     /// Add state code.
-    public func addStateCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    public func addStateCode(for fsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws {
         // State code is embedded in SCXML XML
     }
 
     /// Add transition code.
-    public func addTransitionCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    public func addTransitionCode(for fsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws {
         // Transition code is embedded in SCXML XML
     }
 
@@ -271,7 +269,7 @@ public struct SCXMLBinding: OutputLanguage {
     }
 
     /// Add CMake file.
-    public func addCMakeFile(for llfsm: LLFSM, boilerplate: any Boilerplate, to wrapper: MachineWrapper, isSuspensible: Bool) throws {
+    public func addCMakeFile(for llfsm: LLFSM, boilerplate: any Boilerplate, to storage: any MachineStorage, isSuspensible: Bool) throws {
         // SCXML doesn't generate CMake files
     }
 
@@ -331,15 +329,22 @@ public struct SCXMLBinding: OutputLanguage {
 
     // MARK: - Helper Methods
 
-    /// Extract SCXML data from MachineWrapper.
-    private func scxmlData(from wrapper: MachineWrapper) -> Data? {
-        // Try "document.scxml" first
-        if let data = wrapper.fileWrappers?["document.scxml"]?.regularFileContents {
+    /// Extract SCXML data from FileWrapper.
+    private func scxmlData(from wrapper: FileWrapper) -> Data? {
+        // For single-file wrapper, get the content directly
+        if let data = wrapper.regularFileContents {
             return data
         }
 
-        // Try to find any .scxml file
-        if let fileWrappers = wrapper.fileWrappers {
+        // For directory wrapper, try "document.scxml" first
+        if let directoryWrapper = wrapper as? DirectoryWrapper,
+           let data = directoryWrapper.fileWrappers?["document.scxml"]?.regularFileContents {
+            return data
+        }
+
+        // Try to find any .scxml file in directory wrapper
+        if let directoryWrapper = wrapper as? DirectoryWrapper,
+           let fileWrappers = directoryWrapper.fileWrappers {
             for (filename, fileWrapper) in fileWrappers {
                 if filename.hasSuffix(".scxml"), let data = fileWrapper.regularFileContents {
                     return data

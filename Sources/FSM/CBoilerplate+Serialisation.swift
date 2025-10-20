@@ -7,11 +7,11 @@
 import Foundation
 
 /// Extension providing methods for serialising and deserialising CBoilerplate
-/// objects to and from MachineWrapper instances. These methods facilitate
+/// objects to and from MachineDirectoryWrapper instances. These methods facilitate
 /// the management of boilerplate code sections for C-based finite-state
 /// machines, supporting both machine-level and state-level boilerplate.
 public extension CBoilerplate {
-    /// Add the machine boilerplate to the given `MachineWrapper`.
+    /// Add the machine boilerplate to the given `MachineDirectoryWrapper`.
     ///
     /// This method adds all relevant boilerplate sections for the machine
     /// to the specified wrapper, replacing any existing file wrappers
@@ -19,10 +19,10 @@ public extension CBoilerplate {
     /// The boilerplate is used to provide necessary includes, variables,
     /// and functions for the generated C code.
     ///
-    /// - Parameter wrapper: The `MachineWrapper` to add the boilerplate to.
+    /// - Parameter wrapper: The `MachineDirectoryWrapper` to add the boilerplate to.
     /// - Throws: Any error thrown by the underlying file system.
     @inlinable
-    func add(to wrapper: MachineWrapper) {
+    func add(to wrapper: MachineDirectoryWrapper) {
         for (section, fileName) in cBoilerplateFileMappings(for: wrapper.name) {
             let fileWrapper = fileWrapper(named: fileName, from: sections[section])
             wrapper.replaceFileWrapper(fileWrapper)
@@ -38,10 +38,10 @@ public extension CBoilerplate {
     ///
     /// - Parameters:
     ///   - state: The state to write the boilerplate for.
-    ///   - wrapper: The `MachineWrapper` to add the state to.
+    ///   - wrapper: The `MachineDirectoryWrapper` to add the state to.
     /// - Throws: Any error thrown by the underlying file system.
     @inlinable
-    func add(state: String, to wrapper: MachineWrapper) {
+    func add(state: String, to wrapper: MachineDirectoryWrapper) {
         for (section, fileName) in cStateBoilerplateFileMappings(for: state) {
             let fileWrapper = fileWrapper(named: fileName, from: sections[section])
             wrapper.replaceFileWrapper(fileWrapper)
@@ -53,7 +53,7 @@ public extension CBoilerplate {
 /// - Parameter machine: The machine URL.
 /// - Returns: The boilerplate for the given machine.
 @inlinable
-public func boilerplateOfCMachine(at machineWrapper: MachineWrapper) -> any Boilerplate {
+public func boilerplateOfCMachine(at machineWrapper: MachineDirectoryWrapper) -> any Boilerplate {
     var boilerplate = CBoilerplate()
     for (section, fileName) in cBoilerplateFileMappings(for: machineWrapper.name) {
         boilerplate.sections[section] = machineWrapper.stringContents(of: fileName)
@@ -68,7 +68,7 @@ public func boilerplateOfCMachine(at machineWrapper: MachineWrapper) -> any Boil
 ///   - state: The name of the state to examine.
 /// - Returns: The boilerplate for the given state.
 @inlinable
-public func boilerplateofCState(_ state: StateName, of machineWrapper: MachineWrapper) -> any Boilerplate {
+public func boilerplateofCState(_ state: StateName, of machineWrapper: MachineDirectoryWrapper) -> any Boilerplate {
     var boilerplate = CBoilerplate()
     for (section, fileName) in cStateBoilerplateFileMappings(for: state) {
         boilerplate.sections[section] = machineWrapper.stringContents(of: fileName)

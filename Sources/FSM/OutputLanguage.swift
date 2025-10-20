@@ -21,15 +21,15 @@ import SystemPackage
 ///         integration with build systems.
 public protocol OutputLanguage: LanguageBinding {
     /// Create a file wrapper at the given URL.
-    /// 
+    ///
     /// This is used to create the file wrapper for the
     /// given URL in preparation for writing the FSM.
     ///
     /// - Parameters:
-    ///   - url: URL to create the machine wrapper at
+    ///   - url: URL to create the machine storage at
     ///   - machine: Machine to create the file wrapper for (or `nil` if no machine exists yet).
-    /// - Returns: The MachineWrapper for the given URL
-    func createWrapper(at url: URL, for machine: Machine?) throws -> MachineWrapper
+    /// - Returns: The MachineStorage for the given URL
+    func createWrapper(at url: URL, for machine: Machine?) throws -> any MachineStorage
     /// Create an arrangement at the given URL.
     ///
     /// This is used to create the file wrapper for the
@@ -45,30 +45,30 @@ public protocol OutputLanguage: LanguageBinding {
     ///
     /// - Parameters:
     ///   - layout: The state and transition layout
-    ///   - wrapper: The `MachineWrapper` to add to.
-    func add(layout: StateNameLayouts, to wrapper: MachineWrapper) throws
+    ///   - storage: The machine storage to add to.
+    func add(layout: StateNameLayouts, to storage: any MachineStorage) throws
     /// Write the window layout.
     ///
     /// - Parameters:
     ///   - windowLayout: The window layout (ignord if `nil`)
-    /// - Parameter wrapper: The `MachineWrapper` to add to.
-    func add(windowLayout: Data?, to wrapper: MachineWrapper) throws
+    /// - Parameter storage: The machine storage to add to.
+    func add(windowLayout: Data?, to storage: any MachineStorage) throws
     /// Write the state name information to the given URL
     /// - Parameters:
     ///   - stateNames: The names of the states.
-    ///   - wrapper: The `MachineWrapper` to add to.
-    func add(stateNames: StateNames, to wrapper: MachineWrapper) throws
+    ///   - storage: The machine storage to add to.
+    func add(stateNames: StateNames, to storage: any MachineStorage) throws
     /// Write the given boilerplate to the given URL
     /// - Parameters:
     ///   - boilerplate: The boilerplate to add.
-    /// - Parameter wrapper: The `MachineWrapper` to add to.
-    func add(boilerplate: any Boilerplate, to wrapper: MachineWrapper) throws
+    /// - Parameter storage: The machine storage to add to.
+    func add(boilerplate: any Boilerplate, to storage: any MachineStorage) throws
     /// Write the given state boilerplate to the given URL
     /// - Parameters:
     ///   - stateBoilerplate: The boilerplate to add.
-    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - storage: The machine storage to add to.
     ///   - stateName: The name of the state to add the boilerplate for.
-    func add(stateBoilerplate: any Boilerplate, to wrapper: MachineWrapper, for stateName: String) throws
+    func add(stateBoilerplate: any Boilerplate, to storage: any MachineStorage, for stateName: String) throws
     /// Write the interface for the given LLFSM to the given URL.
     ///
     /// This method adds the language interface (if any)
@@ -76,9 +76,9 @@ public protocol OutputLanguage: LanguageBinding {
     ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to add.
-    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - storage: The machine storage to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func addInterface(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws
+    func addInterface(for llfsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws
     /// Write the state interface for the given LLFSM to the given URL.
     ///
     /// This method adds the language interface (if any)
@@ -86,9 +86,9 @@ public protocol OutputLanguage: LanguageBinding {
     ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to add.
-    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - storage: The machine storage to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func addStateInterface(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws
+    func addStateInterface(for fsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws
     /// Write the arrangment interface to the given URL.
     ///
     /// This method adds the arrangement interface (if any)
@@ -106,9 +106,9 @@ public protocol OutputLanguage: LanguageBinding {
     ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to add.
-    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - storage: The machine storage to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func addCode(for llfsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws
+    func addCode(for llfsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws
     /// Write the state interface for the given LLFSM to the given URL.
     ///
     /// This method adds the language interface (if any)
@@ -116,9 +116,9 @@ public protocol OutputLanguage: LanguageBinding {
     ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to add.
-    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - storage: The machine storage to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func addStateCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws
+    func addStateCode(for fsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws
     /// Write the transition expressions for the given LLFSM to the given URL.
     ///
     /// This method adds the transition expressions
@@ -126,9 +126,9 @@ public protocol OutputLanguage: LanguageBinding {
     ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to add.
-    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - storage: The machine storage to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func addTransitionCode(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws
+    func addTransitionCode(for fsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws
     /// Write the arrangment implementation to the given URL.
     ///
     /// This method adds the arrangement code (if any)
@@ -147,9 +147,9 @@ public protocol OutputLanguage: LanguageBinding {
     /// - Parameters:
     ///   - llfsm: The finite-state machine to add.
     ///   - boilerplate: The boilerplate for the machine.
-    ///   - wrapper: The `MachineWrapper` to add to.
+    ///   - storage: The machine storage to add to.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
-    func addCMakeFile(for fsm: LLFSM, boilerplate: any Boilerplate, to wrapper: MachineWrapper, isSuspensible: Bool) throws
+    func addCMakeFile(for fsm: LLFSM, boilerplate: any Boilerplate, to storage: any MachineStorage, isSuspensible: Bool) throws
     /// Write a CMakefile for the given LLFSM arrangement to the given URL.
     ///
     /// This method creates a CMakefile to compile the
@@ -173,18 +173,18 @@ public protocol OutputLanguage: LanguageBinding {
 public extension OutputLanguage {
     /// Create a file wrapper for the given URL.
     ///
-    /// This method creates a `MachineWrapper` for the specified URL, optionally
+    /// This method creates a `MachineDirectoryWrapper` for the specified URL, optionally
     /// initialising it with the provided FSM. It prepares the wrapper for
     /// subsequent writing or manipulation.
     ///
     /// - Parameters:
     ///   - url: The URL to create the file wrapper at.
     ///   - machine: The FSM to create the file wrapper for (optional).
-    /// - Returns: A `MachineWrapper` instance for the given URL.
+    /// - Returns: A `MachineStorage` instance for the given URL.
     /// - Throws: An error if wrapper creation fails.
     @inlinable
-    func createWrapper(at url: URL, for machine: Machine? = nil) throws -> MachineWrapper {
-        let wrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine ?? Machine(), named: url.lastPathComponent)
+    func createWrapper(at url: URL, for machine: Machine? = nil) throws -> any MachineStorage {
+        let wrapper = MachineDirectoryWrapper(directoryWithFileWrappers: [:], for: machine ?? Machine(), named: url.lastPathComponent)
         return wrapper
     }
     /// Create an arrangement file wrapper for the given URL.
@@ -204,7 +204,7 @@ public extension OutputLanguage {
     ///
     /// The default implementation creates a `Language`
     /// file inside the file wrapper denoted by the given URL.
-    /// - Parameter wrapper: The `MachineWrapper` to create the file wrapper at.
+    /// - Parameter wrapper: The `FileWrapper` to add the language information to.
     @inlinable
     func addLanguage(to wrapper: FileWrapper) throws {
         guard let data = name.data(using: .utf8) else { throw POSIXError(.EINVAL) }
@@ -216,26 +216,32 @@ public extension OutputLanguage {
     ///
     /// - Parameters:
     ///   - layout: The FSM layout.
-    ///   - wrapper: The `MachineWrapper` to create the file wrapper at.
+    ///   - storage: The machine storage to create the file wrapper at.
     @inlinable
-    func add(layout: StateNameLayouts, to wrapper: MachineWrapper) throws {
+    func add(layout: StateNameLayouts, to storage: any MachineStorage) throws {
+        guard let directoryWrapper = storage.fileWrapper as? DirectoryWrapper else {
+            return
+        }
         let plist = dictionary(from: layout)
         let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
         let fileWrapper = FileWrapper(regularFileWithContents: data)
         fileWrapper.preferredFilename = .layout
-        wrapper.replaceFileWrapper(fileWrapper)
+        directoryWrapper.replaceFileWrapper(fileWrapper)
     }
     /// Create a `FileWrapper` with window layout information.
     ///
     /// - Parameters:
     ///   - windowLayout: The FSM window layout data.
-    ///   - wrapper: The `MachineWrapper` to create the file wrapper at.
+    ///   - storage: The machine storage to create the file wrapper at.
     @inlinable
-    func add(windowLayout: Data?, to wrapper: MachineWrapper) throws {
+    func add(windowLayout: Data?, to storage: any MachineStorage) throws {
         guard let windowLayout else { return }
+        guard let directoryWrapper = storage.fileWrapper as? DirectoryWrapper else {
+            return
+        }
         let fileWrapper = FileWrapper(regularFileWithContents: windowLayout)
         fileWrapper.preferredFilename = .windowLayout
-        wrapper.replaceFileWrapper(fileWrapper)
+        directoryWrapper.replaceFileWrapper(fileWrapper)
     }
     /// Create a `FileWrapper` with the names of the states.
     ///
@@ -244,22 +250,25 @@ public extension OutputLanguage {
     ///
     /// - Parameters:
     ///   - stateNames: The names of the states.
-    ///   - wrapper: The `MachineWrapper` to create the file wrapper at.
+    ///   - storage: The machine storage to create the file wrapper at.
     @inlinable
-    func add(stateNames: StateNames, to wrapper: MachineWrapper) throws {
+    func add(stateNames: StateNames, to storage: any MachineStorage) throws {
+        guard let directoryWrapper = storage.fileWrapper as? DirectoryWrapper else {
+            return
+        }
         guard let data = stateNames.joined(separator: "\n").data(using: .utf8) else { throw POSIXError(.EINVAL) }
         let fileWrapper = FileWrapper(regularFileWithContents: data)
         fileWrapper.preferredFilename = .states
-        wrapper.replaceFileWrapper(fileWrapper)
+        directoryWrapper.replaceFileWrapper(fileWrapper)
     }
     /// Default do-nothing CMakefile creator.
     ///
     /// - Parameters:
     ///   - llfsm: The finite-state machine to add.
-    ///   - wrapper: The `MachineWrapper` to create the file wrapper at.
+    ///   - storage: The machine storage to create the file wrapper at.
     ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
     @inlinable
-    func addCMakeFile(for fsm: LLFSM, to wrapper: MachineWrapper, isSuspensible: Bool) throws {}
+    func addCMakeFile(for fsm: LLFSM, to storage: any MachineStorage, isSuspensible: Bool) throws {}
     /// Default `Machines` file creator.
     /// 
     /// This method creates a file containing the names of the

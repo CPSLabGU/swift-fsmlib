@@ -45,10 +45,10 @@ public protocol LanguageBinding: Equatable {
     /// Return the number of transitions for the given state.
     ///
     /// - Parameters:
-    ///   - machineWrapper: The machine wrapper to read from.
+    ///   - storage: The machine storage to read from.
     ///   - stateName: The name of the state to examine.
     /// - Returns: The number of transitions leaving the given state.
-    func numberOfTransitions(for machineWrapper: MachineWrapper, stateName: StateName) -> Int
+    func numberOfTransitions(for storage: any MachineStorage, stateName: StateName) -> Int
     /// Return the expression of the given transition.
     ///
     /// This returns the expression of the transition at the given index
@@ -56,42 +56,42 @@ public protocol LanguageBinding: Equatable {
     ///
     /// - Parameters:
     ///   - transitionNumber: The index of the transition to examine.
-    ///   - machineWrapper: The machine wrapper to read from.
+    ///   - storage: The machine storage to read from.
     ///   - stateName: The name of the state to examine.
     /// - Returns: The expression of the given transition.
-    func expression(of transitionNumber: Int, for machineWrapper: MachineWrapper, stateName: StateName) -> String
+    func expression(of transitionNumber: Int, for storage: any MachineStorage, stateName: StateName) -> String
     /// Return the target state ID of the given transition.
     ///
     /// - Parameters:
     ///   - transitionNumber: The index of the transition to examine.
-    ///   - machineWrapper: The machine wrapper to read from.
+    ///   - storage: The machine storage to read from.
     ///   - stateName: The name of the state to examine.
     ///   - states: The states of the machine.
     /// - Returns: The target state ID of the given transition.
-    func target(of transitionNumber: Int, for machineWrapper: MachineWrapper, stateName: StateName, with states: [State]) -> StateID?
+    func target(of transitionNumber: Int, for storage: any MachineStorage, stateName: StateName, with states: [State]) -> StateID?
     /// Return the suspend state ID for the given machine.
     ///
     /// - Parameters:
-    ///   - machineWrapper: The machine wrapper to read from.
+    ///   - storage: The machine storage to read from.
     ///   - states: The states of the machine.
     /// - Returns: The suspend state ID for the given machine.
-    func suspendState(for machineWrapper: MachineWrapper, states: [State]) -> StateID?
+    func suspendState(for storage: any MachineStorage, states: [State]) -> StateID?
     /// Return the boilerplate for the given machine.
-    /// - Parameter machineWrapper: The machine wrapper to read from.
+    /// - Parameter storage: The machine storage to read from.
     /// - Returns: The boilerplate for the given machine.
-    func boilerplate(for machineWrapper: MachineWrapper) -> any Boilerplate
+    func boilerplate(for storage: any MachineStorage) -> any Boilerplate
     /// Return the boilerplate for the given state.
     ///
     /// - Parameters:
-    ///   - machineWrapper: The machine wrapper to read from.
+    ///   - storage: The machine storage to read from.
     ///   - stateName: The name of the state to examine.
     /// - Returns: The boilerplate for the given state.
-    func stateBoilerplate(for machineWrapper: MachineWrapper, stateName: StateName) -> any Boilerplate
+    func stateBoilerplate(for storage: any MachineStorage, stateName: StateName) -> any Boilerplate
     /// Return the window layout for the given machine.
     ///
-    /// - Parameter machineWrapper: The machine wrapper to read from.
+    /// - Parameter storage: The machine storage to read from.
     /// - Returns: The window layout for the given machine.
-    func windowLayout(for machineWrapper: MachineWrapper) -> Data?
+    func windowLayout(for storage: any MachineStorage) -> Data?
 
     // MARK: - Section-Based Boilerplate Access
 
@@ -186,11 +186,14 @@ public extension LanguageBinding {
     }
 
     /// Return the window layout for the given machine.
-    /// - Parameter machineWrapper: The MachineWrapper.
+    /// - Parameter storage: The machine storage.
     /// - Returns: The window layout for the given machine (or `nil`).
     @inlinable
-    func windowLayout(for machineWrapper: MachineWrapper) -> Data? {
-        machineWrapper.fileWrappers?[.windowLayout]?.regularFileContents
+    func windowLayout(for storage: any MachineStorage) -> Data? {
+        guard let directoryWrapper = storage.fileWrapper as? DirectoryWrapper else {
+            return nil
+        }
+        return directoryWrapper.fileWrappers?[.windowLayout]?.regularFileContents
     }
 
     // MARK: - Default Section-Based Implementations
@@ -202,11 +205,7 @@ public extension LanguageBinding {
     /// their own boilerplate types.
     func createBoilerplate(from sections: [StandardBoilerplateSection: String]) -> any Boilerplate {
         var boilerplate = CBoilerplate()
-        for (section, content) in sections {
-            if let sectionName = CBoilerplate.SectionName(rawValue: section.rawValue) {
-                boilerplate.sections[sectionName] = content
-            }
-        }
+        boilerplate.sections = sections
         return boilerplate
     }
 
@@ -260,7 +259,7 @@ public func languageBinding(for url: URL) -> any LanguageBinding {
     languageBinding(for: url.stringContents(of: .language))
 }
 
-/// Return the language binding for the given MachineWrapper.
+/// Return the language binding for the given DirectoryWrapper.
 ///
 /// This method reads the content of the language file and
 /// maps it to a language binding.

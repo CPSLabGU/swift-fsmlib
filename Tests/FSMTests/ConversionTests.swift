@@ -402,7 +402,7 @@ final class ConversionTests: XCTestCase {
         let machine = createTestMachine()
 
         // Create wrapper for C language
-        let cWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: "TestMachine")
+        let cWrapper = MachineDirectoryWrapper(directoryWithFileWrappers: [:], for: machine, named: "TestMachine")
         cWrapper.language = CBinding()
 
         // Generate C code
@@ -418,7 +418,7 @@ final class ConversionTests: XCTestCase {
         XCTAssertTrue(cHeaderContent.contains("void fsm_testmachine_c_init"))
 
         // Create wrapper for ObjC++ language
-        let objcppWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: "TestMachine")
+        let objcppWrapper = MachineDirectoryWrapper(directoryWithFileWrappers: [:], for: machine, named: "TestMachine")
         objcppWrapper.language = ObjCPPBinding()
 
         // Generate ObjC++ code

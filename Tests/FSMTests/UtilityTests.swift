@@ -120,7 +120,7 @@ final class UtilityTests: XCTestCase {
         // Test file extension handling
         let fileName = "test.machine"
         XCTAssertEqual(fileName.sansExtension, "test")
-        XCTAssertEqual(String(fileName.dottedExtension), MachineWrapper.dottedSuffix)
+        XCTAssertEqual(String(fileName.dottedExtension), MachineDirectoryWrapper.dottedSuffix)
     }
 
     /// Test format and output language handling utilities.

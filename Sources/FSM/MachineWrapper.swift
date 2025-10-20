@@ -175,9 +175,3 @@ open class MachineDirectoryWrapper: DirectoryWrapper, MachineStorage {
         try write(to: url, options: [])
     }
 }
-
-// MARK: - Backward Compatibility
-
-/// Type alias for backward compatibility with existing code.
-@available(*, deprecated, renamed: "MachineDirectoryWrapper", message: "Use MachineDirectoryWrapper for directory-based storage or MachineFileWrapper for single-file formats")
-public typealias MachineWrapper = MachineDirectoryWrapper

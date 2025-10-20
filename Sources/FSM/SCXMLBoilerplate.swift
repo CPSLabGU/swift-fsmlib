@@ -153,17 +153,6 @@ public struct SCXMLBoilerplate: Boilerplate, Equatable, Codable {
     /// Typical values: "c", "c++", "objc", "objc++", nil for pure SCXML.
     public var targetLanguage: String?
 
-    /// Embedded C/C++ boilerplate from fsm:boilerplate element.
-    ///
-    /// When converting from C/C++ machines to SCXML, the original C/C++
-    /// boilerplate (includes, variables, functions) is embedded in the SCXML
-    /// document using the fsm: namespace. This allows full round-trip conversion
-    /// without data loss.
-    ///
-    /// **Note**: This is deprecated in favor of `genericSections` which provides
-    /// language-independent storage.
-    @available(*, deprecated, message: "Use genericSections for language-independent storage")
-    public var embeddedCBoilerplate: CBoilerplate?
 
     /// Generic boilerplate sections for round-trip conversion.
     ///
@@ -203,7 +192,6 @@ public struct SCXMLBoilerplate: Boilerplate, Equatable, Codable {
         self.binding = "early"
         self.name = nil
         self.targetLanguage = nil
-        self.embeddedCBoilerplate = nil
         self.genericSections = nil
         self.visualMetadata = [:]
         self.unknownElements = [:]
@@ -222,7 +210,6 @@ public struct SCXMLBoilerplate: Boilerplate, Equatable, Codable {
     ///   - binding: Binding semantics (default: "early")
     ///   - name: Machine name (default: nil)
     ///   - targetLanguage: Target language for code generation (default: nil)
-    ///   - embeddedCBoilerplate: Embedded C/C++ boilerplate (default: nil, deprecated)
     ///   - genericSections: Generic boilerplate sections (default: nil)
     ///   - visualMetadata: Visual metadata (default: empty)
     ///   - unknownElements: Unknown elements (default: empty)
@@ -237,7 +224,6 @@ public struct SCXMLBoilerplate: Boilerplate, Equatable, Codable {
         binding: String = "early",
         name: String? = nil,
         targetLanguage: String? = nil,
-        embeddedCBoilerplate: CBoilerplate? = nil,
         genericSections: [StandardBoilerplateSection: String]? = nil,
         visualMetadata: [String: String] = [:],
         unknownElements: [String: String] = [:]
@@ -253,7 +239,6 @@ public struct SCXMLBoilerplate: Boilerplate, Equatable, Codable {
         self.binding = binding
         self.name = name
         self.targetLanguage = targetLanguage
-        self.embeddedCBoilerplate = embeddedCBoilerplate
         self.genericSections = genericSections
         self.visualMetadata = visualMetadata
         self.unknownElements = unknownElements
@@ -262,13 +247,13 @@ public struct SCXMLBoilerplate: Boilerplate, Equatable, Codable {
     // MARK: - Boilerplate Protocol Methods
 
     /// Add boilerplate to machine wrapper (SCXML stores metadata separately).
-    public func add(to wrapper: MachineWrapper) {
+    public func add(to wrapper: MachineDirectoryWrapper) {
         // SCXML boilerplate is primarily metadata, not file-based sections
         // Actual SCXML generation happens during write phase
     }
 
     /// Add state boilerplate to machine wrapper.
-    public func add(state: String, to wrapper: MachineWrapper) {
+    public func add(state: String, to wrapper: MachineDirectoryWrapper) {
         // SCXML state metadata is handled separately
     }
 }

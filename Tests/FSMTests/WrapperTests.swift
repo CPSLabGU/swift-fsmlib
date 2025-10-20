@@ -96,7 +96,7 @@ final class WrapperTests: XCTestCase {
     /// This test creates a simple test machine with two states and a transition.
     /// It then creates a machine wrapper with the machine and writes it to disk.
     /// Finally, it verifies that the machine filename was added to the wrapper.
-    func testMachineWrapperCreation() throws {
+    func testMachineDirectoryWrapperCreation() throws {
         // Create a simple test machine
         let machine = Machine()
         let state1 = State(name: "Initial")
@@ -109,7 +109,7 @@ final class WrapperTests: XCTestCase {
         machine.language = CBinding()
 
         // Create wrapper
-        let wrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: "TestMachine")
+        let wrapper = MachineDirectoryWrapper(directoryWithFileWrappers: [:], for: machine, named: "TestMachine")
 
         // Verify properties
         XCTAssertEqual(wrapper.name, "TestMachine")
@@ -121,7 +121,7 @@ final class WrapperTests: XCTestCase {
         try wrapper.write(to: machineURL)
 
         // Read it back
-        let readWrapper = try MachineWrapper(url: machineURL)
+        let readWrapper = try MachineDirectoryWrapper(url: machineURL)
         XCTAssertEqual(readWrapper.name, "TestMachine")
         XCTAssertEqual(readWrapper.machine.llfsm.states.count, 2)
 
