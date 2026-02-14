@@ -1,7 +1,11 @@
-# ``fsmconvert``
+# fsmconvert
 
 A command-line tool for converting finite-state machines between
 different representations and creating arrangements from multiple machines.
+
+@Metadata {
+  @PageKind(article)
+}
 
 ## Overview
 
@@ -18,6 +22,8 @@ files (CMake) needed to compile the resulting code.
 - <doc:GettingStarted>
 - <doc:Concepts>
 
-### Command
+### Command-Line Tool
 
-- ``FSMConvert``
+The `fsmconvert` executable provides format conversion and arrangement
+creation through command-line flags. Run `fsmconvert --help` for a
+complete list of options.

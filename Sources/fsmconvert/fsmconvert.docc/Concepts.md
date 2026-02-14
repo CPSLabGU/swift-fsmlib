@@ -8,15 +8,14 @@ An overview of the principles behind FSM conversion in `fsmconvert`.
 
 ## Supported Formats
 
-The tool converts between the following language formats, identified
-by the ``Format`` enumeration in the FSM library:
+The tool converts between the following language formats:
 
-| Format Flag | Language | Binding |
-|-------------|----------|---------|
-| `c` | Plain C | ``CBinding`` |
-| `c++`, `cpp`, `cxx` | C++ | ``ObjCPPBinding`` |
-| `objc` | Objective-C | ``ObjCPPBinding`` |
-| `objc++`, `objcpp` | Objective-C++ | ``ObjCPPBinding`` |
+| Format Flag | Language | Description |
+|-------------|----------|-------------|
+| `c` | Plain C | Plain C machine code |
+| `c++`, `cpp`, `cxx` | C++ | Objective-C++ machine code |
+| `objc` | Objective-C | Objective-C machine code |
+| `objc++`, `objcpp` | Objective-C++ | Objective-C++ machine code |
 
 ## Machines vs Arrangements
 
@@ -31,12 +30,11 @@ from the input machines rather than converting a single machine.
 
 ## Conversion Process
 
-1. Each input `.machine` directory is read using a ``MachineWrapper``.
+1. Each input `.machine` directory is read from disk.
 2. The language binding is detected from the machine's file structure.
 3. If a different output format is specified with `-f`, the machine is
-   converted by applying the new ``LanguageBinding`` and regenerating
-   the code.
-4. The result is written to the output path using the appropriate wrapper.
+   converted by regenerating the code in the target language.
+4. The result is written to the output path.
 
 ## CMake Integration
 
