@@ -1,17 +1,23 @@
 # ``fsmconvert``
 
-@Metadata {
-  @Title("fsmconvert Tools")
-  @Technology("fsmconvert")
-}
+A command-line tool for converting finite-state machines between
+different representations and creating arrangements from multiple machines.
 
-The ``fsmconvert`` module provides utilities for converting FSMs between different representations and formats.
+## Overview
 
-## Background
+The `fsmconvert` tool reads Logic-Labelled Finite-State Machines (LLFSMs)
+from `.machine` directories and can write them in different language formats
+or combine them into `.arrangement` directories. It supports C and
+Objective-C++ output formats and generates the complete build system
+files (CMake) needed to compile the resulting code.
 
-FSM conversion is essential for interoperability with other tools, standards, and storage formats. This module aims to make conversion seamless and robust for Logic-labelled Finite-State Machines (LLFSMs).
+## Topics
 
-## Features
+### Essentials
 
-- Convert LLFSMs to and from C, C++, Objective-C, and Objective-C++
-- Extensible for new formats
+- <doc:GettingStarted>
+- <doc:Concepts>
+
+### Command
+
+- ``FSMConvert``

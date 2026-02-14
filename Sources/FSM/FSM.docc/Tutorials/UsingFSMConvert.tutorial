@@ -1,0 +1,184 @@
+@Tutorial {
+    @Intro(title: "Using fsmconvert") {
+        Learn how to use the `fsmconvert` command-line tool to convert
+        machines between formats, create arrangements, and generate
+        build system files. This tutorial covers all major features
+        of the tool.
+    }
+
+    @Section(title: "Build fsmconvert") {
+        @ContentAndMedia {
+            The `fsmconvert` tool is built from the `swift-fsmlib`
+            repository using the Swift Package Manager.
+        }
+
+        @Steps {
+            @Step {
+                Clone the repository and build in release mode.
+
+                ```bash
+                git clone https://github.com/CPSLabGU/swift-fsmlib.git
+                cd swift-fsmlib
+                swift build -c release
+                ```
+            }
+
+            @Step {
+                Verify the tool is available by checking the help output.
+
+                ```bash
+                swift run fsmconvert --help
+                ```
+            }
+        }
+    }
+
+    @Section(title: "Convert a Machine to a Different Format") {
+        @ContentAndMedia {
+            Use the `-f` flag to convert a machine from one language
+            format to another. For example, convert an Objective-C++
+            machine to plain C.
+        }
+
+        @Steps {
+            @Step {
+                Convert an Objective-C++ machine to plain C format.
+                The `-f c` flag specifies the output format.
+
+                ```swift
+                swift run fsmconvert examples/Counter.machine -f c -o /tmp/CounterC.machine
+                ```
+            }
+
+            @Step {
+                Compare the generated files with the original. The C
+                version uses different file naming conventions and
+                code structure.
+
+                ```bash
+                diff <(ls examples/Counter.machine/) <(ls /tmp/CounterC.machine/)
+                ```
+            }
+
+            @Step {
+                Convert in the other direction, from C to Objective-C++.
+
+                ```bash
+                swift run fsmconvert examples/CounterC.machine -f c++ -o /tmp/CounterCPP.machine
+                ```
+            }
+        }
+    }
+
+    @Section(title: "Create Arrangements") {
+        @ContentAndMedia {
+            Arrangements combine multiple machines into a single
+            coordinated system. Use the `-a` flag for single-machine
+            arrangements, or pass multiple inputs for multi-machine
+            arrangements.
+        }
+
+        @Steps {
+            @Step {
+                Create a single-machine arrangement. The `-a` flag
+                wraps one machine in an arrangement structure.
+
+                ```bash
+                swift run fsmconvert examples/Counter.machine -a -o /tmp/Counter.arrangement
+                ```
+            }
+
+            @Step {
+                Create a multi-machine arrangement by passing multiple
+                input machines. The arrangement flag is implied when
+                more than one input is provided.
+
+                ```bash
+                swift run fsmconvert \
+                    examples/SuspendCounter.machine \
+                    examples/Counter.machine \
+                    -o /tmp/MultiMachine.arrangement
+                ```
+            }
+
+            @Step {
+                Use verbose output to see a summary of the arrangement.
+
+                ```bash
+                swift run fsmconvert \
+                    examples/SuspendCounter.machine \
+                    examples/Counter.machine \
+                    -v -o /tmp/MultiMachine.arrangement
+                ```
+            }
+        }
+    }
+
+    @Section(title: "Format Options and Flags") {
+        @ContentAndMedia {
+            The `fsmconvert` tool supports several flags that control
+            the output format and code generation behaviour.
+        }
+
+        @Steps {
+            @Step {
+                Generate non-suspensible machine code. This omits the
+                suspend and resume infrastructure from the output.
+
+                ```bash
+                swift run fsmconvert examples/Counter.machine -n -o /tmp/NonSuspensible.machine
+                ```
+            }
+
+            @Step {
+                Combine format conversion with arrangement creation.
+                Convert machines to C format and create an arrangement.
+
+                ```bash
+                swift run fsmconvert \
+                    examples/SuspendCounter.machine \
+                    -f c -a -o /tmp/CArrangement.arrangement
+                ```
+            }
+        }
+    }
+
+    @Section(title: "CMake Build System Integration") {
+        @ContentAndMedia {
+            Both machine and arrangement outputs include generated
+            CMake files for building the generated code. This section
+            shows how to use them.
+        }
+
+        @Steps {
+            @Step {
+                Generate a machine and examine the CMake files.
+
+                ```bash
+                swift run fsmconvert examples/Counter.machine -o /tmp/Counter.machine
+                ls /tmp/Counter.machine/CMakeLists.txt /tmp/Counter.machine/project.cmake
+                ```
+            }
+
+            @Step {
+                The `CMakeLists.txt` builds the machine as a static
+                library. The `project.cmake` fragment can be included
+                by parent projects.
+
+                ```bash
+                cat /tmp/Counter.machine/CMakeLists.txt
+                ```
+            }
+
+            @Step {
+                For arrangements, the generated `CMakeLists.txt` builds
+                an executable that links against all machine libraries.
+
+                ```bash
+                swift run fsmconvert examples/Counter.machine -a -o /tmp/Counter.arrangement
+                cat /tmp/Counter.arrangement/CMakeLists.txt
+                ```
+            }
+        }
+    }
+}

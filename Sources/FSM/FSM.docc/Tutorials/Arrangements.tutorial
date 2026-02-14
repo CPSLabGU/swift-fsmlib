@@ -1,0 +1,78 @@
+@Tutorial {
+    @Intro(title: "Arrangements and Serialisation in FSM") {
+        Learn how to create arrangements of FSM instances and perform serialisation using the FSM Swift package. This tutorial demonstrates more advanced concepts, using tested code from the suite.
+        
+        All code in this tutorial is guaranteed to compile and is present in the test suite. For more details on arrangements and serialisation, see the API documentation and the Concepts guide.
+    }
+    
+    @Section(title: "Create Instances") {
+        @ContentAndMedia {
+            In this section, you will create a machine and an instance. Instances wrap machines, allowing them to be identified by name and type file. This is important for arrangements, which group instances together.
+        }
+        
+        @Steps {
+            @Step {
+                Define a machine and an instance.
+                
+                ```swift
+                    let machine = Machine()
+                    let state = State(name: "Test")
+                    machine.llfsm = LLFSM(states: [state], transitions: [], suspendState: nil)
+                    let instance = Instance(name: "instance1", typeFile: "TestMachine.machine", machine: machine)
+                ```
+            }
+        }
+    }
+    
+    @Section(title: "Create Arrangements") {
+        @ContentAndMedia {
+            In this section, you will arrange instances into an arrangement. Arrangements allow you to group instances together and provide a unified interface for working with them.
+        }
+        
+        @Steps {
+            @Step {
+                Create two machines with states and arrange them into an arrangement.
+                
+                ```swift
+                    let machine1 = Machine()
+                    let state1 = State(name: "State1")
+                    machine1.llfsm = LLFSM(states: [state1], transitions: [], suspendState: nil)
+                    let machine2 = Machine()
+                    let state2 = State(name: "State2")
+                    machine2.llfsm = LLFSM(states: [state2], transitions: [], suspendState: nil)
+                    let instance1 = Instance(name: "instance1", typeFile: "Machine1.machine", machine: machine1)
+                    let instance2 = Instance(name: "instance2", typeFile: "Machine2.machine", machine: machine2)
+                    let arrangement = Arrangement(namedInstances: [instance1, instance2])
+                ```
+            }
+        }
+    }
+    
+    @Section(title: "Wrap and Serialise Arrangements") {
+        @ContentAndMedia {
+            In this section, you will wrap an arrangement and serialise it to disk. You will create a machine, an instance, and an arrangement, and then wrap and serialise them. To do this, you will first create a machine, an instance, and an arrangement, and then create a machine wrapper and an arrangement wrapper. You will then use these wrappers to serialise the arrangement to disk.
+        }
+        
+        @Steps {
+            @Step {
+                Wrap and serialise an arrangement to disk with all necessary components.
+                
+                ```swift
+                    let machine1Name = "Machine1"
+                    let machine1FileName = machine1Name + MachineWrapper.dottedSuffix
+                    let machine1 = Machine()
+                    let state1 = State(name: "State1")
+                    machine1.llfsm = LLFSM(states: [state1], transitions: [], suspendState: nil)
+                    machine1.language = CBinding()
+                    let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine1, named: machine1FileName)
+                    let instance = Instance(name: "Machine1", typeFile: machine1FileName, machine: machine1)
+                    let arrangement = Arrangement(namedInstances: [instance])
+                    let arrangementURL = tempDirectoryURL.appendingPathComponent("TestArrangement.arrangement")
+                    let wrappers = [machine1FileName: machineWrapper]
+                    let wrapper = ArrangementWrapper(directoryWithFileWrappers: wrappers, for: arrangement, named: arrangementURL.lastPathComponent)
+                    try wrapper.write(to: arrangementURL)
+                ```
+            }
+        }
+    }
+}
