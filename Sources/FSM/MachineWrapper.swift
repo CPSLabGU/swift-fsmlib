@@ -6,7 +6,12 @@
 //
 import Foundation
 
-/// Directory file wrapper wrapping a Machine
+/// Directory file wrapper wrapping a Machine.
+///
+/// This class wraps a `Machine` instance along with its language binding,
+/// providing read/write capabilities for `.machine` directory bundles.
+/// It handles serialisation and deserialisation of the machine's states,
+/// transitions, and boilerplate code.
 open class MachineWrapper: DirectoryWrapper {
     /// The preferred file extension used for a machine wrapper.
     public static let fileExtension = "machine"
@@ -16,7 +21,7 @@ open class MachineWrapper: DirectoryWrapper {
     open var machine: Machine
     /// The language the machine is written in.
     open var language: any LanguageBinding
-    /// Whether or onot the machine is suspensible
+    /// Whether or not the machine is suspensible.
     open var isSuspensible = true
 
     /// Initialiser for reading from a URL.

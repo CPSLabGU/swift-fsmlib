@@ -5,7 +5,12 @@
 //  Copyright © 2015, 2016, 2023 Rene Hexel. All rights reserved.
 //
 
-/// Abstract representation of a transition layout
+/// Abstract representation of a transition layout.
+///
+/// This protocol defines the visual representation of a transition
+/// between states using a bezier path. Conforming types provide a
+/// ``Path`` that describes the curve drawn from one state to another,
+/// including its control points for smooth rendering.
 public protocol TransitionVertexLayout: BezierPath {
     /// Transition bezier path
     var path: Path { get mutating set }
@@ -20,7 +25,13 @@ public extension TransitionVertexLayout {
     }
 }
 
-/// Layout of a transition
+/// Layout of a transition.
+///
+/// This is the concrete implementation of `TransitionVertexLayout` that
+/// stores the graphical path information for drawing a transition between
+/// states. It wraps a ``Path`` instance whose points define the bezier
+/// curve connecting a source state to a target state, with intermediate
+/// control points that determine the curvature of the drawn line.
 public struct TransitionLayout: TransitionVertexLayout {
     /// Transition bezier path
     public var path: Path

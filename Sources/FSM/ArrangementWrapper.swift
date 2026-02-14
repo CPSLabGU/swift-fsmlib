@@ -7,13 +7,18 @@
 // swiftlint:disable large_tuple
 import Foundation
 
-/// Directory file wrapper wrapping an arrangement of Machines
+/// Directory file wrapper wrapping an arrangement of Machines.
+///
+/// This class wraps an `Arrangement` instance containing multiple machine
+/// instances, providing read/write capabilities for `.arrangement` directory
+/// bundles. It manages the coordination of multiple FSM instances and their
+/// shared code generation.
 open class ArrangementWrapper: DirectoryWrapper {
     /// The arrangement wrapped by this class.
     public var arrangement: Arrangement
     /// The language the arrangement is written in.
     public var language: any LanguageBinding
-    /// Whether or onot the arrangement supports suspension
+    /// Whether or not the arrangement supports suspension.
     public var isSuspensible = true
 
     /// Clone a FileWrapper.

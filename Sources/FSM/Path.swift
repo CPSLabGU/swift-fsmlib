@@ -6,7 +6,13 @@
 //
 // swiftlint:disable:this type_contents_order
 
-/// Abstract representation of a bezier path
+/// Abstract representation of a bezier path.
+///
+/// This protocol defines the interface for a bezier curve used to draw
+/// smooth paths between states in a finite state machine diagram. A
+/// bezier path consists of a starting point, one or more control points
+/// that influence the curvature, and an end point. Convenience accessors
+/// are provided for individual coordinates of these points.
 public protocol BezierPath {
     /// Start, control points, and end point
     var points: [Point2D] { get mutating set }
@@ -99,7 +105,13 @@ public extension BezierPath {
     }
 }
 
-/// Bezier path implementation structure
+/// Bezier path implementation structure.
+///
+/// This is the concrete implementation of the ``BezierPath`` protocol,
+/// storing an array of two-dimensional points that define the curve.
+/// The first point represents the start of the path, the last point
+/// represents the end, and any intermediate points serve as control
+/// points that shape the curvature of the bezier line.
 public struct Path: BezierPath {
     /// Start, control points, and end point.
     public var points: [Point2D]

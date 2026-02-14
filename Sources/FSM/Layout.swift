@@ -12,7 +12,13 @@
     import Darwin
 #endif
 
-/// A simple, 2-dimensional vector
+/// A simple, 2-dimensional vector.
+///
+/// This protocol defines the basic requirements for a two-dimensional
+/// vector type, including mutable `x` and `y` coordinates and a
+/// designated initialiser. Conforming types can be used for positions,
+/// dimensions, and other geometric calculations within the FSM layout
+/// system.
 public protocol Vector2D {
     /// X coordinate
     var x: Double { get mutating set }
@@ -74,7 +80,12 @@ public func -<V: Vector2D>(lhs: V, rhs: V) -> V {
     return V(lhs.x + rhs.x, lhs.y + rhs.y)
 }
 
-/// A 2-dimensional coordinate implementation
+/// A 2-dimensional coordinate implementation.
+///
+/// This struct provides a concrete implementation of the ``Vector2D``
+/// protocol, storing `x` and `y` values as `Double`. It serves as the
+/// foundation for points, dimensions, and other geometric primitives
+/// used throughout the layout system.
 public struct Coordinate2D: Vector2D {
     /// X coordinate
     public var x: Double
@@ -87,14 +98,29 @@ public struct Coordinate2D: Vector2D {
     }
 }
 
-/// A 2-dimensional point
+/// A 2-dimensional point representing a position in 2D space.
+///
+/// This is a type alias for ``Coordinate2D``, providing semantic clarity
+/// when a coordinate is used specifically to represent a location rather
+/// than a size or offset.
 public typealias Point2D = Coordinate2D
 
-/// A 2-dimensional point
+/// A 2-dimensional size representing width and height.
+///
+/// This is a type alias for ``Coordinate2D``, providing semantic clarity
+/// when a coordinate is used specifically to represent dimensions. The
+/// `x` component corresponds to the width and the `y` component
+/// corresponds to the height.
 public typealias Dimensions2D = Coordinate2D
 
 
-/// Abstract representation of a rectangle
+/// Abstract representation of a rectangle.
+///
+/// This protocol defines the requirements for a rectangle in 2D space,
+/// specified by its top left corner and dimensions. Conforming types
+/// gain access to a range of computed properties for accessing and
+/// mutating corner positions, centre coordinates, and individual
+/// width and height values.
 public protocol Rectangle2D {
     /// Coordinates of the top left corner
     var topLeft: Coordinate2D { get mutating set }
@@ -187,7 +213,7 @@ public struct Rectangle: Rectangle2D {
 
     /// Designated initialiser.
     ///
-    /// Initialise a rectangle with the given» top left corner and dimensions.
+    /// Initialise a rectangle with the given top left corner and dimensions.
     ///
     /// - Parameters:
     ///   - topLeft: The top left corner coordinates.
@@ -223,5 +249,10 @@ public extension Rectangle {
     }
 }
 
-/// An ellipse that fits into a given rectangle
+/// An ellipse that fits into a given rectangle.
+///
+/// This is a type alias for ``Rectangle``, representing an ellipse
+/// inscribed within the bounds of the rectangle. The ellipse shares
+/// the same top left corner and dimensions, with its semi-axes
+/// determined by half the width and half the height of the rectangle.
 public typealias Ellipse = Rectangle

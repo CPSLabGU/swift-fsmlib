@@ -5,7 +5,13 @@
 //  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 
-/// Abstract representation of a state layout
+/// Abstract representation of a state layout.
+///
+/// This protocol defines the visual representation of a state node within
+/// a finite state machine diagram. Each state node supports both an open
+/// (expanded) and a closed (collapsed) layout, allowing the graphical
+/// editor to toggle between a compact ellipse view and a detailed
+/// rectangular view that reveals the state's activities.
 public protocol StateNodeLayout {
     /// Layout of the state when closed
     var closedLayout: Ellipse { get mutating set }
@@ -26,7 +32,15 @@ public extension StateNodeLayout {
     }
 }
 
-/// State layout structure
+/// State layout structure.
+///
+/// This is the concrete implementation of `StateNodeLayout` that stores
+/// graphical positioning data for a state node. In addition to the open
+/// and closed layout frames, it records section heights for each of the
+/// state's activities (such as OnEntry, OnExit, Internal, OnSuspend, and
+/// OnResume), both at normal and zoomed scales. Any extra properties
+/// from the layout property list are also preserved to maintain
+/// compatibility with external tools.
 public struct StateLayout: StateNodeLayout {
     /// Representation of whether the state uses an open or closed layout
     public var isOpen: Bool

@@ -8,6 +8,10 @@
 import Foundation
 
 /// A generic directory wrapper.
+///
+/// This class extends `FileWrapper` to represent a directory on the file system,
+/// providing convenience properties for accessing the directory name with and
+/// without file extensions.
 open class DirectoryWrapper: FileWrapper {
     /// Return the directory name of the machine.
     @usableFromInline var _preferredDirectoryName: String?

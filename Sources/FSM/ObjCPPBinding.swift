@@ -84,31 +84,68 @@ public struct ObjCPPBinding: OutputLanguage {
     }
 
     /// Objective-C++ binding from URL and state name to number of transitions.
+    ///
+    /// This URL-based closure provides backward compatibility for reading
+    /// transition counts directly from a machine directory URL. Given a
+    /// machine URL and a state name, it returns the number of transitions
+    /// associated with that state by inspecting the corresponding transition
+    /// files on disk.
     public let numberOfTransitions: (URL, StateName) -> Int = { url, s in
         numberOfObjCPPTransitionsFor(machine: url, state: s)
     }
-    /// Objective-C++ binding from URL, state name, and transition to expression
+    /// Objective-C++ binding from URL, state name, and transition to expression.
+    ///
+    /// This URL-based curried closure returns the transition expression for a
+    /// given state and transition number. The first invocation takes a machine
+    /// URL and state name, returning a second closure that accepts a transition
+    /// index and produces the corresponding Boolean expression string read
+    /// from the transition file on disk.
     public let expressionOfTransition: (URL, StateName) -> (Int) -> String = { url, s in { number in
-            expressionOfObjCPPTransitionFor(machine: url, state: s, transition: number)
-        }
+        expressionOfObjCPPTransitionFor(machine: url, state: s, transition: number)
     }
-    /// Objective-C++ binding from URL, states, source state name, and transition to target state ID
+    }
+    /// Objective-C++ binding from URL, states, source state name, and transition to target state ID.
+    ///
+    /// This URL-based curried closure resolves the target state ID for a given
+    /// transition. The first invocation accepts a machine URL, the array of
+    /// known states, and a source state name, returning a second closure that
+    /// takes a transition index and produces the optional `StateID` of the
+    /// target state. The target is determined by reading the transition target
+    /// file from disk and matching the name against the provided states.
     public let targetOfTransition: (URL, [State], StateName) -> (Int) -> StateID? = { url, ss, s in
         { number in
             targetOfObjCPPTransitionFor(machine: url, states: ss, state: s, transition: number)
         }
     }
-    /// Objective-C++ binding from URL, states to suspend state ID
+    /// Objective-C++ binding from URL, states to suspend state ID.
+    ///
+    /// This URL-based closure resolves the suspend state ID from a machine
+    /// directory. Given a machine URL and the array of known states, it reads
+    /// the suspend state name from the machine directory and returns the
+    /// corresponding `StateID`, or `nil` if no suspend state is defined or
+    /// the name does not match any known state.
     public let suspendState: (URL, [State]) -> StateID? = { url, ss in
         suspendStateOfObjCPPMachine(url, states: ss)
     }
 
     /// Objective-C++ binding from URL to machine boilerplate.
+    ///
+    /// This URL-based closure reads the boilerplate code from a machine
+    /// directory URL. It inspects the standard Objective-C++ boilerplate
+    /// files (such as includes, variables, and function sections) within
+    /// the machine directory and returns them as a consolidated
+    /// `Boilerplate` instance.
     public let boilerplate: (URL) -> any Boilerplate = { url in
         boilerplateofObjCPPMachine(at: url)
     }
 
     /// Objective-C++ binding from URL and state name to state boilerplate.
+    ///
+    /// This URL-based closure reads the state-level boilerplate from a
+    /// machine directory for a given state name. It locates and parses
+    /// the Objective-C++ state boilerplate files (such as state-specific
+    /// includes, variables, and method sections) and returns them as a
+    /// consolidated `Boilerplate` instance.
     public var stateBoilerplate: (URL, StateName) -> any Boilerplate = { url, stateName in
         boilerplateofObjCPPState(at: url, state: stateName)
     }
@@ -651,7 +688,7 @@ public func boilerplateofObjCPPState(at machine: URL, state: StateName) -> any B
 ///
 /// - Parameters:
 ///   - state: The name of the state to examine.
-///   - machmachineWrapperine: The MachineWrapper.
+///   - machineWrapper: The MachineWrapper.
 /// - Returns: The boilerplate for the given machine.
 @inlinable
 public func boilerplateofObjCPPState(_ state: StateName, of machineWrapper: MachineWrapper) -> any Boilerplate {

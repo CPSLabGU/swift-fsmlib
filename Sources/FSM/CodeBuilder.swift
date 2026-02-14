@@ -7,6 +7,11 @@
 // swiftlint:disable convenience_type
 
 /// Source code.
+///
+/// This typealias represents source code as a `String`, providing a
+/// semantic alias for code generation operations. Using `Code` instead
+/// of `String` directly makes the intent clearer when working with
+/// source code content throughout the library.
 public typealias Code = String
 
 /// Extension providing convenience properties for accessing and mutating
