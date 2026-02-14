@@ -56,6 +56,13 @@ final class StateNameLayoutsRoundTripTests: XCTestCase {
         return diffs
     }
 
+    /// Compare two Ellipse instances field by field.
+    ///
+    /// - Parameters:
+    ///   - lhs: The first ellipse to compare.
+    ///   - rhs: The second ellipse to compare.
+    ///   - label: A label to prefix difference messages.
+    /// - Returns: A string describing all differences (empty if ellipses are equal).
     func compareEllipse(_ lhs: Ellipse, _ rhs: Ellipse, label: String) -> String {
         var diffs = ""
         if lhs.x != rhs.x { diffs += "\(label).x: \(lhs.x) != \(rhs.x)\n" }
@@ -65,6 +72,13 @@ final class StateNameLayoutsRoundTripTests: XCTestCase {
         return diffs
     }
 
+    /// Compare two Rectangle instances field by field.
+    ///
+    /// - Parameters:
+    ///   - lhs: The first rectangle to compare.
+    ///   - rhs: The second rectangle to compare.
+    ///   - label: A label to prefix difference messages.
+    /// - Returns: A string describing all differences (empty if rectangles are equal).
     func compareRectangle(_ lhs: Rectangle, _ rhs: Rectangle, label: String) -> String {
         var diffs = ""
         if lhs.x != rhs.x { diffs += "\(label).x: \(lhs.x) != \(rhs.x)\n" }
@@ -90,12 +104,21 @@ final class StateNameLayoutsRoundTripTests: XCTestCase {
         return ""
     }
 
+    /// Compare two Point2D instances field by field.
+    ///
+    /// - Parameters:
+    ///   - lhs: The first point to compare.
+    ///   - rhs: The second point to compare.
+    /// - Returns: A string describing all differences (empty if points are equal).
     func comparePoint2D(_ lhs: Point2D, _ rhs: Point2D) -> String {
         var diffs = ""
         if lhs.x != rhs.x { diffs += "x: \(lhs.x) != \(rhs.x); " }
         if lhs.y != rhs.y { diffs += "y: \(lhs.y) != \(rhs.y); " }
         return diffs
     }
+    /// Test round-trip serialisation/deserialisation of an empty StateNameLayouts dictionary.
+    ///
+    /// Verifies that an empty layouts dictionary serialises to a dictionary and deserialises back to an empty dictionary.
     func testEmptyLayoutsRoundTrip() {
         let layouts: StateNameLayouts = [:]
         let dict = dictionary(from: layouts)
@@ -105,6 +128,10 @@ final class StateNameLayoutsRoundTripTests: XCTestCase {
         }
     }
 
+    /// Test round-trip serialisation/deserialisation of a single state with no transitions.
+    ///
+    /// Verifies that a StateNameLayouts dictionary containing a single state with an empty transitions array
+    /// serialises and deserialises correctly, preserving all state layout properties.
     func testSingleStateNoTransitionsRoundTrip() {
         let stateName = "StateA"
         let layout = StateLayout(index: 0)
@@ -118,6 +145,10 @@ final class StateNameLayoutsRoundTripTests: XCTestCase {
         assertStateNameLayoutsEqual(layouts, roundTripped)
     }
 
+    /// Test round-trip serialisation/deserialisation of a single state with multiple transitions.
+    ///
+    /// Verifies that a StateNameLayouts dictionary containing a single state with multiple transition layouts
+    /// serialises and deserialises correctly, preserving both state properties and all transition point sequences.
     func testSingleStateWithTransitionsRoundTrip() {
         let stateName = "StateA"
         let layout = StateLayout(index: 0)
@@ -133,6 +164,10 @@ final class StateNameLayoutsRoundTripTests: XCTestCase {
         assertStateNameLayoutsEqual(layouts, roundTripped)
     }
 
+    /// Test round-trip serialisation/deserialisation of multiple states with varying transitions.
+    ///
+    /// Verifies that a StateNameLayouts dictionary containing multiple states (some with transitions, some without)
+    /// serialises and deserialises correctly, preserving all state layouts and transition data for each state.
     func testMultipleStatesRoundTrip() {
         let layoutA = StateLayout(index: 0)
         let layoutB = StateLayout(index: 1)
@@ -149,6 +184,10 @@ final class StateNameLayoutsRoundTripTests: XCTestCase {
         assertStateNameLayoutsEqual(layouts, roundTripped)
     }
 
+    /// Test round-trip serialisation/deserialisation of state names containing special Unicode characters.
+    ///
+    /// Verifies that StateNameLayouts correctly handles non-ASCII state names (such as Chinese characters)
+    /// during serialisation and deserialisation, ensuring proper Unicode string preservation.
     func testSpecialCharactersInStateNames() {
         let stateName = "特殊字符"
         let layout = StateLayout(index: 0)
@@ -162,4 +201,3 @@ final class StateNameLayoutsRoundTripTests: XCTestCase {
         assertStateNameLayoutsEqual(layouts, roundTripped)
     }
 }
-

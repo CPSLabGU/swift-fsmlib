@@ -146,8 +146,47 @@ public func cMachineCode(for llfsm: LLFSM, named name: String, isSuspensible: Bo
         "/// - Returns: `true` iff the machine appears valid."
         "bool fsm_" + lowerName + "_validate(struct Machine_" + name + " * const machine)"
         Code.bracedBlock {
-            "return machine->current_state != NULL &&"
-            "true; // FIXME: check states"
+            let upperName = name.uppercased()
+
+            // Check current_state is not NULL
+            "if (machine->current_state == NULL) return false;"
+            ""
+            // Check all states are not NULL
+            "for (int i = 0; i < MACHINE_\(upperName)_NUMBER_OF_STATES; i++)"
+            Code.bracedBlock {
+                "if (machine->states[i] == NULL) return false;"
+            }
+            ""
+            // Check current_state is in the states array
+            "bool current_state_valid = false;"
+            "for (int i = 0; i < MACHINE_\(upperName)_NUMBER_OF_STATES; i++)"
+            Code.bracedBlock {
+                "if (machine->current_state == machine->states[i])"
+                Code.bracedBlock {
+                    "current_state_valid = true;"
+                    "break;"
+                }
+            }
+            "if (!current_state_valid) return false;"
+            ""
+            if isSuspensible {
+                // Check suspend_state (if not NULL) is in the states array
+                "if (machine->suspend_state != NULL)"
+                Code.bracedBlock {
+                    "bool suspend_state_valid = false;"
+                    "for (int i = 0; i < MACHINE_\(upperName)_NUMBER_OF_STATES; i++)"
+                    Code.bracedBlock {
+                        "if (machine->suspend_state == machine->states[i])"
+                        Code.bracedBlock {
+                            "suspend_state_valid = true;"
+                            "break;"
+                        }
+                    }
+                    "if (!suspend_state_valid) return false;"
+                }
+                ""
+            }
+            "return true;"
         }
     } + "\n"
 }
