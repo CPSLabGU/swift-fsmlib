@@ -10,3 +10,4 @@ DerivedData/
 .netrc
 coverage.lcov
 coverage.txt
+examples/**/build/
