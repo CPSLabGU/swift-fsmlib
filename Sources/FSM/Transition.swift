@@ -63,7 +63,7 @@ public extension TransitionSource {
 /// - Note: Used to identify the destination of a transition in the FSM graph.
 ///
 public protocol TransitionTarget: CustomStringConvertible {
-    /// Target state that this transition originates from
+    /// Target state that this transition leads to
     var target: StateID { get }
 }
 
@@ -159,7 +159,7 @@ public struct Transition: TransitionVertex, Equatable, Hashable {
     /// Source state that this transition originates from
     public var source: StateID
 
-    /// Target state that this transition originates from
+    /// Target state that this transition leads to
     public var target: StateID
 
     /// Designated initialiser.

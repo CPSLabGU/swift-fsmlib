@@ -5,6 +5,10 @@
 //  Copyright © 2015, 2016, 2023 Rene Hexel. All rights reserved.
 //
 /// Known machine formats.
+///
+/// This enumeration lists the supported language formats for FSM code generation,
+/// including C, C++, Objective-C++, Swift, Verilog, and VHDL. Each case maps to
+/// a language binding implementation used for serialisation and deserialisation.
 public enum Format: String, RawRepresentable, Hashable, CaseIterable, Codable {
     /// A plain C FSM
     case c
@@ -43,13 +47,14 @@ public enum Format: String, RawRepresentable, Hashable, CaseIterable, Codable {
 ]
 
 /// Return the output language associated with the given format.
-/// 
-/// - Parameter format: T
-/// Return the output language associated with the given format.
+///
+/// This function maps a ``Format`` value to its corresponding
+/// ``OutputLanguage`` implementation, falling back to the
+/// provided default if the format is `nil`.
 ///
 /// - Parameters:
 ///   - format: The desired language format.
-///   - default: The default format if `format` is `nil`
+///   - default: The default format if `format` is `nil`.
 /// - Returns: The output language associated with the given format, or `nil` if there is none.
 @inlinable
 public func outputLanguage(for format: Format?, default: (any LanguageBinding)? = nil) -> (any OutputLanguage)? {

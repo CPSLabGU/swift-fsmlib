@@ -26,7 +26,7 @@ public struct CBinding: OutputLanguage {
         numberOfCTransitions(for: machineWrapper, state: stateName)
     }
 
-    /// Objective-C++ binding from URL, state name, and transition to expression.
+    /// C binding from URL, state name, and transition to expression.
     ///
     /// - Parameters:
     ///   - transitionNumber: The transition number to examine.
@@ -38,7 +38,7 @@ public struct CBinding: OutputLanguage {
         expressionOfCTransition(transitionNumber, state: stateName, for: machineWrapper)
     }
 
-    /// Objective-C++ binding from URL, states, source state name, and transition to target state ID.
+    /// C binding from URL, states, source state name, and transition to target state ID.
     ///
     /// - Parameters:
     ///   - transitionNumber: The transition number to examine.
@@ -51,7 +51,7 @@ public struct CBinding: OutputLanguage {
         targetOfCTransition(transitionNumber, state: stateName, for: machineWrapper, with: states)
     }
 
-    /// Objective-C++ binding from URL, states to suspend state ID.
+    /// C binding from URL, states to suspend state ID.
     ///
     /// - Parameters:
     ///   - machineWrapper: The MachineWrapper to examine.
@@ -61,7 +61,7 @@ public struct CBinding: OutputLanguage {
     public func suspendState(for machineWrapper: MachineWrapper, states: [State]) -> StateID? {
         suspendStateOfCMachine(machineWrapper, states: states)
     }
-    /// Objective-C++ binding from URL to machine boilerplate.
+    /// C binding from URL to machine boilerplate.
     ///
     /// - Parameter machineWrapper: The MachineWrapper to examine.
     /// - Returns: The boilerplate for the given machine.
@@ -70,7 +70,7 @@ public struct CBinding: OutputLanguage {
         boilerplateOfCMachine(at: machineWrapper)
     }
 
-    /// Objective-C++ binding from URL and state name to state boilerplate.
+    /// C binding from URL and state name to state boilerplate.
     ///
     /// - Parameters:
     ///   - machineWrapper: The MachineWrapper to examine.

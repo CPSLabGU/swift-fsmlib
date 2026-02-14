@@ -62,7 +62,7 @@ public struct StateActivitiesSourceCode: StateActivities {
 
 /// Name of a state activity.
 ///
-/// This represents the cannonical state activities
+/// This represents the canonical state activities
 /// in the order in which they are stored in the array.
 public enum StateActivityName: String, RawRepresentable, CaseIterable, Codable {
     /// The OnEntry activity, executed when entering a state.
@@ -79,7 +79,7 @@ public enum StateActivityName: String, RawRepresentable, CaseIterable, Codable {
 
 /// Order of state actions.
 ///
-/// This represents the array index of cannonical state activities
+/// This represents the array index of canonical state activities
 /// in the order in which they are stored in the array.
 public enum StateActionIndex: Int, RawRepresentable, CaseIterable, Codable {
     /// Index for the OnEntry activity in the state activity array.
