@@ -1,0 +1,20 @@
+//
+// CounterCPP_VarRefs.mm
+//
+// Automatically created through MiCASE -- do not change manually!
+//
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
+#pragma clang diagnostic ignored "-Wshadow"
+
+CounterCPP *_m = static_cast<CounterCPP *>(_machine);
+
+//
+// CounterCPP_Variables.h
+//
+// Automatically created through MiCASE -- do not change manually!
+//
+const	char	*	&machine_name = _m->machine_name;	///<
+int	&counter = _m->counter;	///< Bean counter
+
+#pragma clang diagnostic pop

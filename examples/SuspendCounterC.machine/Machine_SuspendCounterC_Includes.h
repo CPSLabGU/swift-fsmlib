@@ -1,0 +1,6 @@
+#include <stdio.h>
+#include <time.h>
+#include "Machine_Common.h"
+#include "Static_Arrangement_$ARRANGEMENT.h"
+
+#define at(t) (time(&machine->now) > machine->start + (t))
