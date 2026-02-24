@@ -26,7 +26,7 @@ import Foundation
 /// )
 /// try storage.write(to: outputURL)
 /// ```
-public struct MachineStorageFactory {
+public enum MachineStorageFactory {
 
     /// Read machine storage from a URL.
     ///

@@ -97,7 +97,8 @@ public extension Boilerplate {
     ///   - code: The boilerplate code to set for the given section name.
     @inlinable
     mutating func setSection(named sectionName: String, to code: BoilerplateCode) {
-        sections[SectionName(rawValue: sectionName)!] = code
+        guard let key = SectionName(rawValue: sectionName) else { return }
+        sections[key] = code
     }
     /// Section accessor subscript.
     ///

@@ -224,10 +224,22 @@ extension ExecutableAction {
         return nil
     }
 
+    /// Details of a send action.
+    ///
+    /// Groups the event name, optional target, and optional delay for a send action.
+    public struct SendDetails {
+        /// The event name to send.
+        public var event: String
+        /// Optional target recipient of the event.
+        public var target: String?
+        /// Optional delay before sending the event.
+        public var delay: String?
+    }
+
     /// Get send details if this is a send action.
-    public var sendDetails: (event: String, target: String?, delay: String?)? {
+    public var sendDetails: SendDetails? {
         if case .send(let event, let target, let delay) = self {
-            return (event, target, delay)
+            return SendDetails(event: event, target: target, delay: delay)
         }
         return nil
     }

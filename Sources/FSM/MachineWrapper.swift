@@ -65,7 +65,7 @@ open class MachineDirectoryWrapper: DirectoryWrapper, MachineStorage {
     ///   - url: The URL to read from.
     ///   - options: The reading options to use.
     /// - Throws: Any error thrown by the underlying file system.
-    public override convenience init(url: URL, options: ReadingOptions = []) throws {
+    override public convenience init(url: URL, options: ReadingOptions = []) throws {
         let temporaryWrapper = try FileWrapper(url: url, options: options)
         try self.init(fileWrapper: temporaryWrapper)
         preferredFilename = url.lastPathComponent

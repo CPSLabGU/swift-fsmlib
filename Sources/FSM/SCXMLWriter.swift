@@ -22,7 +22,10 @@ import FoundationXML
 public final class SCXMLWriter {
     // MARK: - Properties
 
+    /// Current indentation depth (number of `indentString` repetitions).
     private var indentLevel = 0
+
+    /// The string used for a single level of indentation.
     private let indentString = "  "
 
     // MARK: - Public API
@@ -39,180 +42,109 @@ public final class SCXMLWriter {
         }
 
         indentLevel = 0
-        var xml = ""
+        var xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+        xml += generateRootAttributes(machine: machine, boilerplate: scxmlBoilerplate)
+        indentLevel += 1
+        xml += try generateRootContent(machine: machine, boilerplate: scxmlBoilerplate)
+        indentLevel -= 1
+        xml += "</scxml>\n"
+        return xml
+    }
 
-        // XML declaration
-        xml += "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-
-        // SCXML root element with multi-namespace support
-        xml += "<scxml"
+    /// Generate the opening `<scxml ...>` tag with all required attributes.
+    ///
+    /// - Parameters:
+    ///   - machine: The machine being serialised.
+    ///   - boilerplate: The SCXML boilerplate providing attribute values.
+    /// - Returns: The `<scxml ...>\n` opening tag string.
+    private func generateRootAttributes(machine: Machine, boilerplate: SCXMLBoilerplate) -> String {
+        var xml = "<scxml"
         xml += " xmlns=\"http://www.w3.org/2005/07/scxml\""
         xml += " xmlns:fsm=\"http://mipal.net.au/fsmlib\""
         xml += " xmlns:qt=\"http://www.qt.io/2015/02/scxml-ext\""
         xml += " xmlns:se=\"http://scxmleditor.sf.net\""
-        xml += " version=\"\(scxmlBoilerplate.scxmlVersion)\""
-        xml += " datamodel=\"\(scxmlBoilerplate.datamodel)\""
-        xml += " binding=\"\(scxmlBoilerplate.binding)\""
-
-        if let name = scxmlBoilerplate.name {
+        xml += " version=\"\(boilerplate.scxmlVersion)\""
+        xml += " datamodel=\"\(boilerplate.datamodel)\""
+        xml += " binding=\"\(boilerplate.binding)\""
+        if let name = boilerplate.name {
             xml += " name=\"\(name.xmlEscaped)\""
         }
-
-        // FSMLib language attribute for round-trip conversion
-        if let targetLanguage = scxmlBoilerplate.targetLanguage {
+        if let targetLanguage = boilerplate.targetLanguage {
             xml += " fsm:language=\"\(targetLanguage.xmlEscaped)\""
         }
-
-        // Initial state
         if let initialState = machine.llfsm.states.first,
-            let initialStateName = machine.llfsm.stateName(for: initialState)
-        {
+            let initialStateName = machine.llfsm.stateName(for: initialState) {
             xml += " initial=\"\(initialStateName.xmlEscaped)\""
         }
-
         xml += ">\n"
-        indentLevel += 1
+        return xml
+    }
 
-        // FSMLib boilerplate for round-trip conversion
-        if let genericSections = scxmlBoilerplate.genericSections, !genericSections.isEmpty {
+    /// Generate the body of the `<scxml>` element (boilerplate, datamodel, script, states).
+    ///
+    /// - Parameters:
+    ///   - machine: The machine being serialised.
+    ///   - boilerplate: The SCXML boilerplate for body content.
+    /// - Returns: The XML body string.
+    /// - Throws: Error if state generation fails.
+    private func generateRootContent(machine: Machine, boilerplate: SCXMLBoilerplate) throws -> String {
+        var xml = ""
+        if let genericSections = boilerplate.genericSections, !genericSections.isEmpty {
             xml += generateFSMLibBoilerplateFromSections(genericSections)
         }
-
-        // Datamodel
-        if !scxmlBoilerplate.dataDeclarations.isEmpty {
-            xml += indent() + "<datamodel>\n"
-            indentLevel += 1
-            for decl in scxmlBoilerplate.dataDeclarations {
-                xml += indent() + "<data id=\"\(decl.id.xmlEscaped)\""
-                if let expr = decl.expr {
-                    xml += " expr=\"\(expr.xmlEscaped)\""
-                }
-                if let src = decl.src {
-                    xml += " src=\"\(src.xmlEscaped)\""
-                }
-                if let content = decl.content, !content.isEmpty {
-                    xml += ">\n"
-                    indentLevel += 1
-                    xml += indent() + content.xmlEscaped + "\n"
-                    indentLevel -= 1
-                    xml += indent() + "</data>\n"
-                } else {
-                    xml += "/>\n"
-                }
-            }
-            indentLevel -= 1
-            xml += indent() + "</datamodel>\n"
+        if !boilerplate.dataDeclarations.isEmpty {
+            xml += generateDatamodel(boilerplate.dataDeclarations)
         }
-
-        // Initial script
-        if let script = scxmlBoilerplate.initialScript, !script.isEmpty {
+        if let script = boilerplate.initialScript, !script.isEmpty {
             xml += indent() + "<script>\n"
             indentLevel += 1
             xml += indent() + script.xmlEscaped + "\n"
             indentLevel -= 1
             xml += indent() + "</script>\n"
         }
-
-        // States (only top-level; children are written recursively inside their parents)
-        let scxmlBp = machine.boilerplate as? SCXMLBoilerplate
         for stateID in machine.llfsm.states {
             guard let state = machine.llfsm.stateMap[stateID] else { continue }
-            // Skip child states — they are emitted by generateState of their parent
-            if scxmlBp?.stateMetadata[stateID]?.parentState != nil { continue }
+            if boilerplate.stateMetadata[stateID]?.parentState != nil { continue }
             xml += try generateState(state, machine: machine)
         }
+        return xml
+    }
 
+    /// Generate the `<datamodel>` element and its `<data>` children.
+    ///
+    /// - Parameter declarations: The data declarations to serialise.
+    /// - Returns: The `<datamodel>...</datamodel>` XML string.
+    private func generateDatamodel(_ declarations: [DataDeclaration]) -> String {
+        var xml = indent() + "<datamodel>\n"
+        indentLevel += 1
+        for decl in declarations {
+            xml += indent() + "<data id=\"\(decl.id.xmlEscaped)\""
+            if let expr = decl.expr {
+                xml += " expr=\"\(expr.xmlEscaped)\""
+            }
+            if let src = decl.src {
+                xml += " src=\"\(src.xmlEscaped)\""
+            }
+            if let content = decl.content, !content.isEmpty {
+                xml += ">\n"
+                indentLevel += 1
+                xml += indent() + content.xmlEscaped + "\n"
+                indentLevel -= 1
+                xml += indent() + "</data>\n"
+            } else {
+                xml += "/>\n"
+            }
+        }
         indentLevel -= 1
-        xml += "</scxml>\n"
-
+        xml += indent() + "</datamodel>\n"
         return xml
     }
 
     // MARK: - Private Methods
 
+    /// Return a string of spaces for the current indentation level.
     private func indent() -> String {
         String(repeating: indentString, count: indentLevel)
-    }
-
-    /// Generate FSMLib boilerplate section for C/C++ round-trip conversion.
-    private func generateFSMLibBoilerplate(_ cBoilerplate: CBoilerplate) -> String {
-        var xml = ""
-
-        xml += indent() + "<fsm:boilerplate>\n"
-        indentLevel += 1
-
-        // Include path
-        if let includePath = cBoilerplate.sections[.includePath], !includePath.isEmpty {
-            xml += indent() + "<fsm:includePath><![CDATA[\n"
-            xml += includePath
-            if !includePath.hasSuffix("\n") { xml += "\n" }
-            xml += indent() + "]]></fsm:includePath>\n"
-        }
-
-        // Includes
-        if let includes = cBoilerplate.sections[.includes], !includes.isEmpty {
-            xml += indent() + "<fsm:includes><![CDATA[\n"
-            xml += includes
-            if !includes.hasSuffix("\n") { xml += "\n" }
-            xml += indent() + "]]></fsm:includes>\n"
-        }
-
-        // Variables
-        if let variables = cBoilerplate.sections[.variables], !variables.isEmpty {
-            xml += indent() + "<fsm:variables><![CDATA[\n"
-            xml += variables
-            if !variables.hasSuffix("\n") { xml += "\n" }
-            xml += indent() + "]]></fsm:variables>\n"
-        }
-
-        // Functions
-        if let functions = cBoilerplate.sections[.functions], !functions.isEmpty {
-            xml += indent() + "<fsm:functions><![CDATA[\n"
-            xml += functions
-            if !functions.hasSuffix("\n") { xml += "\n" }
-            xml += indent() + "]]></fsm:functions>\n"
-        }
-
-        indentLevel -= 1
-        xml += indent() + "</fsm:boilerplate>\n"
-
-        return xml
-    }
-
-    private func generateFromGenericMachine(_ machine: Machine) throws -> String {
-        // Generate basic SCXML from non-SCXML machine
-        indentLevel = 0
-        var xml = ""
-
-        xml += "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-        xml += "<scxml xmlns=\"http://www.w3.org/2005/07/scxml\""
-        xml += " xmlns:fsm=\"http://mipal.net.au/fsmlib\""
-        xml += " version=\"1.0\" datamodel=\"null\""
-
-        if let initialState = machine.llfsm.states.first,
-            let initialStateName = machine.llfsm.stateName(for: initialState)
-        {
-            xml += " initial=\"\(initialStateName.xmlEscaped)\""
-        }
-
-        xml += ">\n"
-        indentLevel += 1
-
-        // Embed machine boilerplate sections if they exist
-        let machineSections = machine.language.extractSections(from: machine.boilerplate)
-        if !machineSections.isEmpty {
-            xml += generateFSMLibBoilerplateFromSections(machineSections)
-        }
-
-        for stateID in machine.llfsm.states {
-            guard let state = machine.llfsm.stateMap[stateID] else { continue }
-            xml += try generateStateWithActivities(state, machine: machine)
-        }
-
-        indentLevel -= 1
-        xml += "</scxml>\n"
-
-        return xml
     }
 
     /// Generate FSMLib extension sections from generic sections dictionary.
@@ -255,11 +187,15 @@ public final class SCXMLWriter {
         return xml
     }
 
+    /// Generate XML for a single state element, recursing into child states.
+    ///
+    /// - Parameters:
+    ///   - state: The state to serialise.
+    ///   - machine: The machine that owns the state.
+    /// - Returns: The state XML string.
+    /// - Throws: Error if transition or child state generation fails.
     private func generateState(_ state: State, machine: Machine) throws -> String {
-        var xml = ""
-        // Read metadata from boilerplate
         guard let scxmlBoilerplate = machine.boilerplate as? SCXMLBoilerplate else {
-            // No SCXML metadata, generate as basic state
             return try generateBasicState(state, machine: machine)
         }
 
@@ -267,44 +203,16 @@ public final class SCXMLWriter {
         let isFinal = metadata?.isFinal ?? false
         let isParallel = metadata?.isParallel ?? false
         let isHistory = metadata?.historyType != nil
+        let context = StateTagContext(
+            isFinal: isFinal,
+            isParallel: isParallel,
+            isHistory: isHistory,
+            metadata: metadata
+        )
 
-        // State element
-        xml += indent()
-        if isFinal {
-            xml += "<final"
-        } else if isParallel {
-            xml += "<parallel"
-        } else if isHistory {
-            xml += "<history"
-        } else {
-            xml += "<state"
-        }
+        var xml = indent() + stateOpenTag(context: context, state: state, machine: machine)
 
-        xml += " id=\"\(state.name.xmlEscaped)\""
-
-        // History type
-        if let historyType = metadata?.historyType {
-            xml += " type=\"\(historyType.rawValue)\""
-        }
-
-        // Initial child
-        if let initialChild = metadata?.initialChild,
-            let initialChildName = machine.llfsm.stateName(for: initialChild)
-        {
-            xml += " initial=\"\(initialChildName.xmlEscaped)\""
-        }
-
-        // Layout metadata for visual editors
-        // ScxmlEditor attributes (se: namespace)
-        if let layout = machine.stateLayout[state.id] {
-            let x = Int(layout.openLayout.topLeft.x)
-            let y = Int(layout.openLayout.topLeft.y)
-            let width = Int(layout.openLayout.dimensions.w)
-            let height = Int(layout.openLayout.dimensions.h)
-            xml += " se:x=\"\(x)\" se:y=\"\(y)\" se:width=\"\(width)\" se:height=\"\(height)\""
-        }
-
-        let hasChildren = metadata?.childStates != nil && metadata?.childStates?.isEmpty == false
+        let hasChildren = metadata?.childStates?.isEmpty == false
         let hasContent = hasStateContent(state, machine: machine)
 
         if !hasChildren && !hasContent {
@@ -314,11 +222,117 @@ public final class SCXMLWriter {
 
         xml += ">\n"
         indentLevel += 1
+        xml += try generateStateBody(state: state, machine: machine, scxmlBoilerplate: scxmlBoilerplate)
+        indentLevel -= 1
+        xml += indent() + stateCloseTag(context: context)
+        return xml
+    }
 
-        // Get state sections through language binding
+    /// Contextual flags for generating a state element tag.
+    private struct StateTagContext {
+        /// `true` if this is a `<final>` element.
+        var isFinal: Bool
+        /// `true` if this is a `<parallel>` element.
+        var isParallel: Bool
+        /// `true` if this is a `<history>` element.
+        var isHistory: Bool
+        /// Optional SCXML-specific metadata for the state.
+        var metadata: SCXMLStateMetadata?
+    }
+
+    /// Build the opening tag string (attributes only, no `>` or `/>`) for a state element.
+    ///
+    /// - Parameters:
+    ///   - context: The type flags and metadata for this state.
+    ///   - state: The state being serialised.
+    ///   - machine: The owning machine (for layout and initial child lookups).
+    /// - Returns: The opening tag string including all attributes, without closing `>`.
+    private func stateOpenTag(context: StateTagContext, state: State, machine: Machine) -> String {
+        var tag: String
+        if context.isFinal {
+            tag = "<final"
+        } else if context.isParallel {
+            tag = "<parallel"
+        } else if context.isHistory {
+            tag = "<history"
+        } else {
+            tag = "<state"
+        }
+
+        tag += " id=\"\(state.name.xmlEscaped)\""
+        if let historyType = context.metadata?.historyType {
+            tag += " type=\"\(historyType.rawValue)\""
+        }
+        if let initialChild = context.metadata?.initialChild,
+           let initialChildName = machine.llfsm.stateName(for: initialChild) {
+            tag += " initial=\"\(initialChildName.xmlEscaped)\""
+        }
+        if let layout = machine.stateLayout[state.id] {
+            let x = Int(layout.openLayout.topLeft.x)
+            let y = Int(layout.openLayout.topLeft.y)
+            let width = Int(layout.openLayout.dimensions.w)
+            let height = Int(layout.openLayout.dimensions.h)
+            tag += " se:x=\"\(x)\" se:y=\"\(y)\" se:width=\"\(width)\" se:height=\"\(height)\""
+        }
+        return tag
+    }
+
+    /// Return the closing tag name for a state element.
+    ///
+    /// - Parameter context: The type flags for the state element.
+    /// - Returns: The closing tag string including trailing newline.
+    private func stateCloseTag(context: StateTagContext) -> String {
+        if context.isFinal { return "</final>\n" }
+        if context.isParallel { return "</parallel>\n" }
+        if context.isHistory { return "</history>\n" }
+        return "</state>\n"
+    }
+
+    /// Generate the body content of a state element (activities, invocations, transitions, children).
+    ///
+    /// - Parameters:
+    ///   - state: The state being serialised.
+    ///   - machine: The owning machine.
+    ///   - scxmlBoilerplate: The SCXML boilerplate for metadata lookups.
+    /// - Returns: The state body XML string.
+    /// - Throws: Error if transition or child state generation fails.
+    private func generateStateBody(
+        state: State, machine: Machine, scxmlBoilerplate: SCXMLBoilerplate
+    ) throws -> String {
         let sections = machine.stateActivities(for: state.id)
+        var xml = generateSCXMLActivities(sections)
 
-        // OnEntry
+        if let invocations = scxmlBoilerplate.invocations[state.id.uuidString] {
+            for invocation in invocations {
+                xml += generateInvocation(invocation)
+            }
+        }
+
+        for transitionID in machine.llfsm.transitions {
+            guard let transition = machine.llfsm.transitionMap[transitionID],
+                transition.source == state.id
+            else { continue }
+            xml += try generateTransition(transition, machine: machine)
+        }
+
+        if let childIDs = scxmlBoilerplate.stateMetadata[state.id]?.childStates {
+            for childID in childIDs {
+                if let childState = machine.llfsm.stateMap[childID] {
+                    xml += try generateState(childState, machine: machine)
+                }
+            }
+        }
+        return xml
+    }
+
+    /// Generate XML-escaped activity elements (`<onentry>`, `<onexit>`, FSMLib extension sections).
+    ///
+    /// Used for SCXML-native machines where content is XML-escaped rather than CDATA-wrapped.
+    ///
+    /// - Parameter sections: The activity sections dictionary to serialise.
+    /// - Returns: The XML string for all non-empty activity sections.
+    private func generateSCXMLActivities(_ sections: [StandardBoilerplateSection: String]) -> String {
+        var xml = ""
         if let onEntry = sections[.onEntry], !onEntry.isEmpty {
             xml += indent() + "<onentry>\n"
             indentLevel += 1
@@ -330,8 +344,6 @@ public final class SCXMLWriter {
             indentLevel -= 1
             xml += indent() + "</onentry>\n"
         }
-
-        // OnExit
         if let onExit = sections[.onExit], !onExit.isEmpty {
             xml += indent() + "<onexit>\n"
             indentLevel += 1
@@ -343,12 +355,7 @@ public final class SCXMLWriter {
             indentLevel -= 1
             xml += indent() + "</onexit>\n"
         }
-
-        // FSMLib extension sections for complete round-trip support
-        // Use generic <fsm:section name="..."> for extension sections
-        // IMPORTANT: Preserve empty sections for round-trip fidelity
-        let extensionSections: [StandardBoilerplateSection] = [.internal, .onSuspend, .onResume]
-        for section in extensionSections {
+        for section in [StandardBoilerplateSection.internal, .onSuspend, .onResume] {
             if let content = sections[section] {
                 xml += indent() + "<fsm:section name=\"\(section.rawValue)\"><![CDATA[\n"
                 xml += content
@@ -356,60 +363,36 @@ public final class SCXMLWriter {
                 xml += indent() + "]]></fsm:section>\n"
             }
         }
-
-        // Invocations
-        if let scxmlBoilerplate = machine.boilerplate as? SCXMLBoilerplate,
-            let invocations = scxmlBoilerplate.invocations[state.id.uuidString]
-        {
-            for invocation in invocations {
-                xml += indent() + "<invoke type=\"\(invocation.type.xmlEscaped)\""
-                if let src = invocation.src {
-                    xml += " src=\"\(src.xmlEscaped)\""
-                }
-                if let id = invocation.id {
-                    xml += " id=\"\(id.xmlEscaped)\""
-                }
-                if invocation.autoForward {
-                    xml += " autoforward=\"true\""
-                }
-                xml += "/>\n"
-            }
-        }
-
-        // Transitions
-        for transitionID in machine.llfsm.transitions {
-            guard let transition = machine.llfsm.transitionMap[transitionID],
-                transition.source == state.id
-            else {
-                continue
-            }
-            xml += try generateTransition(transition, machine: machine)
-        }
-
-        // Child states (recursive)
-        if let childIDs = metadata?.childStates {
-            for childID in childIDs {
-                if let childState = machine.llfsm.stateMap[childID] {
-                    xml += try generateState(childState, machine: machine)
-                }
-            }
-        }
-
-        indentLevel -= 1
-        xml += indent()
-        if isFinal {
-            xml += "</final>\n"
-        } else if isParallel {
-            xml += "</parallel>\n"
-        } else if isHistory {
-            xml += "</history>\n"
-        } else {
-            xml += "</state>\n"
-        }
-
         return xml
     }
 
+    /// Generate an `<invoke>` element for the given invocation.
+    ///
+    /// - Parameter invocation: The invocation to serialise.
+    /// - Returns: The `<invoke .../>` XML string.
+    private func generateInvocation(_ invocation: Invocation) -> String {
+        var xml = indent() + "<invoke type=\"\(invocation.type.xmlEscaped)\""
+        if let src = invocation.src {
+            xml += " src=\"\(src.xmlEscaped)\""
+        }
+        if let id = invocation.id {
+            xml += " id=\"\(id.xmlEscaped)\""
+        }
+        if invocation.autoForward {
+            xml += " autoforward=\"true\""
+        }
+        xml += "/>\n"
+        return xml
+    }
+
+    /// Return `true` if the state has any content that requires a closing tag.
+    ///
+    /// Content includes non-empty activity sections, invocations, and outgoing transitions.
+    ///
+    /// - Parameters:
+    ///   - state: The state to check.
+    ///   - machine: The owning machine.
+    /// - Returns: `true` if the state element must have a body.
     private func hasStateContent(_ state: State, machine: Machine) -> Bool {
         // Check if state has onentry/onexit actions
         let sections = machine.stateActivities(for: state.id)
@@ -420,16 +403,14 @@ public final class SCXMLWriter {
         // Check if state has invocations
         if let scxmlBoilerplate = machine.boilerplate as? SCXMLBoilerplate,
             let invocations = scxmlBoilerplate.invocations[state.id.uuidString],
-            !invocations.isEmpty
-        {
+            !invocations.isEmpty {
             return true
         }
 
         // Check if state has transitions
         for transitionID in machine.llfsm.transitions {
             if let transition = machine.llfsm.transitionMap[transitionID],
-                transition.source == state.id
-            {
+                transition.source == state.id {
                 return true
             }
         }
@@ -437,6 +418,13 @@ public final class SCXMLWriter {
         return false
     }
 
+    /// Generate the `<transition>` element XML for the given transition.
+    ///
+    /// - Parameters:
+    ///   - transition: The transition to serialise.
+    ///   - machine: The owning machine (for metadata and target state name lookups).
+    /// - Returns: The `<transition .../>` or `<transition ...>...</transition>` XML string.
+    /// - Throws: Error if executable action generation fails.
     private func generateTransition(_ transition: Transition, machine: Machine) throws -> String {
         var xml = indent() + "<transition"
 
@@ -463,8 +451,7 @@ public final class SCXMLWriter {
 
         // Target
         if let targetID = machine.llfsm.targetState(for: transition.id),
-            let targetName = machine.llfsm.stateName(for: targetID)
-        {
+            let targetName = machine.llfsm.stateName(for: targetID) {
             xml += " target=\"\(targetName.xmlEscaped)\""
         }
 
@@ -496,6 +483,11 @@ public final class SCXMLWriter {
         return xml
     }
 
+    /// Generate the XML element for a single executable action.
+    ///
+    /// - Parameter action: The action to serialise.
+    /// - Returns: The XML string for the action element.
+    /// - Throws: Error if a nested action fails.
     private func generateExecutableAction(_ action: ExecutableAction) throws -> String {
         var xml = ""
 
@@ -600,12 +592,110 @@ public final class SCXMLWriter {
         }
     }
 
-    /// Generate a state with activities from a generic (non-SCXML) machine.
-    /// This extracts activities from state boilerplate via the language binding.
-    private func generateStateWithActivities(_ state: State, machine: Machine) throws -> String {
-        var xml = indent() + "<state id=\"\(state.name.xmlEscaped)\""
+}
 
-        // Check if state has any content
+// MARK: - Legacy and Generic Boilerplate Generation
+
+/// Extension providing helpers for generic machine generation and legacy C boilerplate serialisation.
+private extension SCXMLWriter {
+    /// Generate an `<fsm:boilerplate>` element from a `CBoilerplate` for C/C++ round-trip conversion.
+    ///
+    /// - Parameter cBoilerplate: The C boilerplate whose sections will be serialised.
+    /// - Returns: The `<fsm:boilerplate>...</fsm:boilerplate>` XML string.
+    func generateFSMLibBoilerplate(_ cBoilerplate: CBoilerplate) -> String {
+        var xml = ""
+
+        xml += indent() + "<fsm:boilerplate>\n"
+        indentLevel += 1
+
+        // Include path
+        if let includePath = cBoilerplate.sections[.includePath], !includePath.isEmpty {
+            xml += indent() + "<fsm:includePath><![CDATA[\n"
+            xml += includePath
+            if !includePath.hasSuffix("\n") { xml += "\n" }
+            xml += indent() + "]]></fsm:includePath>\n"
+        }
+
+        // Includes
+        if let includes = cBoilerplate.sections[.includes], !includes.isEmpty {
+            xml += indent() + "<fsm:includes><![CDATA[\n"
+            xml += includes
+            if !includes.hasSuffix("\n") { xml += "\n" }
+            xml += indent() + "]]></fsm:includes>\n"
+        }
+
+        // Variables
+        if let variables = cBoilerplate.sections[.variables], !variables.isEmpty {
+            xml += indent() + "<fsm:variables><![CDATA[\n"
+            xml += variables
+            if !variables.hasSuffix("\n") { xml += "\n" }
+            xml += indent() + "]]></fsm:variables>\n"
+        }
+
+        // Functions
+        if let functions = cBoilerplate.sections[.functions], !functions.isEmpty {
+            xml += indent() + "<fsm:functions><![CDATA[\n"
+            xml += functions
+            if !functions.hasSuffix("\n") { xml += "\n" }
+            xml += indent() + "]]></fsm:functions>\n"
+        }
+
+        indentLevel -= 1
+        xml += indent() + "</fsm:boilerplate>\n"
+
+        return xml
+    }
+
+    /// Generate basic SCXML from a non-SCXML machine using only standard boilerplate sections.
+    ///
+    /// - Parameter machine: The machine to serialise (must have a non-SCXML boilerplate).
+    /// - Returns: The SCXML XML string.
+    /// - Throws: Error if state generation fails.
+    func generateFromGenericMachine(_ machine: Machine) throws -> String {
+        // Generate basic SCXML from non-SCXML machine
+        indentLevel = 0
+        var xml = ""
+
+        xml += "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+        xml += "<scxml xmlns=\"http://www.w3.org/2005/07/scxml\""
+        xml += " xmlns:fsm=\"http://mipal.net.au/fsmlib\""
+        xml += " version=\"1.0\" datamodel=\"null\""
+
+        if let initialState = machine.llfsm.states.first,
+            let initialStateName = machine.llfsm.stateName(for: initialState) {
+            xml += " initial=\"\(initialStateName.xmlEscaped)\""
+        }
+
+        xml += ">\n"
+        indentLevel += 1
+
+        // Embed machine boilerplate sections if they exist
+        let machineSections = machine.language.extractSections(from: machine.boilerplate)
+        if !machineSections.isEmpty {
+            xml += generateFSMLibBoilerplateFromSections(machineSections)
+        }
+
+        for stateID in machine.llfsm.states {
+            guard let state = machine.llfsm.stateMap[stateID] else { continue }
+            xml += try generateStateWithActivities(state, machine: machine)
+        }
+
+        indentLevel -= 1
+        xml += "</scxml>\n"
+
+        return xml
+    }
+
+    /// Generate a state with activities from a generic (non-SCXML) machine.
+    ///
+    /// This extracts activities from state boilerplate via the language binding.
+    ///
+    /// - Parameters:
+    ///   - state: The state to serialise.
+    ///   - machine: The owning machine (non-SCXML).
+    /// - Returns: The state XML string.
+    /// - Throws: Error if transition generation fails.
+    func generateStateWithActivities(_ state: State, machine: Machine) throws -> String {
         let sections = machine.stateActivities(for: state.id)
         let hasActivities = sections.values.contains(where: { !$0.isEmpty })
         let hasTransitions = machine.llfsm.transitions.contains { transitionID in
@@ -613,6 +703,7 @@ public final class SCXMLWriter {
             return transition.source == state.id
         }
 
+        var xml = indent() + "<state id=\"\(state.name.xmlEscaped)\""
         if !hasActivities && !hasTransitions {
             xml += "/>\n"
             return xml
@@ -620,8 +711,26 @@ public final class SCXMLWriter {
 
         xml += ">\n"
         indentLevel += 1
+        xml += generateCDATAActivities(sections)
+        for transitionID in machine.llfsm.transitions {
+            guard let transition = machine.llfsm.transitionMap[transitionID],
+                transition.source == state.id
+            else { continue }
+            xml += try generateBasicTransition(transition, machine: machine)
+        }
+        indentLevel -= 1
+        xml += indent() + "</state>\n"
+        return xml
+    }
 
-        // OnEntry
+    /// Generate CDATA-wrapped activity sections (`<onentry>`, `<onexit>`, FSMLib sections).
+    ///
+    /// Used for generic (non-SCXML) machines where CDATA wrapping is appropriate.
+    ///
+    /// - Parameter sections: The activity sections dictionary to serialise.
+    /// - Returns: The XML string for all non-empty activity sections.
+    func generateCDATAActivities(_ sections: [StandardBoilerplateSection: String]) -> String {
+        var xml = ""
         if let onEntry = sections[.onEntry], !onEntry.isEmpty {
             xml += indent() + "<onentry>\n"
             indentLevel += 1
@@ -632,8 +741,6 @@ public final class SCXMLWriter {
             indentLevel -= 1
             xml += indent() + "</onentry>\n"
         }
-
-        // OnExit
         if let onExit = sections[.onExit], !onExit.isEmpty {
             xml += indent() + "<onexit>\n"
             indentLevel += 1
@@ -644,12 +751,7 @@ public final class SCXMLWriter {
             indentLevel -= 1
             xml += indent() + "</onexit>\n"
         }
-
-        // FSMLib extension sections for complete round-trip support
-        // Use generic <fsm:section name="..."> for extension sections
-        // IMPORTANT: Preserve empty sections for round-trip fidelity
-        let extensionSections: [StandardBoilerplateSection] = [.internal, .onSuspend, .onResume]
-        for section in extensionSections {
+        for section in [StandardBoilerplateSection.internal, .onSuspend, .onResume] {
             if let content = sections[section] {
                 xml += indent() + "<fsm:section name=\"\(section.rawValue)\"><![CDATA[\n"
                 xml += content
@@ -657,24 +759,17 @@ public final class SCXMLWriter {
                 xml += indent() + "]]></fsm:section>\n"
             }
         }
-
-        // Transitions
-        for transitionID in machine.llfsm.transitions {
-            guard let transition = machine.llfsm.transitionMap[transitionID],
-                transition.source == state.id
-            else {
-                continue
-            }
-            xml += try generateBasicTransition(transition, machine: machine)
-        }
-
-        indentLevel -= 1
-        xml += indent() + "</state>\n"
-
         return xml
     }
 
-    private func generateBasicState(_ state: State, machine: Machine) throws -> String {
+    /// Generate a minimal `<state>` element with only transitions and no SCXML metadata.
+    ///
+    /// - Parameters:
+    ///   - state: The state to serialise.
+    ///   - machine: The owning machine.
+    /// - Returns: The state XML string.
+    /// - Throws: Error if transition generation fails.
+    func generateBasicState(_ state: State, machine: Machine) throws -> String {
         var xml = indent() + "<state id=\"\(state.name.xmlEscaped)\""
 
         let hasContent = hasStateContent(state, machine: machine)
@@ -702,9 +797,14 @@ public final class SCXMLWriter {
         return xml
     }
 
-    private func generateBasicTransition(_ transition: Transition, machine: Machine) throws
-        -> String
-    {
+    /// Generate a minimal `<transition>` element with condition and target only.
+    ///
+    /// - Parameters:
+    ///   - transition: The transition to serialise.
+    ///   - machine: The owning machine (for target state name lookup).
+    /// - Returns: The `<transition .../>` XML string.
+    /// - Throws: Unused; declared for API consistency.
+    func generateBasicTransition(_ transition: Transition, machine: Machine) throws -> String {
         var xml = indent() + "<transition"
 
         // Use label as condition if present
@@ -714,8 +814,7 @@ public final class SCXMLWriter {
 
         // Target
         if let targetID = machine.llfsm.targetState(for: transition.id),
-            let targetName = machine.llfsm.stateName(for: targetID)
-        {
+            let targetName = machine.llfsm.stateName(for: targetID) {
             xml += " target=\"\(targetName.xmlEscaped)\""
         }
 
@@ -726,7 +825,9 @@ public final class SCXMLWriter {
 
 // MARK: - String XML Escaping
 
+/// Extension on `String` providing XML character-escaping utilities for SCXML generation.
 extension String {
+    /// Return the string with XML special characters replaced by their entity references.
     fileprivate var xmlEscaped: String {
         var result = self
         result = result.replacingOccurrences(of: "&", with: "&amp;")

@@ -83,8 +83,13 @@ public enum HistoryType: String, Equatable, Hashable, Codable {
 
 /// Section names for SCXML boilerplate.
 public enum SCXMLSection: String, RawRepresentable, Hashable, Codable {
+    /// The datamodel section, describing the data variables and initial values.
     case datamodel
+
+    /// The initial script section, executed before the machine starts.
     case initialScript
+
+    /// Arbitrary metadata for the machine or tool integration.
     case metadata
 }
 
@@ -99,7 +104,10 @@ public enum SCXMLSection: String, RawRepresentable, Hashable, Codable {
 public struct SCXMLBoilerplate: Boilerplate, Equatable, Codable {
     // MARK: - Boilerplate Protocol
 
+    /// The section name type used by the `Boilerplate` protocol.
     public typealias SectionName = SCXMLSection
+
+    /// Dictionary of boilerplate code sections, keyed by section name.
     public var sections: [SCXMLSection: BoilerplateCode] = [:]
 
     // MARK: - SCXML Metadata Storage

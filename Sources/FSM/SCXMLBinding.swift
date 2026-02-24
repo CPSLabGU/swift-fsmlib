@@ -240,7 +240,7 @@ public struct SCXMLBinding: OutputLanguage {
         let machine = storage.machine
         let writer = SCXMLWriter()
         let xml = try writer.generate(from: machine)
-        let xmlData = xml.data(using: .utf8)!
+        let xmlData = Data(xml.utf8)
 
         let scxmlWrapper = FileWrapper(regularFileWithContents: xmlData)
         scxmlWrapper.preferredFilename = "document.scxml"
