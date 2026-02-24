@@ -32,15 +32,14 @@ jobs:
           uname -a
           swift --version
 
-      - name: Build docc-static
-        run: swift build -c release --product docc-static
-
       - name: Generate documentation
         run: |
-          .build/release/docc-static generate \
-            --package-path . \
-            --output .build/documentation \
-            --verbose
+          swift package --allow-writing-to-directory .build/documentation \
+            generate-documentation \
+            --target FSM \
+            --output-path .build/documentation \
+            --transform-for-static-hosting \
+            --hosting-base-path ${{ github.event.repository.name }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
