@@ -91,7 +91,7 @@ Language bindings drive code generation for target languages:
 File-system wrappers handle persistence of machines and arrangements:
 
 - ``DirectoryWrapper`` provides base directory operations.
-- ``MachineWrapper`` reads and writes `.machine` directory bundles.
+- ``MachineDirectoryWrapper`` reads and writes `.machine` directory bundles.
 - ``ArrangementWrapper`` reads and writes `.arrangement` directory
   bundles.
 

@@ -59,12 +59,12 @@
                 
                 ```swift
                     let machine1Name = "Machine1"
-                    let machine1FileName = machine1Name + MachineWrapper.dottedSuffix
+                    let machine1FileName = machine1Name + MachineDirectoryWrapper.dottedSuffix
                     let machine1 = Machine()
                     let state1 = State(name: "State1")
                     machine1.llfsm = LLFSM(states: [state1], transitions: [], suspendState: nil)
                     machine1.language = CBinding()
-                    let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine1, named: machine1FileName)
+                    let machineWrapper = MachineDirectoryWrapper(directoryWithFileWrappers: [:], for: machine1, named: machine1FileName)
                     let instance = Instance(name: "Machine1", typeFile: machine1FileName, machine: machine1)
                     let arrangement = Arrangement(namedInstances: [instance])
                     let arrangementURL = tempDirectoryURL.appendingPathComponent("TestArrangement.arrangement")

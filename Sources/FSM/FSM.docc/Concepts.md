@@ -94,7 +94,7 @@ arrangements to `.arrangement` directory bundles. The serialisation
 layer uses Foundation's `FileWrapper` class, extended through:
 
 - ``DirectoryWrapper``: Base class for directory-based file wrappers.
-- ``MachineWrapper``: Reads and writes `.machine` directories.
+- ``MachineDirectoryWrapper``: Reads and writes `.machine` directories.
 - ``ArrangementWrapper``: Reads and writes `.arrangement` directories.
 
 A `.machine` directory typically contains:

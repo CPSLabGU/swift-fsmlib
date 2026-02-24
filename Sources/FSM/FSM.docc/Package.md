@@ -76,7 +76,7 @@ The library provides:
 
 ### Serialisation
 
-- ``MachineWrapper``
+- ``MachineDirectoryWrapper``
 - ``ArrangementWrapper``
 - ``DirectoryWrapper``
 - ``PropertyList``

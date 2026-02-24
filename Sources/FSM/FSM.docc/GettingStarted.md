@@ -64,12 +64,12 @@ and serialisation.
 
 ## Serialising to Disk
 
-Use ``MachineWrapper`` to write a machine to a `.machine` directory:
+Use ``MachineDirectoryWrapper`` to write a machine to a `.machine` directory:
 
 ```swift
 let machineName = "TrafficLight"
-let fileName = machineName + MachineWrapper.dottedSuffix
-let wrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: fileName)
+let fileName = machineName + MachineDirectoryWrapper.dottedSuffix
+let wrapper = MachineDirectoryWrapper(directoryWithFileWrappers: [:], for: machine, named: fileName)
 let url = URL(fileURLWithPath: "/tmp/\(fileName)")
 try wrapper.write(to: url)
 ```
