@@ -1,54 +1,63 @@
 name: Generate Documentation
 
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-  generate-docc:
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        swift: ["6.1"]
-        build_mode: ["debug"]
-    name: Generate Documentation
-    runs-on: ${{ matrix.os }}
+  build:
+    name: Build Documentation
+    runs-on: macos-15
     steps:
-      - uses: swift-actions/setup-swift@v2
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
         with:
-          swift-version: ${{ matrix.swift }}
+          xcode-version: "26.1.1"
 
       - name: Print OS and Swift version
         run: |
           uname -a
           swift --version
 
-      - name: Setup SSH Key
+      - name: Build docc-static
+        run: swift build -c release --product docc-static
+
+      - name: Generate documentation
         run: |
-          rm -rf ~/.ssh
-          mkdir -m 0700 ~/.ssh
-          echo "${{ secrets.WORKFLOWS_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          echo "${{ secrets.WORKFLOWS_SSH_PUBLIC_KEY }}" > ~/.ssh/id_ed25519.pub
-          chmod 0600 ~/.ssh/id_ed25519
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/id_ed25519
+          .build/release/docc-static generate \
+            --package-path . \
+            --output .build/documentation \
+            --verbose
 
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
-      - name: Generate Documentation
-        uses: fwcd/swift-docc-action@v1
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          target: FSM
-          output: ./docs
-          hosting-base-path: ${{ github.event.repository.name }}
-          disable-indexing: 'true'
-          transform-for-static-hosting: 'true'
+          path: .build/documentation
 
+  deploy:
+    name: Deploy to GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
-          force_orphan: true
+        id: deployment
+        uses: actions/deploy-pages@v4
