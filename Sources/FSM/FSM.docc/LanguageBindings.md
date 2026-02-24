@@ -73,6 +73,22 @@ Key characteristics:
 Despite its name, `ObjCPPBinding` handles all C++-family formats:
 `c++`, `cpp`, `cxx`, `objc`, `objc++`, and `objcpp`.
 
+### SCXMLBinding
+
+``SCXMLBinding`` reads and writes State Chart XML (`.scxml`) files.
+Unlike ``CBinding`` and ``ObjCPPBinding``, it does not generate
+compilable target-language code; instead it serialises the complete
+machine — states, transitions, layout, and boilerplate — into a single
+well-formed XML document.
+
+Key characteristics:
+- Produces a single `.scxml` file (single-file storage via ``MachineFileWrapper``).
+- Embeds C/C++ boilerplate in custom `fsm:` namespace extensions for
+  round-trip fidelity.
+- Compatible with ScxmlEditor, Qt Creator, and W3C-conformant SCXML tooling.
+- Uses ``CBoilerplate`` internally, which suits all existing C-family
+  language bindings (C, C++, Objective-C++).
+
 ## Format Mapping
 
 The ``Format`` enumeration maps string identifiers to bindings:
@@ -86,6 +102,7 @@ The ``Format`` enumeration maps string identifiers to bindings:
 | `.objC` | `"objc"` | ``ObjCPPBinding`` |
 | `.objCX` | `"objc++"` | ``ObjCPPBinding`` |
 | `.objCPP` | `"objcpp"` | ``ObjCPPBinding`` |
+| `.scxml` | `"scxml"` | ``SCXMLBinding`` |
 
 Use the ``outputLanguage(for:default:)`` function to resolve a
 ``Format`` value to its corresponding ``OutputLanguage`` binding.
@@ -116,5 +133,13 @@ appropriate language binding by examining the file structure:
 - The presence of Objective-C++ header files indicates an
   ``ObjCPPBinding``.
 
-The `languageBinding(for:)` family of functions automates this
+For single-file formats, the URL file extension determines the binding:
+
+- A `.scxml` extension selects ``SCXMLBinding`` automatically.
+
+``MachineStorageFactory`` combines format detection with the correct
+storage wrapper so that calling code does not need to distinguish
+between directory-based and single-file formats.
+
+The `languageBinding(for:)` family of functions automates binding
 detection for both URLs and file wrappers.

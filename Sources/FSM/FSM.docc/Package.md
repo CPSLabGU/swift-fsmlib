@@ -15,6 +15,7 @@ by Boolean expressions evaluated each execution cycle.
 The library provides:
 - Type-safe state and transition definitions
 - Support for C, C++, Objective-C, and Objective-C++ language bindings
+- SCXML support for single-file `.scxml` format interchange
 - Serialisation and deserialisation via file-system wrappers
 - Arrangements for composing multiple FSMs into complex systems
 - Layout and geometry types for graphical FSM editors
@@ -24,11 +25,12 @@ The library provides:
 
 ### Essentials
 
-- <doc:GettingStarted>
+- <doc:Installation>
 - <doc:Concepts>
 - <doc:Architecture>
 - <doc:LanguageBindings>
 - <doc:ArrangementDesign>
+- <doc:SCXMLSupport>
 
 ### Machines
 
@@ -76,6 +78,9 @@ The library provides:
 
 ### Serialisation
 
+- ``MachineStorage``
+- ``MachineFileWrapper``
+- ``MachineStorageFactory``
 - ``MachineDirectoryWrapper``
 - ``ArrangementWrapper``
 - ``DirectoryWrapper``
@@ -88,11 +93,13 @@ The library provides:
 - ``Format``
 - ``CBinding``
 - ``ObjCPPBinding``
+- ``SCXMLBinding``
 
 ### Boilerplate
 
 - ``Boilerplate``
 - ``CBoilerplate``
+- ``SCXMLBoilerplate``
 
 ### Layout
 

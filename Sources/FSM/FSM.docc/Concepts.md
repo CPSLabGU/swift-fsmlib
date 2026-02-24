@@ -67,6 +67,7 @@ Currently supported bindings:
 |---------|---------|-------------|
 | ``CBinding`` | `.c` | Plain C machines |
 | ``ObjCPPBinding`` | `.cx`, `.cpp`, `.cxx`, `.objC`, `.objCX`, `.objCPP` | Objective-C++ machines |
+| ``SCXMLBinding`` | `.scxml` | SCXML single-file interchange |
 
 ## Boilerplate
 
@@ -89,13 +90,17 @@ instances of the same machine type.
 
 ## Serialisation
 
-FSMs are serialised to and from `.machine` directory bundles, and
-arrangements to `.arrangement` directory bundles. The serialisation
-layer uses Foundation's `FileWrapper` class, extended through:
+FSMs are serialised to and from storage via the ``MachineStorage`` protocol,
+which provides a unified abstraction over both directory-based and
+single-file formats. ``MachineStorageFactory`` auto-detects the correct
+implementation from a URL extension.
 
+The concrete implementations are:
+
+- ``MachineDirectoryWrapper``: Reads and writes `.machine` directory bundles.
+- ``MachineFileWrapper``: Reads and writes single-file formats such as `.scxml`.
+- ``ArrangementWrapper``: Reads and writes `.arrangement` directory bundles.
 - ``DirectoryWrapper``: Base class for directory-based file wrappers.
-- ``MachineDirectoryWrapper``: Reads and writes `.machine` directories.
-- ``ArrangementWrapper``: Reads and writes `.arrangement` directories.
 
 A `.machine` directory typically contains:
 - A `States` file listing state names

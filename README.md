@@ -111,11 +111,6 @@ See `examples/README.md` for detailed descriptions.
 
 Generate DocC documentation locally:
 
-### Format-Specific Documentation
-- [SCXML.md](SCXML.md) - SCXML support and usage guide
-
-Generate DocC documentation locally:
-
 ```bash
 swift package generate-documentation
 ```

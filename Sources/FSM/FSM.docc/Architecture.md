@@ -44,6 +44,21 @@ enabling declarative code generation. Language bindings use
 `@CodeBuilder` closures to compose generated source code in a
 readable, structured manner.
 
+### Factory Pattern
+
+``MachineStorageFactory`` encapsulates the logic for selecting the
+correct ``MachineStorage`` implementation based on a file-URL extension.
+Callers request a storage object without needing to know whether the
+target is a directory bundle or a single XML file.
+
+### Extension-Based Design
+
+Functionality is added to types through Swift extensions, keeping core
+type definitions small and focused. Language binding code generation, for
+example, is split across multiple extension files, each responsible for
+a distinct output concern (machine code, arrangement code, infrastructure
+headers).
+
 ### Visitor Pattern
 
 Language bindings act as visitors that traverse the abstract FSM
@@ -84,16 +99,21 @@ Language bindings drive code generation for target languages:
 - ``CBinding`` generates plain C machine and arrangement code.
 - ``ObjCPPBinding`` generates Objective-C++ code with a C++ class
   hierarchy.
+- ``SCXMLBinding`` serialises machines to W3C SCXML single-file format.
 - ``CodeBuilder`` provides a declarative DSL for composing source code.
 
 ### Serialisation Layer
 
 File-system wrappers handle persistence of machines and arrangements:
 
-- ``DirectoryWrapper`` provides base directory operations.
+- ``MachineStorage`` is the unifying protocol for all machine storage
+  implementations.
+- ``MachineStorageFactory`` auto-detects and creates the correct
+  storage implementation from a URL.
 - ``MachineDirectoryWrapper`` reads and writes `.machine` directory bundles.
-- ``ArrangementWrapper`` reads and writes `.arrangement` directory
-  bundles.
+- ``MachineFileWrapper`` reads and writes single-file formats (e.g. `.scxml`).
+- ``ArrangementWrapper`` reads and writes `.arrangement` directory bundles.
+- ``DirectoryWrapper`` provides base directory operations.
 
 ### Arrangement System
 

@@ -1,4 +1,4 @@
-# Getting Started with ``FSM``
+# Installing the ``FSM`` Framework
 
 Learn how to set up and use the FSM framework in your Swift project.
 
