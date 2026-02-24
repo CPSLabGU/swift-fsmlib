@@ -313,8 +313,12 @@ public final class SCXMLParser: NSObject {
             element.elements(forName: "state") + element.elements(forName: "parallel")
             + element.elements(forName: "final") + element.elements(forName: "history")
         if !childElements.isEmpty {
-            metadata.childStates = []
+            let countBefore = states.count
             try parseStates(element, parent: stateID)
+            // Populate childStates with direct children only (not grandchildren)
+            metadata.childStates = states[countBefore...].compactMap { child in
+                stateMetadata[child.id]?.parentState == stateID ? child.id : nil
+            }
         }
 
         // Parse onentry/onexit
@@ -438,56 +442,172 @@ public final class SCXMLParser: NSObject {
 
         for child in parent.children ?? [] {
             guard let elem = child as? XMLElement else { continue }
-
-            switch elem.name {
-            case "script":
-                if let script = elem.stringValue {
-                    actions.append(.script(script))
-                }
-            case "assign":
-                guard let location = elem.attributeValue(forName: "location"),
-                    let expr = elem.attributeValue(forName: "expr")
-                else {
-                    throw SCXMLParserError.missingRequiredAttribute(
-                        element: "assign", attribute: "location or expr")
-                }
-                actions.append(.assign(location: location, expr: expr))
-            case "raise":
-                guard let event = elem.attributeValue(forName: "event") else {
-                    throw SCXMLParserError.missingRequiredAttribute(
-                        element: "raise", attribute: "event")
-                }
-                actions.append(.raise(event: event))
-            case "send":
-                guard let event = elem.attributeValue(forName: "event") else {
-                    throw SCXMLParserError.missingRequiredAttribute(
-                        element: "send", attribute: "event")
-                }
-                let target = elem.attributeValue(forName: "target")
-                let delay = elem.attributeValue(forName: "delay")
-                actions.append(.send(event: event, target: target, delay: delay))
-            case "log":
-                let expr = elem.attributeValue(forName: "expr") ?? ""
-                let label = elem.attributeValue(forName: "label")
-                actions.append(.log(expr: expr, label: label))
-            case "if":
-                guard let cond = elem.attributeValue(forName: "cond") else {
-                    throw SCXMLParserError.missingRequiredAttribute(
-                        element: "if", attribute: "cond")
-                }
-                let thenActions = try parseExecutableContent(elem)
-                // Parse else blocks
-                let elseActions: [ExecutableAction]? = nil  // TODO: parse else/elseif
-                actions.append(.if(condition: cond, actions: thenActions, elseActions: elseActions))
-            default:
-                // Unknown executable content - store as script
-                if let content = elem.stringValue, !content.isEmpty {
-                    actions.append(.script("/* \(elem.name ?? "unknown") */\n\(content)"))
-                }
+            if let action = try parseSingleAction(elem) {
+                actions.append(action)
             }
         }
 
         return actions
+    }
+
+    /// Parse a single executable action element.
+    ///
+    /// - Parameter elem: The XML element to parse.
+    /// - Returns: The parsed action, or `nil` if the element is empty/ignorable.
+    /// - Throws: `SCXMLParserError` if required attributes are missing.
+    private func parseSingleAction(_ elem: XMLElement) throws -> ExecutableAction? {
+        switch elem.name {
+        case "script":
+            if let script = elem.stringValue {
+                return .script(script)
+            }
+            return nil
+        case "assign":
+            guard let location = elem.attributeValue(forName: "location"),
+                let expr = elem.attributeValue(forName: "expr")
+            else {
+                throw SCXMLParserError.missingRequiredAttribute(
+                    element: "assign", attribute: "location or expr")
+            }
+            return .assign(location: location, expr: expr)
+        case "raise":
+            guard let event = elem.attributeValue(forName: "event") else {
+                throw SCXMLParserError.missingRequiredAttribute(
+                    element: "raise", attribute: "event")
+            }
+            return .raise(event: event)
+        case "send":
+            guard let event = elem.attributeValue(forName: "event") else {
+                throw SCXMLParserError.missingRequiredAttribute(
+                    element: "send", attribute: "event")
+            }
+            let target = elem.attributeValue(forName: "target")
+            let delay = elem.attributeValue(forName: "delay")
+            return .send(event: event, target: target, delay: delay)
+        case "log":
+            let expr = elem.attributeValue(forName: "expr") ?? ""
+            let label = elem.attributeValue(forName: "label")
+            return .log(expr: expr, label: label)
+        case "if":
+            guard let cond = elem.attributeValue(forName: "cond") else {
+                throw SCXMLParserError.missingRequiredAttribute(
+                    element: "if", attribute: "cond")
+            }
+            return try parseIfElement(cond: cond, element: elem)
+        case "foreach":
+            guard let array = elem.attributeValue(forName: "array") else {
+                throw SCXMLParserError.missingRequiredAttribute(
+                    element: "foreach", attribute: "array")
+            }
+            guard let item = elem.attributeValue(forName: "item") else {
+                throw SCXMLParserError.missingRequiredAttribute(
+                    element: "foreach", attribute: "item")
+            }
+            let index = elem.attributeValue(forName: "index")
+            let body = try parseExecutableContent(elem)
+            return .forEach(array: array, item: item, index: index, actions: body)
+        case "cancel":
+            guard let sendId = elem.attributeValue(forName: "sendid") else {
+                throw SCXMLParserError.missingRequiredAttribute(
+                    element: "cancel", attribute: "sendid")
+            }
+            return .cancel(sendId: sendId)
+        default:
+            // Unknown executable content - store as script
+            if let content = elem.stringValue, !content.isEmpty {
+                return .script("/* \(elem.name ?? "unknown") */\n\(content)")
+            }
+            return nil
+        }
+    }
+
+    /// Parse an `<if>` element, handling `<elseif>` and `<else>` children.
+    ///
+    /// Children are split at `<elseif>` and `<else>` boundaries:
+    /// - Actions before any `<elseif>` or `<else>` become the "then" branch.
+    /// - `<elseif cond="...">` creates a nested `.if` in `elseActions`.
+    /// - `<else/>` causes remaining actions to become `elseActions`.
+    ///
+    /// Example: `<if cond="a"> A <elseif cond="b"/> B <else/> C </if>` becomes:
+    /// `.if(condition: "a", actions: [A], elseActions: [.if(condition: "b", actions: [B], elseActions: [C])])`
+    ///
+    /// - Parameters:
+    ///   - cond: The condition for this `<if>` element.
+    ///   - element: The `<if>` XML element.
+    /// - Returns: The parsed `.if` action.
+    /// - Throws: `SCXMLParserError` if required attributes are missing.
+    private func parseIfElement(cond: String, element: XMLElement) throws -> ExecutableAction {
+        var thenActions: [ExecutableAction] = []
+        var elseIfChain: [(condition: String, elements: [XMLElement])] = []
+        var elseElements: [XMLElement]?
+
+        // Current collection target (then, elseif, or else)
+        enum CollectionPhase {
+            case then
+            case elseIf(index: Int)
+            case elseBlock
+        }
+        var phase = CollectionPhase.then
+
+        for child in element.children ?? [] {
+            guard let elem = child as? XMLElement else { continue }
+
+            switch elem.name {
+            case "elseif":
+                guard let elseIfCond = elem.attributeValue(forName: "cond") else {
+                    throw SCXMLParserError.missingRequiredAttribute(
+                        element: "elseif", attribute: "cond")
+                }
+                elseIfChain.append((condition: elseIfCond, elements: []))
+                phase = .elseIf(index: elseIfChain.count - 1)
+            case "else":
+                elseElements = []
+                phase = .elseBlock
+            default:
+                switch phase {
+                case .then:
+                    if let action = try parseSingleAction(elem) {
+                        thenActions.append(action)
+                    }
+                case .elseIf(let index):
+                    elseIfChain[index].elements.append(elem)
+                case .elseBlock:
+                    elseElements?.append(elem)
+                }
+            }
+        }
+
+        // Build the nested if/elseif/else chain from the end
+        var currentElseActions: [ExecutableAction]?
+
+        // Process else block (innermost)
+        if let elseElems = elseElements {
+            var actions: [ExecutableAction] = []
+            for elem in elseElems {
+                if let action = try parseSingleAction(elem) {
+                    actions.append(action)
+                }
+            }
+            currentElseActions = actions
+        }
+
+        // Process elseif chain in reverse order to nest correctly
+        for entry in elseIfChain.reversed() {
+            var actions: [ExecutableAction] = []
+            for elem in entry.elements {
+                if let action = try parseSingleAction(elem) {
+                    actions.append(action)
+                }
+            }
+            let nestedIf = ExecutableAction.if(
+                condition: entry.condition,
+                actions: actions,
+                elseActions: currentElseActions
+            )
+            currentElseActions = [nestedIf]
+        }
+
+        return .if(condition: cond, actions: thenActions, elseActions: currentElseActions)
     }
 
     private func parseInvokes(_ element: XMLElement, stateID: StateID) {

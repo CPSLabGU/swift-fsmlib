@@ -113,9 +113,12 @@ public final class SCXMLWriter {
             xml += indent() + "</script>\n"
         }
 
-        // States
+        // States (only top-level; children are written recursively inside their parents)
+        let scxmlBp = machine.boilerplate as? SCXMLBoilerplate
         for stateID in machine.llfsm.states {
             guard let state = machine.llfsm.stateMap[stateID] else { continue }
+            // Skip child states — they are emitted by generateState of their parent
+            if scxmlBp?.stateMetadata[stateID]?.parentState != nil { continue }
             xml += try generateState(state, machine: machine)
         }
 
@@ -536,12 +539,7 @@ public final class SCXMLWriter {
                 xml += try generateExecutableAction(act)
             }
             if let elseActs = elseActions, !elseActs.isEmpty {
-                indentLevel -= 1
-                xml += indent() + "<else>\n"
-                indentLevel += 1
-                for act in elseActs {
-                    xml += try generateExecutableAction(act)
-                }
+                try generateElseChain(elseActs, into: &xml)
             }
             indentLevel -= 1
             xml += indent() + "</if>\n"
@@ -564,6 +562,42 @@ public final class SCXMLWriter {
         }
 
         return xml
+    }
+
+    /// Flatten a nested `.if` chain into sibling `<elseif>` and `<else/>` markers.
+    ///
+    /// Per W3C SCXML, `<elseif cond="..."/>` and `<else/>` are self-closing sibling markers
+    /// within `<if>`, not nested elements. This method recursively flattens the internal
+    /// representation (nested `.if` in `elseActions`) into the correct XML structure.
+    ///
+    /// - Parameters:
+    ///   - elseActions: The else branch actions to flatten.
+    ///   - xml: The output string to append to.
+    /// - Throws: Error if action generation fails.
+    private func generateElseChain(_ elseActions: [ExecutableAction], into xml: inout String) throws {
+        // Check if the else branch is a single nested .if (i.e., an elseif chain)
+        if elseActions.count == 1,
+           case .if(let elseIfCond, let elseIfThen, let elseIfElse) = elseActions[0] {
+            // Emit <elseif cond="..."/> as self-closing sibling marker
+            indentLevel -= 1
+            xml += indent() + "<elseif cond=\"\(elseIfCond.xmlEscaped)\"/>\n"
+            indentLevel += 1
+            for act in elseIfThen {
+                xml += try generateExecutableAction(act)
+            }
+            // Recurse for further elseif/else
+            if let nextElse = elseIfElse, !nextElse.isEmpty {
+                try generateElseChain(nextElse, into: &xml)
+            }
+        } else {
+            // Emit <else/> as self-closing sibling marker
+            indentLevel -= 1
+            xml += indent() + "<else/>\n"
+            indentLevel += 1
+            for act in elseActions {
+                xml += try generateExecutableAction(act)
+            }
+        }
     }
 
     /// Generate a state with activities from a generic (non-SCXML) machine.
