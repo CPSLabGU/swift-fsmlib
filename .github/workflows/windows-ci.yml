@@ -1,11 +1,14 @@
 name: Windows CI
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [development, main]
   pull_request:
     branches: [development, main]
-    paths:
-      - '.github/workflows/windows-ci.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-windows:
