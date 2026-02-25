@@ -341,13 +341,14 @@ public struct SCXMLBinding: OutputLanguage {
     /// Extract SCXML data from FileWrapper.
     private func scxmlData(from wrapper: FileWrapper) -> Data? {
         // For single-file wrapper, get the content directly
-        if let data = wrapper.regularFileContents {
+        if let data = wrapper.regularFileContents, !data.isEmpty {
             return data
         }
 
         // For directory wrapper, try "document.scxml" first
         if let directoryWrapper = wrapper as? DirectoryWrapper,
-           let data = directoryWrapper.fileWrappers?["document.scxml"]?.regularFileContents {
+           let data = directoryWrapper.fileWrappers?["document.scxml"]?.regularFileContents,
+           !data.isEmpty {
             return data
         }
 
@@ -355,7 +356,9 @@ public struct SCXMLBinding: OutputLanguage {
         if let directoryWrapper = wrapper as? DirectoryWrapper,
            let fileWrappers = directoryWrapper.fileWrappers {
             for (filename, fileWrapper) in fileWrappers {
-                if filename.hasSuffix(".scxml"), let data = fileWrapper.regularFileContents {
+                if filename.hasSuffix(".scxml"),
+                   let data = fileWrapper.regularFileContents,
+                   !data.isEmpty {
                     return data
                 }
             }
