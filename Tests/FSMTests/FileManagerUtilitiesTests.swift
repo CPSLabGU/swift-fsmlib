@@ -11,7 +11,9 @@ final class FileManagerUtilitiesTests: XCTestCase {
         let fm = FileManager.default
         let url = fm.currentDirectoryURL
         let path = fm.currentDirectoryPath
-        XCTAssertEqual(url.path, path, "currentDirectoryURL's path should match currentDirectoryPath")
+        // On Windows, URL.path normalises separators to forward slashes while
+        // FileManager.currentDirectoryPath uses backslashes, so compare via URL.
+        XCTAssertEqual(url, URL(fileURLWithPath: path), "currentDirectoryURL's path should match currentDirectoryPath")
     }
 
     /// Test that currentDirectoryName returns the last path component of the current directory.

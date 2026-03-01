@@ -6,10 +6,12 @@
 //
 // swiftlint:disable operator_usage_whitespace
 // swiftlint:disable identifier_name
-#if os(Linux)
+#if canImport(Darwin)
+    import Darwin
+#elseif canImport(Glibc)
     import Glibc
 #else
-    import Darwin
+    import Foundation
 #endif
 
 /// A simple, 2-dimensional vector.
