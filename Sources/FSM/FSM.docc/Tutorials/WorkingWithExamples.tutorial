@@ -1,0 +1,147 @@
+@Tutorial {
+    @Intro(title: "Working with Examples") {
+        Explore the example machines and arrangements included in the
+        repository. Learn how to inspect them with `fsmconvert` and
+        build them using CMake.
+    }
+
+    @Section(title: "Explore the Examples Directory") {
+        @ContentAndMedia {
+            The `examples/` directory contains several pre-built machines
+            and arrangements demonstrating different language bindings
+            and FSM patterns.
+        }
+
+        @Steps {
+            @Step {
+                List the available examples. You will see `.machine`
+                directories (individual FSMs) and `.arrangement`
+                directories (composed systems).
+
+                ```bash
+                ls examples/
+                ```
+            }
+
+            @Step {
+                Examine the structure of a machine directory. Each
+                `.machine` directory contains state files, transition
+                expressions, layout data, and language-specific code.
+
+                ```bash
+                ls examples/Counter.machine/
+                ```
+            }
+
+            @Step {
+                Read the state names of a machine. The `States` file
+                lists all states, one per line.
+
+                ```bash
+                cat examples/Counter.machine/States
+                ```
+            }
+        }
+    }
+
+    @Section(title: "Inspect a Machine with fsmconvert") {
+        @ContentAndMedia {
+            Use the `fsmconvert` tool with verbose output to inspect
+            the structure of a machine without modifying it.
+        }
+
+        @Steps {
+            @Step {
+                Build `fsmconvert` from the repository.
+
+                ```bash
+                swift build -c release
+                ```
+            }
+
+            @Step {
+                Inspect a machine with verbose output. The `-v` flag
+                displays the number of states and transitions.
+
+                ```bash
+                swift run fsmconvert examples/SuspendCounter.machine -v -o /tmp/inspect.machine
+                ```
+            }
+
+            @Step {
+                Inspect a C-format machine for comparison.
+
+                ```bash
+                swift run fsmconvert examples/SuspendCounterC.machine -v -o /tmp/inspect_c.machine
+                ```
+            }
+        }
+    }
+
+    @Section(title: "Build an Arrangement with CMake") {
+        @ContentAndMedia {
+            Arrangements include generated CMake build files. You can
+            compile the generated C or Objective-C++ code using CMake
+            to produce an executable.
+        }
+
+        @Steps {
+            @Step {
+                Generate an arrangement from a machine using `fsmconvert`.
+
+                ```bash
+                swift run fsmconvert examples/SuspendCounter.machine -a -o /tmp/SuspendCounter.arrangement
+                ```
+            }
+
+            @Step {
+                Configure the build with CMake.
+
+                ```bash
+                cd /tmp/SuspendCounter.arrangement
+                mkdir build && cd build
+                cmake ..
+                ```
+            }
+
+            @Step {
+                Build the arrangement executable.
+
+                ```bash
+                cmake --build .
+                ```
+            }
+        }
+    }
+
+    @Section(title: "Create an Arrangement from Multiple Machines") {
+        @ContentAndMedia {
+            Combine multiple machines into a single arrangement. This
+            is useful for creating coordinated systems where machines
+            interact.
+        }
+
+        @Steps {
+            @Step {
+                Create an arrangement from two machines. The `-a` flag
+                is implicit when multiple inputs are provided.
+
+                ```bash
+                swift run fsmconvert \
+                    examples/SuspendCounter.machine \
+                    examples/Counter.machine \
+                    -o /tmp/Combined.arrangement
+                ```
+            }
+
+            @Step {
+                Inspect the generated arrangement directory to see the
+                included machine directories and arrangement files.
+
+                ```bash
+                ls /tmp/Combined.arrangement/
+                ```
+            }
+        }
+    }
+}

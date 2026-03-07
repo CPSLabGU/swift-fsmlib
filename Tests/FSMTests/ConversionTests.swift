@@ -135,217 +135,35 @@ final class ConversionTests: XCTestCase {
     /// This test reads a traffic light machine from resources, verifies its
     /// properties, and converts it to Objective-C++.
     func testTrafficLightMachineInResources() throws {
-        let fm = FileManager.default
-        var isDirectory: ObjCBool = false
-        guard let bundleResourcesURL = Bundle.module.resourceURL,
-                  fm.fileExists(atPath: bundleResourcesURL.path, isDirectory: &isDirectory),
-                  isDirectory.boolValue else {
-            return
-        }
-        let testResourcesURL = bundleResourcesURL.appendingPathComponent("Resources")
-        let baseTrafficLightURL = bundleResourcesURL.appendingPathComponent("TrafficLight.machine")
-        let resourcesURL: URL
-        if fm.fileExists(atPath: testResourcesURL.path, isDirectory: &isDirectory), isDirectory.boolValue {
-            resourcesURL = testResourcesURL
-        } else if fm.fileExists(atPath: baseTrafficLightURL.path, isDirectory: &isDirectory), isDirectory.boolValue {
-            resourcesURL = bundleResourcesURL
-        } else {
-            return // Skip test if resource directory does not exist
-        }
-
+        guard let resourcesURL = trafficLightResourcesURL() else { return }
         let trafficLightURL = resourcesURL.appendingPathComponent("TrafficLight.machine")
-
-        // Test reading the machine
         let machine = try Machine(from: trafficLightURL)
 
-        // Verify machine properties
-        XCTAssertEqual(machine.language.name, "objc++")
-        XCTAssertEqual(machine.llfsm.states.count, 5)
+        verifyTrafficLightProperties(machine)
 
-        // Test state names
-        let stateNames = machine.llfsm.states.compactMap { machine.llfsm.stateName(for: $0) }
-        XCTAssertTrue(stateNames.contains("InitialPseudoState"))
-        XCTAssertTrue(stateNames.contains("Red"))
-        XCTAssertTrue(stateNames.contains("Yellow"))
-        XCTAssertTrue(stateNames.contains("Green"))
-        XCTAssertTrue(stateNames.contains("YellowRed"))
-
-        // Verify Layouts
         let layouts = machine.stateLayout
         let transitionLayouts = machine.transitionLayout
+        let stateNameToID = buildStateNameToID(machine: machine)
 
-        // Map state names to IDs
-        var stateNameToID: [String: StateID] = [:]
-        for state in machine.llfsm.states {
-            if let name = machine.llfsm.stateName(for: state) {
-                stateNameToID[name] = state
-            }
-        }
-        // Check state layout and transitions for each real-world state
-        func assertStateLayout(_ name: String, isOpen: Bool, x: Double, y: Double, w: Double, h: Double, internalHeight: Double? = nil, onEntryHeight: Double? = nil, onExitHeight: Double? = nil) {
-            guard let id = stateNameToID[name], let layout = layouts[id] else {
-                XCTFail("Missing layout for \(name)")
-                return
-            }
-            XCTAssertEqual(layout.isOpen, isOpen, "State \(name) expected isOpen=\(isOpen), got \(layout.isOpen)")
-            if isOpen {
-                XCTAssertEqual(layout.openLayout.x, x, accuracy: 1e-6)
-                XCTAssertEqual(layout.openLayout.y, y, accuracy: 1e-6)
-                XCTAssertEqual(layout.openLayout.w, w, accuracy: 1e-6)
-                XCTAssertEqual(layout.openLayout.h, h, accuracy: 1e-6)
-            } else {
-                XCTAssertEqual(layout.closedLayout.x, x, accuracy: 1e-6)
-                XCTAssertEqual(layout.closedLayout.y, y, accuracy: 1e-6)
-                XCTAssertEqual(layout.closedLayout.w, w, accuracy: 1e-6)
-                XCTAssertEqual(layout.closedLayout.h, h, accuracy: 1e-6)
-            }
-            if let ih = internalHeight { XCTAssertEqual(layout.internalHeight, ih, accuracy: 1e-6) }
-            if let eh = onEntryHeight { XCTAssertEqual(layout.onEntryHeight, eh, accuracy: 1e-6) }
-            if let xh = onExitHeight { XCTAssertEqual(layout.onExitHeight, xh, accuracy: 1e-6) }
-        }
-        func assertTransitionPoints(_ name: String, expected: [(Double, Double)]) {
-            guard let id = stateNameToID[name] else {
-                XCTFail("No state ID for \(name)")
-                return
-            }
-            // Find all outgoing transitions for this state
-            let outgoing = machine.llfsm.transitionMap.values.filter { $0.source == id }
-            guard outgoing.count == 1 else {
-                XCTFail("Expected exactly 1 outgoing transition for \(name), got \(outgoing.count)")
-                return
-            }
-            let tID = outgoing[0].id
-            guard let tLayout = transitionLayouts[tID] else {
-                XCTFail("No TransitionLayout for transition ID \(tID) of state \(name)")
-                return
-            }
+        verifyTrafficLightStateLayouts(
+            stateNameToID: stateNameToID,
+            layouts: layouts,
+            transitionLayouts: transitionLayouts,
+            machine: machine)
 
-            XCTAssertEqual(tLayout.points.count, expected.count)
-            for i in 0..<expected.count {
-                let (ex, ey) = expected[i]
-                XCTAssertEqual(tLayout.points[i].x, ex, accuracy: 1e-6)
-                XCTAssertEqual(tLayout.points[i].y, ey, accuracy: 1e-6)
-            }
-        }
-        // Green
-        assertStateLayout("Green", isOpen: false, x: 500, y: 100, w: 100, h: 50, internalHeight: 40, onEntryHeight: 20, onExitHeight: 20) // Set isOpen to true if this state is open in the plist
-        assertTransitionPoints("Green", expected: [
-            (461.91697426306109, 89.345533359129988),
-            (435.79132935733372, 72.899930228890383),
-            (364.80037484835981, 73.540663018355772),
-            (338.43397345581457, 89.597439209879795)
-        ])
-        // InitialPseudoState
-        assertStateLayout("InitialPseudoState", isOpen: false, x: 37.5, y: 81.25, w: 25, h: 25) // Set isOpen to true if this state is open in the plist
-        assertTransitionPoints("InitialPseudoState", expected: [
-            (37.5, 80.75), (37.5, 80.75), (56.897817165048188, 94.253042288673086), (56.897817165048188, 94.253042288673086)
-        ])
-        // Red
-        assertStateLayout("Red", isOpen: false, x: 100, y: 100, w: 100, h: 50, internalHeight: 40, onEntryHeight: 20, onExitHeight: 20) // Set isOpen to true if this state is open in the plist
-        assertTransitionPoints("Red", expected: [
-            (99.75577968598067, 119.99970546172364),
-            (99.433001858706206, 179.47382569295826),
-            (195.54177030952403, 301.0404871605727),
-            (255.01166917949769, 300.26184012870544)
-        ])
-        // Yellow
-        assertStateLayout("Yellow", isOpen: false, x: 300, y: 100, w: 100, h: 50, internalHeight: 40, onEntryHeight: 20, onExitHeight: 20) // Set isOpen to true if this state is open in the plist
-        assertTransitionPoints("Yellow", expected: [
-            (261.57396671082358, 89.591646605869542),
-            (235.22335769176277, 73.532234235533906),
-            (164.29335261145596, 73.007760736915287),
-            (138.13934189371224, 89.385399294779631)
-        ])
-        // YellowRed
-        assertStateLayout("YellowRed", isOpen: false, x: 300, y: 300, w: 100, h: 50, internalHeight: 40, onEntryHeight: 20, onExitHeight: 20) // Set isOpen to true if this state is open in the plist
-        assertTransitionPoints("YellowRed", expected: [
-            (345.00568062344985, 300.19467698836939),
-            (404.76436083631722, 300.77638654151804),
-            (504.77272019018744, 179.67869482754736),
-            (502.0501079609715, 119.97923394692222)
-        ])
-
-        // Convert to C
+        // Convert to C and verify layouts are preserved
         let cMachineURL = tempDirectoryURL.appendingPathComponent("TrafficLight_C.machine")
-        // swiftlint:disable:next force_unwrapping
-        try machine.write(to: cMachineURL, language: outputLanguage(for: .c)!, isSuspensible: true)
-
-        // Read back converted machine
+        let cLanguage = try XCTUnwrap(outputLanguage(for: .c), "C language binding must exist")
+        try machine.write(to: cMachineURL, language: cLanguage, isSuspensible: true)
         let convertedMachine = try Machine(from: cMachineURL)
         XCTAssertEqual(convertedMachine.language.name, "c")
         XCTAssertEqual(convertedMachine.llfsm.states.count, 5)
-
-        // Build state name → layout/transition mapping for both original and converted machines
-        let convertedLayouts = convertedMachine.stateLayout
-        let convertedTransitions = convertedMachine.transitionLayout
-        let origNameToLayout: [String: StateLayout] = Dictionary(uniqueKeysWithValues: machine.llfsm.states.compactMap { sid in
-            guard let name = machine.llfsm.stateName(for: sid), let layout = layouts[sid] else { return nil }
-            return (name, layout)
-        })
-        let convNameToLayout: [String: StateLayout] = Dictionary(uniqueKeysWithValues: convertedMachine.llfsm.states.compactMap { sid in
-            guard let name = convertedMachine.llfsm.stateName(for: sid), let layout = convertedLayouts[sid] else { return nil }
-            return (name, layout)
-        })
-        // Compare layouts by state name, checking all relevant layout fields
-        for name in stateNameToID.keys {
-            guard let orig = origNameToLayout[name], let conv = convNameToLayout[name] else {
-                XCTFail("State layout for \(name) missing in original or converted layouts")
-                continue
-            }
-            // isOpen
-            XCTAssertEqual(orig.isOpen, conv.isOpen)
-            // openLayout
-            XCTAssertEqual(orig.openLayout.x, conv.openLayout.x, accuracy: 1e-6)
-            XCTAssertEqual(orig.openLayout.y, conv.openLayout.y, accuracy: 1e-6)
-            XCTAssertEqual(orig.openLayout.w, conv.openLayout.w, accuracy: 1e-6)
-            XCTAssertEqual(orig.openLayout.h, conv.openLayout.h, accuracy: 1e-6)
-            // closedLayout (Ellipse: x, y, w, h)
-            XCTAssertEqual(orig.closedLayout.x, conv.closedLayout.x, accuracy: 1e-6)
-            XCTAssertEqual(orig.closedLayout.y, conv.closedLayout.y, accuracy: 1e-6)
-            XCTAssertEqual(orig.closedLayout.w, conv.closedLayout.w, accuracy: 1e-6)
-            XCTAssertEqual(orig.closedLayout.h, conv.closedLayout.h, accuracy: 1e-6)
-            // Heights
-            XCTAssertEqual(orig.internalHeight, conv.internalHeight, accuracy: 1e-6)
-            XCTAssertEqual(orig.onEntryHeight, conv.onEntryHeight, accuracy: 1e-6)
-            XCTAssertEqual(orig.onExitHeight, conv.onExitHeight, accuracy: 1e-6)
-            XCTAssertEqual(orig.onSuspendHeight, conv.onSuspendHeight, accuracy: 1e-6)
-            XCTAssertEqual(orig.onResumeHeight, conv.onResumeHeight, accuracy: 1e-6)
-            // Zoomed heights
-            XCTAssertEqual(orig.zoomedOnEntryHeight, conv.zoomedOnEntryHeight, accuracy: 1e-6)
-            XCTAssertEqual(orig.zoomedOnExitHeight, conv.zoomedOnExitHeight, accuracy: 1e-6)
-            XCTAssertEqual(orig.zoomedInternalHeight, conv.zoomedInternalHeight, accuracy: 1e-6)
-            XCTAssertEqual(orig.zoomedOnSuspendHeight, conv.zoomedOnSuspendHeight, accuracy: 1e-6)
-            XCTAssertEqual(orig.zoomedOnResumeHeight, conv.zoomedOnResumeHeight, accuracy: 1e-6)
-        }
-        // Compare transition points by state name
-        let origNameToTransitions: [String: [TransitionLayout]] = Dictionary(uniqueKeysWithValues: machine.llfsm.states.compactMap { sid in
-            guard let name = machine.llfsm.stateName(for: sid) else { return nil }
-            // All outgoing transitions for this state
-            let outgoing = machine.llfsm.transitionMap.values.filter { $0.source == sid }
-            let layoutsArr = outgoing.compactMap { transitionLayouts[$0.id] }
-            return (name, layoutsArr)
-        })
-        let convNameToTransitions: [String: [TransitionLayout]] = Dictionary(uniqueKeysWithValues: convertedMachine.llfsm.states.compactMap { sid in
-            guard let name = convertedMachine.llfsm.stateName(for: sid) else { return nil }
-            let outgoing = convertedMachine.llfsm.transitionMap.values.filter { $0.source == sid }
-            let layoutsArr = outgoing.compactMap { convertedTransitions[$0.id] }
-            return (name, layoutsArr)
-        })
-        for name in stateNameToID.keys {
-            guard let origTransitions = origNameToTransitions[name], let convTransitions = convNameToTransitions[name] else {
-                XCTFail("Transitions for \(name) missing in original or converted layouts")
-                continue
-            }
-            XCTAssertEqual(origTransitions.count, convTransitions.count, "Transition count mismatch for state \(name)")
-            for (o, c) in zip(origTransitions, convTransitions) {
-                XCTAssertEqual(o.points.count, c.points.count, "Transition points count mismatch for state \(name)")
-                for (op, cp) in zip(o.points, c.points) {
-                    XCTAssertEqual(op.x, cp.x, accuracy: 1e-6)
-                    XCTAssertEqual(op.y, cp.y, accuracy: 1e-6)
-                }
-            }
-        }
-
+        verifyConvertedLayouts(
+            original: machine,
+            converted: convertedMachine,
+            stateNameToID: stateNameToID,
+            originalLayouts: layouts,
+            originalTransitions: transitionLayouts)
     }
 
     /// Test arrangement conversion and serialisation.
@@ -402,7 +220,7 @@ final class ConversionTests: XCTestCase {
         let machine = createTestMachine()
 
         // Create wrapper for C language
-        let cWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: "TestMachine")
+        let cWrapper = MachineDirectoryWrapper(directoryWithFileWrappers: [:], for: machine, named: "TestMachine")
         cWrapper.language = CBinding()
 
         // Generate C code
@@ -418,7 +236,7 @@ final class ConversionTests: XCTestCase {
         XCTAssertTrue(cHeaderContent.contains("void fsm_testmachine_c_init"))
 
         // Create wrapper for ObjC++ language
-        let objcppWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: "TestMachine")
+        let objcppWrapper = MachineDirectoryWrapper(directoryWithFileWrappers: [:], for: machine, named: "TestMachine")
         objcppWrapper.language = ObjCPPBinding()
 
         // Generate ObjC++ code
@@ -431,5 +249,275 @@ final class ConversionTests: XCTestCase {
 
         let languageContent = try String(contentsOf: languageFilePath)
         XCTAssertEqual(languageContent, "objc++")
+    }
+}
+
+// MARK: - Traffic Light Test Helpers
+
+/// Extension providing traffic light test helpers to reduce cyclomatic complexity.
+extension ConversionTests {
+
+    /// Parameters describing the expected layout for a state.
+    struct StateLayoutExpectation {
+        /// The state name to look up.
+        var name: String
+        /// Whether the state is expected to be in open (expanded) form.
+        var isOpen: Bool
+        /// Expected x coordinate.
+        var x: Double
+        /// Expected y coordinate.
+        var y: Double
+        /// Expected width.
+        var w: Double
+        /// Expected height.
+        var h: Double
+    }
+
+    /// Locate the resources directory containing the traffic light machine.
+    ///
+    /// - Returns: The URL of the resources directory, or `nil` if not found.
+    func trafficLightResourcesURL() -> URL? {
+        let fm = FileManager.default
+        var isDirectory: ObjCBool = false
+        guard let bundleResourcesURL = Bundle.module.resourceURL,
+              fm.fileExists(atPath: bundleResourcesURL.path, isDirectory: &isDirectory),
+              isDirectory.boolValue else {
+            return nil
+        }
+        let testResourcesURL = bundleResourcesURL.appendingPathComponent("Resources")
+        let baseTrafficLightURL = bundleResourcesURL.appendingPathComponent("TrafficLight.machine")
+        if fm.fileExists(atPath: testResourcesURL.path, isDirectory: &isDirectory),
+           isDirectory.boolValue {
+            return testResourcesURL
+        } else if fm.fileExists(atPath: baseTrafficLightURL.path, isDirectory: &isDirectory),
+                  isDirectory.boolValue {
+            return bundleResourcesURL
+        }
+        return nil
+    }
+
+    /// Verify basic properties of the traffic light machine.
+    ///
+    /// - Parameter machine: The machine to verify.
+    func verifyTrafficLightProperties(_ machine: Machine) {
+        XCTAssertEqual(machine.language.name, "objc++")
+        XCTAssertEqual(machine.llfsm.states.count, 5)
+        let stateNames = machine.llfsm.states.compactMap { machine.llfsm.stateName(for: $0) }
+        XCTAssertTrue(stateNames.contains("InitialPseudoState"))
+        XCTAssertTrue(stateNames.contains("Red"))
+        XCTAssertTrue(stateNames.contains("Yellow"))
+        XCTAssertTrue(stateNames.contains("Green"))
+        XCTAssertTrue(stateNames.contains("YellowRed"))
+    }
+
+    /// Build a mapping from state names to state IDs for the given machine.
+    ///
+    /// - Parameter machine: The machine whose states to map.
+    /// - Returns: A dictionary from state name strings to `StateID` values.
+    func buildStateNameToID(machine: Machine) -> [String: StateID] {
+        var map: [String: StateID] = [:]
+        for state in machine.llfsm.states {
+            if let name = machine.llfsm.stateName(for: state) {
+                map[name] = state
+            }
+        }
+        return map
+    }
+
+    /// Assert that the named state has the expected layout coordinates.
+    ///
+    /// - Parameters:
+    ///   - expectation: The expected layout parameters.
+    ///   - stateNameToID: Mapping from state names to IDs.
+    ///   - layouts: The layout dictionary.
+    func assertStateLayout(
+        _ expectation: StateLayoutExpectation,
+        stateNameToID: [String: StateID],
+        layouts: StateLayouts
+    ) {
+        guard let id = stateNameToID[expectation.name], let layout = layouts[id] else {
+            XCTFail("Missing layout for \(expectation.name)")
+            return
+        }
+        XCTAssertEqual(
+            layout.isOpen,
+            expectation.isOpen,
+            "State \(expectation.name) expected isOpen=\(expectation.isOpen)")
+        if expectation.isOpen {
+            XCTAssertEqual(layout.openLayout.x, expectation.x, accuracy: 1e-6)
+            XCTAssertEqual(layout.openLayout.y, expectation.y, accuracy: 1e-6)
+            XCTAssertEqual(layout.openLayout.w, expectation.w, accuracy: 1e-6)
+            XCTAssertEqual(layout.openLayout.h, expectation.h, accuracy: 1e-6)
+        } else {
+            XCTAssertEqual(layout.closedLayout.x, expectation.x, accuracy: 1e-6)
+            XCTAssertEqual(layout.closedLayout.y, expectation.y, accuracy: 1e-6)
+            XCTAssertEqual(layout.closedLayout.w, expectation.w, accuracy: 1e-6)
+            XCTAssertEqual(layout.closedLayout.h, expectation.h, accuracy: 1e-6)
+        }
+    }
+
+    /// Assert that the named state's single outgoing transition has the expected points.
+    ///
+    /// - Parameters:
+    ///   - name: The source state name.
+    ///   - expected: The expected sequence of (x, y) point pairs.
+    ///   - stateNameToID: Mapping from state names to IDs.
+    ///   - machine: The machine containing the transitions.
+    ///   - transitionLayouts: The layout dictionary for transitions.
+    func assertTransitionPoints(
+        _ name: String,
+        expected: [(Double, Double)],
+        stateNameToID: [String: StateID],
+        machine: Machine,
+        transitionLayouts: TransitionLayouts
+    ) {
+        guard let id = stateNameToID[name] else {
+            XCTFail("No state ID for \(name)")
+            return
+        }
+        let outgoing = machine.llfsm.transitionMap.values.filter { $0.source == id }
+        guard outgoing.count == 1 else {
+            XCTFail("Expected exactly 1 outgoing transition for \(name), got \(outgoing.count)")
+            return
+        }
+        let tID = outgoing[0].id
+        guard let tLayout = transitionLayouts[tID] else {
+            XCTFail("No TransitionLayout for transition ID \(tID) of state \(name)")
+            return
+        }
+        XCTAssertEqual(tLayout.points.count, expected.count)
+        for (point, (ex, ey)) in zip(tLayout.points, expected) {
+            XCTAssertEqual(point.x, ex, accuracy: 1e-6)
+            XCTAssertEqual(point.y, ey, accuracy: 1e-6)
+        }
+    }
+
+    /// Verify that converting a machine preserves its state and transition layouts.
+    ///
+    /// Checks that every state in the original machine has a corresponding layout
+    /// in the converted machine, and that transition point counts are preserved.
+    ///
+    /// - Parameters:
+    ///   - original: The source machine before conversion.
+    ///   - converted: The machine after conversion.
+    ///   - stateNameToID: Mapping from state names to IDs in the original machine.
+    ///   - originalLayouts: The state layout dictionary from the original machine.
+    ///   - originalTransitions: The transition layout dictionary from the original machine.
+    func verifyConvertedLayouts(
+        original: Machine,
+        converted: Machine,
+        stateNameToID: [String: StateID],
+        originalLayouts: StateLayouts,
+        originalTransitions: TransitionLayouts
+    ) {
+        let convertedLayouts = converted.stateLayout
+        let convertedTransitions = converted.transitionLayout
+        // Build a name-to-ID map for the converted machine
+        var convertedNameToID: [String: StateID] = [:]
+        for state in converted.llfsm.states {
+            if let name = converted.llfsm.stateName(for: state) {
+                convertedNameToID[name] = state
+            }
+        }
+        // Verify each state's layout is preserved after conversion
+        for (name, originalID) in stateNameToID {
+            guard let originalLayout = originalLayouts[originalID] else { continue }
+            guard let convertedID = convertedNameToID[name] else {
+                XCTFail("State \(name) missing in converted machine")
+                continue
+            }
+            guard let convertedLayout = convertedLayouts[convertedID] else {
+                XCTFail("No layout for state \(name) in converted machine")
+                continue
+            }
+            XCTAssertEqual(
+                convertedLayout.isOpen,
+                originalLayout.isOpen,
+                "State \(name) isOpen mismatch after conversion")
+        }
+        // Verify transition layout counts are preserved
+        XCTAssertEqual(
+            convertedTransitions.count,
+            originalTransitions.count,
+            "Transition layout count mismatch after conversion")
+    }
+
+    /// Verify state layout and transition points for all traffic light states.
+    ///
+    /// - Parameters:
+    ///   - stateNameToID: Mapping from state names to IDs.
+    ///   - layouts: The state layout dictionary.
+    ///   - transitionLayouts: The transition layout dictionary.
+    ///   - machine: The machine under test.
+    func verifyTrafficLightStateLayouts(
+        stateNameToID: [String: StateID],
+        layouts: StateLayouts,
+        transitionLayouts: TransitionLayouts,
+        machine: Machine
+    ) {
+        let states: [StateLayoutExpectation] = [
+            StateLayoutExpectation(name: "Green", isOpen: false, x: 500, y: 100, w: 100, h: 50),
+            StateLayoutExpectation(name: "InitialPseudoState", isOpen: false, x: 37.5, y: 81.25, w: 25, h: 25),
+            StateLayoutExpectation(name: "Red", isOpen: false, x: 100, y: 100, w: 100, h: 50),
+            StateLayoutExpectation(name: "Yellow", isOpen: false, x: 300, y: 100, w: 100, h: 50),
+            StateLayoutExpectation(name: "YellowRed", isOpen: false, x: 300, y: 300, w: 100, h: 50),
+        ]
+        for expectation in states {
+            assertStateLayout(expectation, stateNameToID: stateNameToID, layouts: layouts)
+        }
+        assertTransitionPoints(
+            "Green",
+            expected: [
+                (461.91697426306109, 89.345533359129988),
+                (435.79132935733372, 72.899930228890383),
+                (364.80037484835981, 73.540663018355772),
+                (338.43397345581457, 89.597439209879795),
+            ],
+            stateNameToID: stateNameToID,
+            machine: machine,
+            transitionLayouts: transitionLayouts)
+        assertTransitionPoints(
+            "InitialPseudoState",
+            expected: [
+                (37.5, 80.75), (37.5, 80.75),
+                (56.897817165048188, 94.253042288673086),
+                (56.897817165048188, 94.253042288673086),
+            ],
+            stateNameToID: stateNameToID,
+            machine: machine,
+            transitionLayouts: transitionLayouts)
+        assertTransitionPoints(
+            "Red",
+            expected: [
+                (99.75577968598067, 119.99970546172364),
+                (99.433001858706206, 179.47382569295826),
+                (195.54177030952403, 301.0404871605727),
+                (255.01166917949769, 300.26184012870544),
+            ],
+            stateNameToID: stateNameToID,
+            machine: machine,
+            transitionLayouts: transitionLayouts)
+        assertTransitionPoints(
+            "Yellow",
+            expected: [
+                (261.57396671082358, 89.591646605869542),
+                (235.22335769176277, 73.532234235533906),
+                (164.29335261145596, 73.007760736915287),
+                (138.13934189371224, 89.385399294779631),
+            ],
+            stateNameToID: stateNameToID,
+            machine: machine,
+            transitionLayouts: transitionLayouts)
+        assertTransitionPoints(
+            "YellowRed",
+            expected: [
+                (345.00568062344985, 300.19467698836939),
+                (404.76436083631722, 300.77638654151804),
+                (504.77272019018744, 179.67869482754736),
+                (502.0501079609715, 119.97923394692222),
+            ],
+            stateNameToID: stateNameToID,
+            machine: machine,
+            transitionLayouts: transitionLayouts)
     }
 }

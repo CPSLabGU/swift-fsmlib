@@ -30,9 +30,9 @@ extension StringProtocol {
         set { self = .init(newValue.joined(separator: "\n")) ?? "" }
     }
 
-    /// The string with whitespace characters trimmed from both ends.
+    /// The string with whitespace and newline characters trimmed from both ends.
     @usableFromInline var trimmed: String {
-        trimmingCharacters(in: .whitespaces)
+        trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// String with the file extension removed

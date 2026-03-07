@@ -1,0 +1,4 @@
+Susp	SuspendCounter.machine
+Instance1	Counter.machine
+Instance2	Counter.machine
+Instance3	Counter.machine

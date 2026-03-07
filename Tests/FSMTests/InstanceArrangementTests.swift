@@ -157,14 +157,14 @@ final class InstanceArrangementTests: XCTestCase {
     func testArrangementSerialization() throws {
         // Create machines
         let machine1Name = "Machine1"
-        let machine1FileName = machine1Name + MachineWrapper.dottedSuffix
+        let machine1FileName = machine1Name + MachineDirectoryWrapper.dottedSuffix
         let machine1 = Machine()
         let state1 = State(name: "State1")
         machine1.llfsm = LLFSM(states: [state1], transitions: [], suspendState: nil)
         machine1.language = CBinding()
 
         // Create machine wrapper that will be serialized
-        let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine1, named: machine1FileName)
+        let machineWrapper = MachineDirectoryWrapper(directoryWithFileWrappers: [:], for: machine1, named: machine1FileName)
 
         // Create instance with the same typeFile name as the machine wrapper
         let instance1 = Instance(name: machine1FileName, typeFile: machine1FileName, machine: machine1)
@@ -214,7 +214,7 @@ final class InstanceArrangementTests: XCTestCase {
         machine.language = CBinding()
 
         // Create machine wrapper
-        let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: "Machine.machine")
+        let machineWrapper = MachineDirectoryWrapper(directoryWithFileWrappers: [:], for: machine, named: "Machine.machine")
 
         // Create instance with matching typeFile
         let instance = Instance(name: "Machine", typeFile: "Machine.machine", machine: machine)
@@ -258,7 +258,7 @@ final class InstanceArrangementTests: XCTestCase {
         let arrangement = Arrangement(namedInstances: [instance])
 
         // Create a machine wrapper with the same name as instance typeFile
-        let machineWrapper = MachineWrapper(directoryWithFileWrappers: [:], for: machine, named: "Machine.machine")
+        let machineWrapper = MachineDirectoryWrapper(directoryWithFileWrappers: [:], for: machine, named: "Machine.machine")
 
         // Create arrangement wrapper with the machine wrapper
         let wrapper = ArrangementWrapper(directoryWithFileWrappers: ["Machine.machine": machineWrapper], for: arrangement, named: "TestArrangement")

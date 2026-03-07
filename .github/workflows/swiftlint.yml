@@ -6,19 +6,18 @@ on:
   pull_request:
     branches: [development, main]
 
-jobs:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
+jobs:
   swiftlint:
     runs-on: ubuntu-24.04
-
     steps:
-      - name: Clone Repo
-        uses: actions/checkout@v2
-
-      #- name: Reconfigure Private Repo URLs
-      #  run: sed -i 's/git@github.com:/https:\/\/${{ secrets.ACCESS_TOKEN }}@github.com\//g' Package.swift
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: SwiftLint
         uses: norio-nomura/action-swiftlint@3.2.1
         with:
-            args: --strict
+          args: --strict

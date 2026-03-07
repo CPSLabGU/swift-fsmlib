@@ -58,33 +58,57 @@ public class Machine {
     public var boilerplate: any Boilerplate
     /// State boilerplate
     public var stateBoilerplate: [StateID: any Boilerplate]
-    /// Source code of OnEntry/OnExit/Internal actions of states
-    public var activities: StateActivitiesSourceCode
+
+    // MARK: - Convenience Methods for State Activities
+
+    /// Get state activities as sections dictionary.
+    ///
+    /// - Parameter stateID: The ID of the state.
+    /// - Returns: Dictionary mapping section names to their content.
+    public func stateActivities(for stateID: StateID) -> [StandardBoilerplateSection: String] {
+        guard let stateName = llfsm.stateName(for: stateID),
+              let boilerplate = stateBoilerplate[stateID] else {
+            return [:]
+        }
+        return language.extractStateSections(from: boilerplate, stateName: stateName)
+    }
+
+    /// Set state activities from sections dictionary.
+    ///
+    /// - Parameters:
+    ///   - sections: Dictionary mapping section names to their content.
+    ///   - stateID: The ID of the state.
+    public func setStateActivities(_ sections: [StandardBoilerplateSection: String], for stateID: StateID) {
+        guard let stateName = llfsm.stateName(for: stateID) else { return }
+        stateBoilerplate[stateID] = language.createStateBoilerplate(
+            from: sections,
+            stateName: stateName
+        )
+    }
 
     /// Constructor for reading an FSM from a given URL.
     ///
     /// This initialiser will read the states and transitions from
-    /// the MachineWrapper at the given URL.
+    /// the MachineDirectoryWrapper at the given URL.
     ///
     /// - Note: The URL is expected to point to a directory containing the machine.
     /// - Parameter url: The URL to read the FSM from.
     public convenience init(from url: URL) throws {
-        let wrapper = try MachineWrapper(url: url)
+        let wrapper = try MachineDirectoryWrapper(url: url)
         try self.init(from: wrapper)
     }
 
-    /// Constructor for reading an FSM from a given MachineWrapper.
+    /// Constructor for reading an FSM from a given MachineDirectoryWrapper.
     ///
     /// This initialiser will read the states and transitions from
-    /// the given MachineWrapper.
+    /// the given MachineDirectoryWrapper.
     ///
-    /// - Note: The MachineWrapper is expected to point to a directory containing the machine.
-    /// - Parameter machineWrapper: The MachineWrapper to read the FSM from.
-    public init(from machineWrapper: MachineWrapper) throws {
+    /// - Note: The MachineDirectoryWrapper is expected to point to a directory containing the machine.
+    /// - Parameter machineWrapper: The MachineDirectoryWrapper to read the FSM from.
+    public init(from machineWrapper: MachineDirectoryWrapper) throws {
         language = languageBinding(for: machineWrapper)
         boilerplate = language.boilerplate(for: machineWrapper)
         windowLayout = language.windowLayout(for: machineWrapper)
-        activities = StateActivitiesSourceCode()
         let names = stateNames(for: machineWrapper, statesFilename: .states)
         let states = names.map { State(id: StateID(), name: $0) }
         let susp = language.suspendState(for: machineWrapper, states: states)
@@ -149,7 +173,43 @@ public class Machine {
         windowLayout = nil
         boilerplate = CBoilerplate()
         stateBoilerplate = [:]
-        activities = StateActivitiesSourceCode()
+    }
+
+    /// Copy constructor for creating a new machine from an existing one.
+    ///
+    /// This creates a new Machine instance with the same LLFSM, layouts,
+    /// boilerplate, and activities as the original machine. Optionally,
+    /// a different language binding can be specified.
+    ///
+    /// - Parameters:
+    ///   - machine: The machine to copy
+    ///   - language: Optional language binding (uses original's language if nil)
+    @inlinable
+    public init(copying machine: Machine, language: (any LanguageBinding)? = nil) {
+        let targetLanguage = language ?? machine.language
+        self.language = targetLanguage
+        self.llfsm = machine.llfsm
+        self.stateLayout = machine.stateLayout
+        self.transitionLayout = machine.transitionLayout
+        self.windowLayout = machine.windowLayout
+
+        // Convert machine boilerplate through language binding
+        self.boilerplate = targetLanguage.convertBoilerplate(
+            from: machine.boilerplate,
+            sourceLanguage: machine.language
+        )
+
+        // Convert state boilerplate
+        var convertedStateBoilerplate: [StateID: any Boilerplate] = [:]
+        for (stateID, boilerplate) in machine.stateBoilerplate {
+            guard let stateName = machine.llfsm.stateName(for: stateID) else { continue }
+            convertedStateBoilerplate[stateID] = targetLanguage.convertStateBoilerplate(
+                from: boilerplate,
+                sourceLanguage: machine.language,
+                stateName: stateName
+            )
+        }
+        self.stateBoilerplate = convertedStateBoilerplate
     }
 
     /// Write the FSM to the given URL.
@@ -192,10 +252,10 @@ public class Machine {
         language = originalLanguage
     }
 
-    /// Add the FSM to the given `MachineWrapper`.
+    /// Add the FSM to the given `MachineDirectoryWrapper`.
     ///
     /// This method will add the FSM to the given
-    /// `MachineWrapper`.
+    /// `MachineDirectoryWrapper`.
     /// Optionally, a language binding can be specified,
     /// that will write the FSM using the given binding.
     ///
@@ -205,41 +265,41 @@ public class Machine {
     ///         required files are generated and all tests will pass without modification.
     ///
     /// - Parameters:
-    ///   - machineWrapper: The `MachineWrapper` to add the FSM to.
+    ///   - storage: The `MachineStorage` to add the FSM to.
     ///   - targetLanguage: The language to use (defaults to the original language).
     ///   - isSuspensible: Whether the FSM code will allow suspension.
     /// - Throws: Any error thrown by the underlying file system or output language.
-    public func add(to machineWrapper: MachineWrapper, language targetLanguage: (any LanguageBinding)? = nil, isSuspensible: Bool) throws {
+    public func add(to storage: any MachineStorage, language targetLanguage: (any LanguageBinding)? = nil, isSuspensible: Bool) throws {
         guard let destination = (targetLanguage ?? language) as? (any OutputLanguage) else {
             throw FSMError.unsupportedOutputFormat
         }
         if destination != language {
-            machineWrapper.removeFileWrappers()
+            storage.fileWrapper.removeFileWrappers()
         }
         // Ensure stateBoilerplate is initialised for all states
         for stateID in llfsm.states {
             if stateBoilerplate[stateID] == nil, let state = llfsm.stateMap[stateID] {
-                stateBoilerplate[stateID] = language.stateBoilerplate(for: machineWrapper, stateName: state.name)
+                stateBoilerplate[stateID] = language.stateBoilerplate(for: storage, stateName: state.name)
             }
         }
-        try destination.addLanguage(to: machineWrapper)
-        try destination.add(boilerplate: boilerplate, to: machineWrapper)
-        try destination.add(windowLayout: windowLayout, to: machineWrapper)
-        try destination.add(stateNames: llfsm.stateNames, to: machineWrapper)
-        try destination.addInterface(for: llfsm, to: machineWrapper, isSuspensible: isSuspensible)
-        try destination.addCode(for: llfsm, to: machineWrapper, isSuspensible: isSuspensible)
-        try destination.addStateInterface(for: llfsm, to: machineWrapper, isSuspensible: isSuspensible)
-        try destination.addStateCode(for: llfsm, to: machineWrapper, isSuspensible: isSuspensible)
-        try destination.addTransitionCode(for: llfsm, to: machineWrapper, isSuspensible: isSuspensible)
+        try destination.addLanguage(to: storage.fileWrapper)
+        try destination.add(boilerplate: boilerplate, to: storage)
+        try destination.add(windowLayout: windowLayout, to: storage)
+        try destination.add(stateNames: llfsm.stateNames, to: storage)
+        try destination.addInterface(for: llfsm, to: storage, isSuspensible: isSuspensible)
+        try destination.addCode(for: llfsm, to: storage, isSuspensible: isSuspensible)
+        try destination.addStateInterface(for: llfsm, to: storage, isSuspensible: isSuspensible)
+        try destination.addStateCode(for: llfsm, to: storage, isSuspensible: isSuspensible)
+        try destination.addTransitionCode(for: llfsm, to: storage, isSuspensible: isSuspensible)
         for stateID in llfsm.states {
             guard let stateName = llfsm.stateMap[stateID]?.name,
                   let boilerplate = stateBoilerplate[stateID] else {
-                fputs("Orphaned state \(stateID) for \(machineWrapper.name)\n", stderr)
+                fputs("Orphaned state \(stateID) for \(storage.name)\n", stderr)
                 continue
             }
-            try destination.add(stateBoilerplate: boilerplate, to: machineWrapper, for: stateName)
+            try destination.add(stateBoilerplate: boilerplate, to: storage, for: stateName)
         }
-        try destination.addCMakeFile(for: llfsm, boilerplate: boilerplate, to: machineWrapper, isSuspensible: isSuspensible)
+        try destination.addCMakeFile(for: llfsm, boilerplate: boilerplate, to: storage, isSuspensible: isSuspensible)
         var layouts = StateNameLayouts()
         for (stateID, layout) in stateLayout {
             guard let state = llfsm.stateMap[stateID] else { continue }
@@ -248,7 +308,7 @@ public class Machine {
             }
             layouts[state.name] = (state: layout, transitions: tl)
         }
-        try destination.add(layout: layouts, to: machineWrapper)
+        try destination.add(layout: layouts, to: storage)
     }
 }
 
@@ -265,9 +325,9 @@ public func stateNames(from url: URL) throws -> StateNames {
     try stateNames(from: String(contentsOf: url, encoding: .utf8))
 }
 
-/// Read the names of states from the given MachineWrapper.
+/// Read the names of states from the given MachineDirectoryWrapper.
 ///
-/// This reads the content of the given MachineWrapper and interprets
+/// This reads the content of the given MachineDirectoryWrapper and interprets
 /// each line as a state name.
 ///
 /// - Parameters:
@@ -276,7 +336,7 @@ public func stateNames(from url: URL) throws -> StateNames {
 /// - Throws: `NSError` if the file cannot be read.
 /// - Returns: An array of state names.
 @inlinable
-public func stateNames(for wrapper: MachineWrapper, statesFilename: Filename) -> StateNames {
+public func stateNames(for wrapper: MachineDirectoryWrapper, statesFilename: Filename) -> StateNames {
     stateNames(from: wrapper.fileWrappers?[statesFilename]?.stringContents ?? "")
 }
 
@@ -386,12 +446,12 @@ public func dictionary(from layouts: StateNameLayouts) -> NSDictionary {
 /// file wrapper.
 ///
 /// - Parameters:
-///   - machineWrapper: The MachineWrapper to examine.
+///   - machineWrapper: The MachineDirectoryWrapper to examine.
 ///   - states: The array of states.
 ///   - language: The language binding to use (defaults to ObjCPPBinding).
 /// - Returns: A function that returns an array of transitions for a given source state.
 @inlinable
-func transitions(for machineWrapper: MachineWrapper, with states: [State], using language: any LanguageBinding = ObjCPPBinding()) -> (State) -> [Transition] {
+func transitions(for machineWrapper: MachineDirectoryWrapper, with states: [State], using language: any LanguageBinding = ObjCPPBinding()) -> (State) -> [Transition] {
     { (state: State) -> [Transition] in
         let sourceID = state.id
         let n = language.numberOfTransitions(for: machineWrapper, stateName: state.name)

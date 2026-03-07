@@ -36,14 +36,14 @@ public protocol Boilerplate {
     /// - Parameter sectionName: The name of the section to get boilerplate code for.
     /// - Returns: The boilerplate code for the given section name (empty if not found).
     func getSection(named sectionName: String) -> BoilerplateCode
-    /// Add the boilerplate to the given `MachineWrapper`.
-    /// - Parameter wrapper: The `MachineWrapper` to add the boilerplate to.
-    func add(to wrapper: MachineWrapper)
-    /// Add the boilerplate for a given state to the given `MachineWrapper`.
+    /// Add the boilerplate to the given `MachineDirectoryWrapper`.
+    /// - Parameter wrapper: The `MachineDirectoryWrapper` to add the boilerplate to.
+    func add(to wrapper: MachineDirectoryWrapper)
+    /// Add the boilerplate for a given state to the given `MachineDirectoryWrapper`.
     /// - Parameters:
     ///   - state: The state to write the boilerplate for.
-    ///   - wrapper: The `MachineWrapper` add to.
-    func add(state: String, to wrapper: MachineWrapper)
+    ///   - wrapper: The `MachineDirectoryWrapper` add to.
+    func add(state: String, to wrapper: MachineDirectoryWrapper)
 }
 
 /// Extension providing additional boilerplate section names for C-like languages.
@@ -97,7 +97,8 @@ public extension Boilerplate {
     ///   - code: The boilerplate code to set for the given section name.
     @inlinable
     mutating func setSection(named sectionName: String, to code: BoilerplateCode) {
-        sections[SectionName(rawValue: sectionName)!] = code
+        guard let key = SectionName(rawValue: sectionName) else { return }
+        sections[key] = code
     }
     /// Section accessor subscript.
     ///

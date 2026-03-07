@@ -1,0 +1,67 @@
+@Tutorial {
+    @Intro(title: "Getting Started with FSM") {
+        Learn how to construct and use a simple finite-state machine (FSM) using the FSM Swift package. This tutorial walks through the creation of states, transitions, and the FSM itself, using tested, cross-platform Swift code.
+        
+        All code in this tutorial is tested and cross-platform. For more advanced usage, see the API documentation and the Concepts guide.
+    }
+    
+    @Section(title: "Define States and Transitions") {
+        @ContentAndMedia {
+            In this section, you will define your states and transitions using the `State` and `Transition` structs.
+        }
+        
+        @Steps {
+            @Step {
+                Define two states for a simple FSM.
+                
+                ```swift
+                    let red = State(name: "Red")
+                    let green = State(name: "Green")
+                ```
+            }
+            
+            @Step {
+                Create transitions between the states.
+                
+                ```swift
+                    let toGreen = Transition(label: "timer", source: red.id, target: green.id)
+                    let toRed = Transition(label: "timer", source: green.id, target: red.id)
+                ```
+            }
+        }
+    }
+    
+    @Section(title: "Create the FSM") {
+        @ContentAndMedia {
+            In this section, you will create the FSM using the `LLFSM` struct.
+        }
+        
+        @Steps {
+            @Step {
+                Construct the FSM from the states and transitions.
+                
+                ```swift
+                    let fsm = LLFSM(states: [red, green], transitions: [toGreen, toRed], suspendState: nil)
+                ```
+            }
+        }
+    }
+    
+    @Section(title: "Inspect the FSM") {
+        @ContentAndMedia {
+            In this section, you will inspect the FSM's initial state, states, and transitions.
+        }
+        
+        @Steps {
+            @Step {
+                Print the FSM's initial state, states, and transitions.
+                
+                ```swift
+                    print("Initial state: \(fsm.initialState)")
+                    print("States: \(fsm.states)")
+                    print("Transitions: \(fsm.transitions)")
+                ```
+            }
+        }
+    }
+}

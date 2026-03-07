@@ -59,6 +59,13 @@ struct FSMConvert: AsyncParsableCommand {
     @Flag(name: .shortAndLong, help: "Turn on verbose output.")
     var verbose = false
 
+    /// Turn on debug output.
+    ///
+    /// This option enables debug output, which provides detailed debugging
+    /// information about the conversion process.
+    @Flag(name: .long, help: "Turn on debug output.")
+    var debug = false
+
     /// The input machines to read.
     ///
     /// This argument specifies the input machines to read. It can be a directory
@@ -75,36 +82,79 @@ struct FSMConvert: AsyncParsableCommand {
     /// - Note: Designed for use in automated build systems and scripting.
     mutating func run() async throws {
         let fileManager = FileManager.default
-        let wrapperNames = try inputMachines.map {
+        // Read machines using the new factory
+        let storageInstances = try inputMachines.map {
             let path: String
             if fileManager.fileExists(atPath: $0) {
                 path = $0
             } else {
-                path = $0 + MachineWrapper.dottedSuffix
+                path = $0 + MachineDirectoryWrapper.dottedSuffix
                 guard fileManager.fileExists(atPath: path) else {
                     throw ValidationError("File '\($0)' does not exist")
                 }
             }
             let machineURL = URL(fileURLWithPath: path)
-            let wrapper = try MachineWrapper(url: machineURL)
-            return (machineURL.lastPathComponent, wrapper)
+            let storage = try MachineStorageFactory.read(from: machineURL)
+            return (machineURL.lastPathComponent, storage)
         }
-        let machineArrangement = Arrangement(namedInstances: wrapperNames.map { Instance(name: $0.0, typeFile: $0.0, machine: $0.1.machine) })
+
         let outputFormat = format.isEmpty ? nil : Format(rawValue: format)
-        guard let outputLanguage = outputLanguage(for: outputFormat, default: wrapperNames.first?.1.machine.language) else {
+        guard let outputLanguage = outputLanguage(for: outputFormat, default: storageInstances.first?.1.machine.language) else {
             FSMConvert.exit(withError: ValidationError("No output language for format '\(format)'\n"))
         }
         let outputURL = URL(fileURLWithPath: output)
-        let wrapperMappings = Dictionary(wrapperNames, uniquingKeysWith: { a, _ in a })
-        let arrangementWrapper = ArrangementWrapper(directoryWithFileWrappers: wrapperMappings, for: machineArrangement, named: outputURL.lastPathComponent, language: outputLanguage)
+
         if verbose {
-            print("\(wrapperNames.count) FSMs with \(wrapperNames.reduce(0) { $0 + $1.1.machine.llfsm.states.count }) states and \(wrapperNames.reduce(0) { $0 + $1.1.machine.llfsm.transitions.count }) transitions\n")
+            let totalStates = storageInstances.reduce(0) { $0 + $1.1.machine.llfsm.states.count }
+            let totalTransitions = storageInstances.reduce(0) { $0 + $1.1.machine.llfsm.transitions.count }
+            print("\(storageInstances.count) FSMs with \(totalStates) states and \(totalTransitions) transitions\n")
         }
-        if arrangement || wrapperNames.count > 1 {
+
+        if arrangement || storageInstances.count > 1 {
+            // For arrangements, create directory wrappers (arrangements are always directory-based)
+            // We need to convert machines to directory wrappers with the output language
+            var instances: [Instance] = []
+            var wrapperMappings: [String: FileWrapper] = [:]
+
+            for item in storageInstances {
+                let machine = item.1.machine
+                // For directory-based machines, use the name as-is
+                // For single-file machines (like SCXML), strip extension and add .machine
+                let machineName: String
+                let instanceName: String
+                if item.0.hasSuffix(MachineDirectoryWrapper.dottedSuffix) {
+                    machineName = item.0
+                    // Instance name without .machine suffix
+                    instanceName = String(item.0.dropLast(MachineDirectoryWrapper.dottedSuffix.count))
+                } else {
+                    // Strip any extension for instance name
+                    instanceName = URL(fileURLWithPath: item.0).deletingPathExtension().lastPathComponent
+                    machineName = instanceName + MachineDirectoryWrapper.dottedSuffix
+                }
+                // Create a directory wrapper with the output language
+                let dirWrapper = MachineDirectoryWrapper(machine: machine, named: machineName)
+                dirWrapper.language = outputLanguage
+                dirWrapper.isSuspensible = !nonSuspensible
+                wrapperMappings[machineName] = dirWrapper
+                instances.append(Instance(name: instanceName, typeFile: machineName, machine: machine))
+            }
+
+            let machineArrangement = Arrangement(namedInstances: instances)
+            let arrangementWrapper = ArrangementWrapper(
+                directoryWithFileWrappers: wrapperMappings,
+                for: machineArrangement,
+                named: outputURL.lastPathComponent,
+                language: outputLanguage
+            )
             try arrangementWrapper.write(to: outputURL)
-        } else if let machineWrapper = wrapperNames.first?.1 {
-            machineWrapper.language = outputLanguage
-            try machineWrapper.write(to: outputURL)
+        } else if let firstStorage = storageInstances.first {
+            // Single machine: use factory to create appropriate storage format
+            let storage = MachineStorageFactory.create(
+                for: firstStorage.1.machine,
+                format: outputFormat,
+                at: outputURL
+            )
+            try storage.write(to: outputURL)
         }
     }
 }

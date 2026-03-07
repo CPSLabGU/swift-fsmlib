@@ -1,0 +1,31 @@
+@Tutorials(name: "FSM Tutorials") {
+    @Intro(title: "Learning FSM") {
+        Explore the FSM library through hands-on tutorials. Learn how to create
+        finite-state machines, work with arrangements, and use the fsmconvert
+        command-line tool.
+    }
+
+    @Chapter(name: "Getting Started") {
+        Build your first finite-state machine using the FSM library's core types.
+
+        @TutorialReference(tutorial: "doc:GettingStarted")
+    }
+
+    @Chapter(name: "Arrangements and Serialisation") {
+        Group multiple FSM instances into arrangements and serialise them to disk.
+
+        @TutorialReference(tutorial: "doc:Arrangements")
+    }
+
+    @Chapter(name: "Working with Examples") {
+        Explore the example machines and arrangements included in the repository.
+
+        @TutorialReference(tutorial: "doc:WorkingWithExamples")
+    }
+
+    @Chapter(name: "Using fsmconvert") {
+        Convert machines between formats and create arrangements from the command line.
+
+        @TutorialReference(tutorial: "doc:UsingFSMConvert")
+    }
+}

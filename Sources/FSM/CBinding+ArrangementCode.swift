@@ -766,7 +766,7 @@ public func cArrangementCMakeFragment(for instances: [Instance], named name: Str
         ")"
         ""
         Code.forEach(machines) { machine in
-            let directory = machine + MachineWrapper.dottedSuffix
+            let directory = machine + MachineDirectoryWrapper.dottedSuffix
             "include(${CMAKE_CURRENT_LIST_DIR}/" + directory + "/project.cmake)"
             "foreach(src ${\(machine)_FSM_SOURCES})"
             "  list(APPEND \(name)_ARRANGEMENT_FSMS \"\(machine)\")"
