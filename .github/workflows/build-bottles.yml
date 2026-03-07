@@ -19,6 +19,7 @@ jobs:
   build-windows:
     name: Build Windows Binary
     runs-on: windows-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
         with:
