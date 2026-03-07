@@ -88,4 +88,54 @@ public struct StateLayout: StateNodeLayout {
     /// and `strokeColour`. These properties are preserved during serialisation
     /// to maintain compatibility with external tools like MiCASE.
     public var extraProperties: [String: Any]
+
+    /// Designated initialiser.
+    ///
+    /// - Parameters:
+    ///   - isOpen: Whether the state layout is expanded.
+    ///   - openLayout: The rectangle used for the expanded state.
+    ///   - closedLayout: The ellipse used for the collapsed state.
+    ///   - onEntryHeight: Height of the on-entry section.
+    ///   - onExitHeight: Height of the on-exit section.
+    ///   - onSuspendHeight: Height of the on-suspend section.
+    ///   - onResumeHeight: Height of the on-resume section.
+    ///   - internalHeight: Height of the internal section.
+    ///   - zoomedOnEntryHeight: Zoomed height of the on-entry section.
+    ///   - zoomedOnExitHeight: Zoomed height of the on-exit section.
+    ///   - zoomedInternalHeight: Zoomed height of the internal section.
+    ///   - zoomedOnSuspendHeight: Zoomed height of the on-suspend section.
+    ///   - zoomedOnResumeHeight: Zoomed height of the on-resume section.
+    ///   - extraProperties: Additional preserved layout properties.
+    @inlinable
+    public init(
+        isOpen: Bool,
+        openLayout: Rectangle,
+        closedLayout: Ellipse,
+        onEntryHeight: Double,
+        onExitHeight: Double,
+        onSuspendHeight: Double,
+        onResumeHeight: Double,
+        internalHeight: Double,
+        zoomedOnEntryHeight: Double,
+        zoomedOnExitHeight: Double,
+        zoomedInternalHeight: Double,
+        zoomedOnSuspendHeight: Double,
+        zoomedOnResumeHeight: Double,
+        extraProperties: [String: Any] = [:]
+    ) {
+        self.isOpen = isOpen
+        self.openLayout = openLayout
+        self.closedLayout = closedLayout
+        self.onEntryHeight = onEntryHeight
+        self.onExitHeight = onExitHeight
+        self.onSuspendHeight = onSuspendHeight
+        self.onResumeHeight = onResumeHeight
+        self.internalHeight = internalHeight
+        self.zoomedOnEntryHeight = zoomedOnEntryHeight
+        self.zoomedOnExitHeight = zoomedOnExitHeight
+        self.zoomedInternalHeight = zoomedInternalHeight
+        self.zoomedOnSuspendHeight = zoomedOnSuspendHeight
+        self.zoomedOnResumeHeight = zoomedOnResumeHeight
+        self.extraProperties = extraProperties
+    }
 }

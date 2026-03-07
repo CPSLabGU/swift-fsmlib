@@ -67,6 +67,15 @@ public struct LLFSM: SuspensibleFSM, Equatable, Hashable {
         return transitionMap[transitionID]?.label
     }
 
+    /// Return the transition for the given ID.
+    ///
+    /// - Parameter transitionID: The transition identifier to resolve.
+    /// - Returns: The transition, or `nil` if it does not exist.
+    @inlinable
+    public func transition(for transitionID: TransitionID) -> Transition? {
+        transitionMap[transitionID]
+    }
+
     /// Set the label of a given transition.
     ///
     /// - Parameters:

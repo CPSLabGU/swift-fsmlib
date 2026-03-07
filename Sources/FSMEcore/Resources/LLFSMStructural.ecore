@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    name="LLFSMStructural"
+    nsURI="http://cpslabgu.github.io/LLFSMStructural"
+    nsPrefix="llfsm">
+
+  <!-- Arrangement: collection of FSM instances -->
+  <eClassifiers xsi:type="ecore:EClass" name="Arrangement">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="instances"
+        upperBound="-1" eType="#//Instance" containment="true"/>
+  </eClassifiers>
+
+  <!-- Instance: a named FSM instance within an arrangement -->
+  <eClassifiers xsi:type="ecore:EClass" name="Instance">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="typeFile" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="machine" lowerBound="1"
+        eType="#//Machine" containment="true"/>
+  </eClassifiers>
+
+  <!-- Machine: high-level FSM representation -->
+  <eClassifiers xsi:type="ecore:EClass" name="Machine">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="language" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="llfsm" lowerBound="1"
+        eType="#//LLFSM" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="boilerplate" lowerBound="1"
+        eType="#//Boilerplate" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="stateBoilerplates"
+        upperBound="-1" eType="#//StateBoilerplateEntry" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="stateLayouts"
+        upperBound="-1" eType="#//StateLayoutEntry" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="transitionLayouts"
+        upperBound="-1" eType="#//TransitionLayoutEntry" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="windowLayout"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- LLFSM: low-level finite state machine -->
+  <eClassifiers xsi:type="ecore:EClass" name="LLFSM">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="states"
+        upperBound="-1" eType="#//State" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="transitions"
+        upperBound="-1" eType="#//Transition" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="suspendState"
+        eType="#//State"/>
+  </eClassifiers>
+
+  <!-- State: a named state in the FSM -->
+  <eClassifiers xsi:type="ecore:EClass" name="State">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="activities"
+        eType="#//StateActivities" containment="true"/>
+  </eClassifiers>
+
+  <!-- StateActivities: source code for state actions -->
+  <eClassifiers xsi:type="ecore:EClass" name="StateActivities">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="onEntry"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="onExit"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="internal"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="onSuspend"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="onResume"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- Transition: a labelled transition between states -->
+  <eClassifiers xsi:type="ecore:EClass" name="Transition">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="label" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="source" lowerBound="1"
+        eType="#//State"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="target" lowerBound="1"
+        eType="#//State"/>
+  </eClassifiers>
+
+  <!-- Boilerplate: language-specific code sections -->
+  <eClassifiers xsi:type="ecore:EClass" name="Boilerplate">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="includePath"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="includes"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="variables"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="functions"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- StateBoilerplateEntry: per-state boilerplate and activities -->
+  <eClassifiers xsi:type="ecore:EClass" name="StateBoilerplateEntry">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="state" lowerBound="1"
+        eType="#//State"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="boilerplate" lowerBound="1"
+        eType="#//Boilerplate" containment="true"/>
+  </eClassifiers>
+
+  <!-- StateLayoutEntry: per-state graphical layout -->
+  <eClassifiers xsi:type="ecore:EClass" name="StateLayoutEntry">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="state" lowerBound="1"
+        eType="#//State"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="layout" lowerBound="1"
+        eType="#//StateLayout" containment="true"/>
+  </eClassifiers>
+
+  <!-- StateLayout: graphical positioning for a state -->
+  <eClassifiers xsi:type="ecore:EClass" name="StateLayout">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="isOpen"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="closedX"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="closedY"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="closedW"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="closedH"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="openX"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="openY"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="openW"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="openH"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="onEntryHeight"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="onExitHeight"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="internalHeight"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="onSuspendHeight"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="onResumeHeight"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="zoomedOnEntryHeight"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="zoomedOnExitHeight"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="zoomedInternalHeight"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="zoomedOnSuspendHeight"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="zoomedOnResumeHeight"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="extraProperties"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- TransitionLayoutEntry: per-transition graphical layout -->
+  <eClassifiers xsi:type="ecore:EClass" name="TransitionLayoutEntry">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="transition" lowerBound="1"
+        eType="#//Transition"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="layout" lowerBound="1"
+        eType="#//TransitionLayout" containment="true"/>
+  </eClassifiers>
+
+  <!-- TransitionLayout: bezier path for a transition -->
+  <eClassifiers xsi:type="ecore:EClass" name="TransitionLayout">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="points"
+        upperBound="-1" eType="#//Point2D" containment="true"/>
+  </eClassifiers>
+
+  <!-- Point2D: a 2D coordinate -->
+  <eClassifiers xsi:type="ecore:EClass" name="Point2D">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="x"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="y"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+  </eClassifiers>
+
+</ecore:EPackage>

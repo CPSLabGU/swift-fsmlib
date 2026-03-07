@@ -1,5 +1,15 @@
 {
+  "originHash" : "b48756d2d7aa17f9041c12e0fef75cdea0e77c30310b53f79bce2bbdf99c4e73",
   "pins" : [
+    {
+      "identity" : "bigint",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/attaswift/BigInt.git",
+      "state" : {
+        "revision" : "e07e00fa1fd435143a2dcf8b7eec9a7710b2fdfe",
+        "version" : "5.7.0"
+      }
+    },
     {
       "identity" : "swift-argument-parser",
       "kind" : "remoteSourceControl",
@@ -7,6 +17,15 @@
       "state" : {
         "revision" : "c5d11a805e765f52ba34ec7284bd4fcd6ba68615",
         "version" : "1.7.0"
+      }
+    },
+    {
+      "identity" : "swift-collections",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-collections",
+      "state" : {
+        "revision" : "8d9834a6189db730f6264db7556a7ffb751e99ee",
+        "version" : "1.4.0"
       }
     },
     {
@@ -35,7 +54,34 @@
         "revision" : "7c6ad0fc39d0763e0b699210e4124afd5041c5df",
         "version" : "1.6.4"
       }
+    },
+    {
+      "identity" : "swiftxml",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftxml/SwiftXML.git",
+      "state" : {
+        "revision" : "ce72f42e82fd105415b5bf97491cb496b7b8fd2d",
+        "version" : "1.0.4"
+      }
+    },
+    {
+      "identity" : "swiftxmlinterfaces",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftxml/SwiftXMLInterfaces",
+      "state" : {
+        "revision" : "6456fe6b3afb9e4d2f0c02925e78ca6c5d128cb1",
+        "version" : "1.0.0"
+      }
+    },
+    {
+      "identity" : "swiftxmlparser",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftxml/SwiftXMLParser",
+      "state" : {
+        "revision" : "913619273f91edd4d79068002633732794a7180f",
+        "version" : "1.0.1"
+      }
     }
   ],
-  "version" : 2
+  "version" : 3
 }
