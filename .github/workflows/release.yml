@@ -1,0 +1,136 @@
+name: Homebrew Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build (e.g., v0.0.1)'
+        required: true
+
+jobs:
+  build-bottles:
+    name: Build Bottles
+    uses: ./.github/workflows/build-bottles.yml
+    with:
+      tag: ${{ github.event.inputs.tag || github.ref_name }}
+    secrets: inherit
+
+  update-formula:
+    name: Update Homebrew Formula
+    runs-on: ubuntu-latest
+    needs: [build-bottles]
+    steps:
+      - name: Checkout swift-fsmlib
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate checksums and update formula
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          # Strip 'v' prefix for version (v0.0.1 -> 0.0.1)
+          VERSION="${TAG#v}"
+          echo "VERSION=$VERSION"
+
+          # Download source tarball and calculate SHA256
+          wget -q "https://github.com/CPSLabGU/swift-fsmlib/archive/refs/tags/${TAG}.tar.gz" -O source.tar.gz
+          SOURCE_SHA256=$(sha256sum source.tar.gz | cut -d' ' -f1)
+          echo "SOURCE_SHA256=$SOURCE_SHA256"
+
+          # Download bottles from release
+          mkdir -p bottles
+          gh release download "${TAG}" --repo CPSLabGU/swift-fsmlib --pattern "swift-fsmlib-*.bottle.tar.gz" -D bottles/ || true
+
+          # Calculate bottle checksums
+          MACOS_ARM64_SHA256=""
+          LINUX_X86_64_SHA256=""
+
+          if [ -f "bottles/swift-fsmlib-${VERSION}.arm64_sequoia.bottle.tar.gz" ]; then
+            MACOS_ARM64_SHA256=$(sha256sum "bottles/swift-fsmlib-${VERSION}.arm64_sequoia.bottle.tar.gz" | cut -d' ' -f1)
+            echo "MACOS_ARM64_SHA256=$MACOS_ARM64_SHA256"
+          fi
+
+          if [ -f "bottles/swift-fsmlib-${VERSION}.x86_64_linux.bottle.tar.gz" ]; then
+            LINUX_X86_64_SHA256=$(sha256sum "bottles/swift-fsmlib-${VERSION}.x86_64_linux.bottle.tar.gz" | cut -d' ' -f1)
+            echo "LINUX_X86_64_SHA256=$LINUX_X86_64_SHA256"
+          fi
+
+          # Clone homebrew-tap
+          git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/CPSLabGU/homebrew-tap.git homebrew-tap
+          cd homebrew-tap
+
+          # Generate the formula using echo commands
+          echo 'class SwiftFsmlib < Formula' > Formula/swift-fsmlib.rb
+          echo '  desc "Library for logic-labelled finite-state machines"' >> Formula/swift-fsmlib.rb
+          echo '  homepage "https://github.com/CPSLabGU/swift-fsmlib"' >> Formula/swift-fsmlib.rb
+          echo "  url \"https://github.com/CPSLabGU/swift-fsmlib/archive/refs/tags/${TAG}.tar.gz\"" >> Formula/swift-fsmlib.rb
+          echo "  sha256 \"${SOURCE_SHA256}\"" >> Formula/swift-fsmlib.rb
+          echo '  env :std' >> Formula/swift-fsmlib.rb
+          echo '  head "https://github.com/CPSLabGU/swift-fsmlib.git", branch: "main"' >> Formula/swift-fsmlib.rb
+          echo '' >> Formula/swift-fsmlib.rb
+
+          # Add bottle block if we have bottles
+          if [ -n "$MACOS_ARM64_SHA256" ] || [ -n "$LINUX_X86_64_SHA256" ]; then
+            echo '  bottle do' >> Formula/swift-fsmlib.rb
+            echo "    root_url \"https://github.com/CPSLabGU/swift-fsmlib/releases/download/${TAG}\"" >> Formula/swift-fsmlib.rb
+            if [ -n "$MACOS_ARM64_SHA256" ]; then
+              echo "    sha256 cellar: :any_skip_relocation, arm64_sequoia: \"${MACOS_ARM64_SHA256}\"" >> Formula/swift-fsmlib.rb
+            fi
+            if [ -n "$LINUX_X86_64_SHA256" ]; then
+              echo "    sha256 cellar: :any_skip_relocation, x86_64_linux: \"${LINUX_X86_64_SHA256}\"" >> Formula/swift-fsmlib.rb
+            fi
+            echo '  end' >> Formula/swift-fsmlib.rb
+            echo '' >> Formula/swift-fsmlib.rb
+          fi
+
+          echo '  on_macos do' >> Formula/swift-fsmlib.rb
+          echo '    depends_on :xcode => ["26.0", :build]' >> Formula/swift-fsmlib.rb
+          echo '  end' >> Formula/swift-fsmlib.rb
+          echo '' >> Formula/swift-fsmlib.rb
+          echo '  on_linux do' >> Formula/swift-fsmlib.rb
+          echo '    # Check the original PATH before Homebrew scrubbed it' >> Formula/swift-fsmlib.rb
+          echo '    original_path = ENV["HOMEBREW_PATH"] || ENV["PATH"]' >> Formula/swift-fsmlib.rb
+          echo '    swift_found = original_path.split(File::PATH_SEPARATOR).any? do |dir|' >> Formula/swift-fsmlib.rb
+          echo '      File.exist?(File.join(dir, "swift"))' >> Formula/swift-fsmlib.rb
+          echo '    end' >> Formula/swift-fsmlib.rb
+          echo '    depends_on "swift" => :build unless swift_found' >> Formula/swift-fsmlib.rb
+          echo '  end' >> Formula/swift-fsmlib.rb
+          echo '' >> Formula/swift-fsmlib.rb
+          echo '  def install' >> Formula/swift-fsmlib.rb
+          echo '    # If swiftly is in the PATH, ensure its environment variables are set' >> Formula/swift-fsmlib.rb
+          echo '    # because Homebrew might have scrubbed them even if it kept the PATH.' >> Formula/swift-fsmlib.rb
+          echo '    original_path = ENV["HOMEBREW_PATH"] || ENV["PATH"]' >> Formula/swift-fsmlib.rb
+          echo '    swift_dir = original_path.split(File::PATH_SEPARATOR).find do |dir|' >> Formula/swift-fsmlib.rb
+          echo '      File.exist?(File.join(dir, "swift"))' >> Formula/swift-fsmlib.rb
+          echo '    end' >> Formula/swift-fsmlib.rb
+          echo '' >> Formula/swift-fsmlib.rb
+          echo '    if swift_dir && swift_dir.include?("swiftly")' >> Formula/swift-fsmlib.rb
+          echo '      ENV["SWIFTLY_BIN_DIR"] = swift_dir' >> Formula/swift-fsmlib.rb
+          echo '      ENV["SWIFTLY_HOME_DIR"] = File.dirname(swift_dir)' >> Formula/swift-fsmlib.rb
+          echo '    end' >> Formula/swift-fsmlib.rb
+          echo '' >> Formula/swift-fsmlib.rb
+          echo '    system "swift", "build", "--disable-sandbox", "-c", "release"' >> Formula/swift-fsmlib.rb
+          echo '    bin.install ".build/release/fsmconvert"' >> Formula/swift-fsmlib.rb
+          echo '  end' >> Formula/swift-fsmlib.rb
+          echo '' >> Formula/swift-fsmlib.rb
+          echo '  test do' >> Formula/swift-fsmlib.rb
+          echo '    system "#{bin}/fsmconvert", "--help"' >> Formula/swift-fsmlib.rb
+          echo '  end' >> Formula/swift-fsmlib.rb
+          echo 'end' >> Formula/swift-fsmlib.rb
+
+          echo "Generated formula:"
+          cat Formula/swift-fsmlib.rb
+
+          # Commit and push directly to main
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          git checkout main
+          git add Formula/swift-fsmlib.rb
+          git commit -m "Update swift-fsmlib to ${TAG}" -m "Release includes pre-built bottles for macOS and Linux"
+          git push origin main
