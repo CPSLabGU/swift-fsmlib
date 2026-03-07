@@ -21,6 +21,7 @@ jobs:
     name: Update Homebrew Formula
     runs-on: ubuntu-latest
     needs: [build-bottles]
+    if: always()
     steps:
       - name: Checkout swift-fsmlib
         uses: actions/checkout@v4
