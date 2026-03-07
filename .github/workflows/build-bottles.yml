@@ -1,0 +1,152 @@
+name: Build Bottles
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build (e.g., v0.0.1)'
+        required: true
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Release tag to build'
+        required: false
+        type: string
+
+jobs:
+  build-windows:
+    name: Build Windows Binary
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Swift
+        uses: compnerd/gha-setup-swift@main
+        with:
+          swift-version: "swift-6.2-release"
+          swift-build: "6.2-RELEASE"
+          cache: true
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Build release
+        run: swift build -c release
+
+      - name: Determine architecture
+        shell: bash
+        run: |
+          ARCH=$(uname -m)
+          echo "ARCH=$ARCH" >> $GITHUB_ENV
+
+      - name: Create archive
+        shell: pwsh
+        run: |
+          $TAG = "${{ inputs.tag || github.event.inputs.tag || github.ref_name }}"
+          New-Item -ItemType Directory -Force -Path bottle
+          Copy-Item .build/release/fsmconvert.exe bottle/
+          Compress-Archive -Path bottle/* -DestinationPath "fsmconvert-${TAG}-windows-${{ env.ARCH }}.zip"
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ inputs.tag || github.event.inputs.tag || github.ref_name }}
+          files: fsmconvert-${{ inputs.tag || github.event.inputs.tag || github.ref_name }}-windows-${{ env.ARCH }}.zip
+
+  build-macos:
+    name: Build macOS Bottle
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "26.1.1"
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Build release
+        run: swift build -c release
+
+      - name: Determine version and platform
+        run: |
+          TAG="${{ inputs.tag || github.event.inputs.tag || github.ref_name }}"
+          # Strip 'v' prefix for Homebrew version (v0.0.1 -> 0.0.1)
+          VERSION="${TAG#v}"
+          ARCH=$(uname -m)
+          # Map architecture to Homebrew platform name
+          if [ "$ARCH" = "arm64" ]; then
+            PLATFORM="arm64_sequoia"
+          else
+            PLATFORM="sequoia"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "PLATFORM=$PLATFORM" >> $GITHUB_ENV
+
+      - name: Create Homebrew bottle
+        run: |
+          # Create Homebrew bottle directory structure
+          mkdir -p swift-fsmlib/${{ env.VERSION }}/bin
+          cp .build/release/fsmconvert swift-fsmlib/${{ env.VERSION }}/bin/
+          # Create bottle tarball with Homebrew naming convention
+          tar czf swift-fsmlib-${{ env.VERSION }}.${{ env.PLATFORM }}.bottle.tar.gz swift-fsmlib
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.TAG }}
+          files: swift-fsmlib-${{ env.VERSION }}.${{ env.PLATFORM }}.bottle.tar.gz
+
+  build-linux:
+    name: Build Linux Bottle
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.2"
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Build release
+        run: swift build -c release
+
+      - name: Determine version and platform
+        run: |
+          TAG="${{ inputs.tag || github.event.inputs.tag || github.ref_name }}"
+          # Strip 'v' prefix for Homebrew version (v0.0.1 -> 0.0.1)
+          VERSION="${TAG#v}"
+          ARCH=$(uname -m)
+          # Map to Homebrew platform name
+          PLATFORM="${ARCH}_linux"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "PLATFORM=$PLATFORM" >> $GITHUB_ENV
+
+      - name: Create Homebrew bottle
+        run: |
+          # Create Homebrew bottle directory structure
+          mkdir -p swift-fsmlib/${{ env.VERSION }}/bin
+          cp .build/release/fsmconvert swift-fsmlib/${{ env.VERSION }}/bin/
+          # Create bottle tarball with Homebrew naming convention
+          tar czf swift-fsmlib-${{ env.VERSION }}.${{ env.PLATFORM }}.bottle.tar.gz swift-fsmlib
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.TAG }}
+          files: swift-fsmlib-${{ env.VERSION }}.${{ env.PLATFORM }}.bottle.tar.gz
