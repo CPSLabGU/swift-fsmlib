@@ -20,9 +20,9 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.0"),
         .package(url: "https://github.com/apple/swift-system", from: "1.2.0"),
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
-        .package(path: "../swift-ecore"),
-        .package(path: "../swift-mtl"),
-        .package(path: "../swift-atl"),
+        .package(url: "https://github.com/mipalgu/swift-ecore", from: "0.1.1"),
+        .package(url: "https://github.com/mipalgu/swift-mtl", from: "0.1.4"),
+        .package(url: "https://github.com/mipalgu/swift-atl", from: "0.1.3"),
     ],
     targets: [
         .target(
