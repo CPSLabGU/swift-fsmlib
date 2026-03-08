@@ -21,6 +21,8 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-system", from: "1.2.0"),
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
         .package(path: "../swift-ecore"),
+        .package(path: "../swift-mtl"),
+        .package(path: "../swift-atl"),
     ],
     targets: [
         .target(
@@ -36,6 +38,8 @@ let package = Package(
                 "FSM",
                 .product(name: "ECore", package: "swift-ecore"),
                 .product(name: "EMFBase", package: "swift-ecore"),
+                .product(name: "MTL", package: "swift-mtl"),
+                .product(name: "ATL", package: "swift-atl"),
             ],
             resources: [.copy("Resources")],
             swiftSettings: [.swiftLanguageMode(.v5)]

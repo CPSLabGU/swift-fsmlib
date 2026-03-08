@@ -1,5 +1,5 @@
 {
-  "originHash" : "b48756d2d7aa17f9041c12e0fef75cdea0e77c30310b53f79bce2bbdf99c4e73",
+  "originHash" : "f1a2ce5c97112c7fe5f9fdd2c160c2da165207c4a9a0993444cf2ced0faa9a2b",
   "pins" : [
     {
       "identity" : "bigint",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "e07e00fa1fd435143a2dcf8b7eec9a7710b2fdfe",
         "version" : "5.7.0"
+      }
+    },
+    {
+      "identity" : "swift-aql",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mipalgu//swift-aql",
+      "state" : {
+        "branch" : "main",
+        "revision" : "7969ef5a17d9acd1aaf5ff7ad6f27786820e7245"
       }
     },
     {

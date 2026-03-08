@@ -18,6 +18,46 @@ enum FSMEcoreTestSupport {
         try Machine(from: try trafficLightMachineURL())
     }
 
+    static func makeTemporaryDirectory(prefix: String) throws -> URL {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "\(prefix)-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory.standardizedFileURL.resolvingSymlinksInPath()
+    }
+
+    static func assertDirectoryContentsEqual(
+        _ lhs: URL,
+        _ rhs: URL,
+        restrictedTo allowedRelativePaths: Set<String>? = nil,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws {
+        let lhsContents = try directoryContents(at: lhs, restrictedTo: allowedRelativePaths)
+        let rhsContents = try directoryContents(at: rhs, restrictedTo: allowedRelativePaths)
+        XCTAssertEqual(lhsContents, rhsContents, file: file, line: line)
+    }
+
+    static func assertPropertyListsEqual(
+        _ lhs: URL,
+        _ rhs: URL,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws {
+        let lhsData = try Data(contentsOf: lhs)
+        let rhsData = try Data(contentsOf: rhs)
+        let lhsList = try PropertyListSerialization.propertyList(from: lhsData, format: nil)
+        let rhsList = try PropertyListSerialization.propertyList(from: rhsData, format: nil)
+
+        XCTAssertEqual(
+            String(describing: lhsList as AnyObject),
+            String(describing: rhsList as AnyObject),
+            file: file,
+            line: line
+        )
+    }
+
     static func assertMachinesEqual(
         _ lhs: Machine,
         _ rhs: Machine,
@@ -152,5 +192,45 @@ enum FSMEcoreTestSupport {
         Dictionary(uniqueKeysWithValues: StandardBoilerplateSection.allCases.map { key in
             (key, sections[key] ?? "")
         })
+    }
+
+    private static func directoryContents(
+        at url: URL,
+        restrictedTo allowedRelativePaths: Set<String>?
+    ) throws -> [String: String] {
+        let fileManager = FileManager.default
+        let keys: [URLResourceKey] = [.isDirectoryKey]
+        let baseURL = url.standardizedFileURL.resolvingSymlinksInPath()
+        let enumerator = fileManager.enumerator(at: baseURL, includingPropertiesForKeys: keys)
+        var contents: [String: String] = [:]
+
+        while let fileURL = enumerator?.nextObject() as? URL {
+            let values = try fileURL.resourceValues(forKeys: Set(keys))
+            guard values.isDirectory != true else { continue }
+
+            let normalisedFileURL = fileURL.standardizedFileURL.resolvingSymlinksInPath()
+            let relativePath = normalisedGeneratedPath(
+                normalisedFileURL.path.replacingOccurrences(of: baseURL.path + "/", with: "")
+            )
+            if let allowedRelativePaths, !allowedRelativePaths.contains(relativePath) {
+                continue
+            }
+            contents[relativePath] = try String(contentsOf: normalisedFileURL, encoding: .utf8)
+        }
+
+        return contents
+    }
+
+    private static func normalisedGeneratedPath(_ rawPath: String) -> String {
+        if rawPath.hasPrefix("/private") {
+            return String(rawPath.dropFirst("/private".count))
+        }
+        if rawPath.hasPrefix("private") {
+            return String(rawPath.dropFirst("private".count))
+        }
+        if rawPath.hasPrefix("/") {
+            return String(rawPath.dropFirst())
+        }
+        return rawPath
     }
 }
