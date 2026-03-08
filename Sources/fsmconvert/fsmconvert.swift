@@ -1,6 +1,7 @@
 import ArgumentParser
 import Foundation
 import FSM
+import FSMEcore
 
 /// Command-line tool for converting FSMs and arrangements.
 ///
@@ -24,6 +25,7 @@ struct FSMConvert: AsyncParsableCommand {
     /// to use the default format, or a valid format name.
     @Option(name: .shortAndLong, help: "The output machine format.", transform: {
         if $0.isEmpty { return $0 }
+        if $0.lowercased() == "xmi" { return "xmi" }
         guard let format = Format(rawValue: $0.lowercased()) else {
             throw ValidationError("Unknown format '\($0)'")
         }
@@ -66,6 +68,26 @@ struct FSMConvert: AsyncParsableCommand {
     @Flag(name: .long, help: "Turn on debug output.")
     var debug = false
 
+    /// Use metamodel-backed XMI conversion paths.
+    ///
+    /// This option routes `.xmi` import and export through `FSMEcore` while
+    /// leaving non-XMI machine and arrangement serialisation unchanged.
+    @Flag(name: .long, help: "Use metamodel-backed XMI conversion.")
+    var metamodel = false
+
+    /// The MTL template to apply after metamodel loading.
+    ///
+    /// This option is reserved for template-driven generation from metamodel
+    /// models. Current support is limited to the built-in structural pipeline.
+    @Option(name: .long, help: "Apply an MTL template after metamodel loading.")
+    var transform: String?
+
+    /// The ATL transformation to apply after metamodel loading.
+    ///
+    /// This option is reserved for metamodel-to-metamodel transformations.
+    @Option(name: .long, help: "Apply an ATL transformation after metamodel loading.")
+    var atl: String?
+
     /// The input machines to read.
     ///
     /// This argument specifies the input machines to read. It can be a directory
@@ -81,6 +103,17 @@ struct FSMConvert: AsyncParsableCommand {
     ///
     /// - Note: Designed for use in automated build systems and scripting.
     mutating func run() async throws {
+        if transform != nil || atl != nil {
+            throw ValidationError(
+                "`--transform` and `--atl` are not implemented for this release of fsmconvert"
+            )
+        }
+
+        if metamodel {
+            try await runWithMetamodel()
+            return
+        }
+
         let fileManager = FileManager.default
         // Read machines using the new factory
         let storageInstances = try inputMachines.map {
@@ -157,4 +190,181 @@ struct FSMConvert: AsyncParsableCommand {
             try storage.write(to: outputURL)
         }
     }
+
+    /// Run the command through the metamodel-backed XMI pipeline.
+    ///
+    /// This path uses `FSMEcore` for `.xmi` import and export while still using
+    /// the established Swift machine and arrangement writers for other formats.
+    private mutating func runWithMetamodel() async throws {
+        let metamodel = try await LLFSMMetamodel()
+        let roundTrip = XMIRoundTrip(metamodel: metamodel)
+        let outputURL = URL(fileURLWithPath: output)
+        let xmiRequested = format.lowercased() == "xmi" || outputURL.pathExtension.lowercased() == "xmi"
+
+        if arrangement || inputMachines.count > 1 {
+            let arrangement = try await loadArrangement(roundTrip: roundTrip)
+            if xmiRequested {
+                try await roundTrip.write(arrangement: arrangement, to: outputURL)
+            } else {
+                let outputLanguage = try outputLanguageForArrangement(arrangement)
+                try writeArrangement(arrangement, outputURL: outputURL, outputLanguage: outputLanguage)
+            }
+            return
+        }
+
+        if inputMachines.count != 1 {
+            throw ValidationError("Metamodel conversion requires exactly one input machine")
+        }
+
+        if inputMachines[0].lowercased().hasSuffix(".xmi") && !xmiRequested {
+            switch try await loadSingleXMIInput(roundTrip: roundTrip) {
+            case .machine(let machine):
+                let outputFormat = format.isEmpty ? nil : Format(rawValue: format)
+                guard let outputLanguage = outputLanguage(
+                    for: outputFormat,
+                    default: machine.language
+                ) else {
+                    throw ValidationError("No output language for format '\(format)'")
+                }
+
+                let storage = MachineStorageFactory.create(for: machine, format: outputFormat, at: outputURL)
+                storage.machine.language = outputLanguage
+                storage.isSuspensible = !nonSuspensible
+                try storage.write(to: outputURL)
+            case .arrangement(let arrangement):
+                let outputLanguage = try outputLanguageForArrangement(arrangement)
+                try writeArrangement(arrangement, outputURL: outputURL, outputLanguage: outputLanguage)
+            }
+            return
+        }
+
+        let machine = try await loadMachine(roundTrip: roundTrip)
+        if xmiRequested {
+            try await roundTrip.write(machine: machine, name: machineName(for: outputURL), to: outputURL)
+            return
+        }
+
+        let outputFormat = format.isEmpty ? nil : Format(rawValue: format)
+        guard let outputLanguage = outputLanguage(
+            for: outputFormat,
+            default: machine.language
+        ) else {
+            throw ValidationError("No output language for format '\(format)'")
+        }
+
+        let storage = MachineStorageFactory.create(for: machine, format: outputFormat, at: outputURL)
+        storage.machine.language = outputLanguage
+        storage.isSuspensible = !nonSuspensible
+        try storage.write(to: outputURL)
+    }
+
+    /// Load a machine either from XMI or from the existing Swift readers.
+    private func loadMachine(roundTrip: XMIRoundTrip) async throws -> Machine {
+        let inputURL = try resolvedInputURL(inputMachines[0])
+        if inputURL.pathExtension.lowercased() == "xmi" {
+            return try await roundTrip.readMachine(from: inputURL).machine
+        }
+        return try MachineStorageFactory.read(from: inputURL).machine
+    }
+
+    /// Load an arrangement either from XMI or by composing machine inputs.
+    private func loadArrangement(roundTrip: XMIRoundTrip) async throws -> Arrangement {
+        if inputMachines.count == 1 {
+            let inputURL = try resolvedInputURL(inputMachines[0])
+            if inputURL.pathExtension.lowercased() == "xmi" {
+                return try await roundTrip.readArrangement(from: inputURL)
+            }
+        }
+
+        let storages = try inputMachines.map { path -> (String, MachineStorage) in
+            let url = try resolvedInputURL(path)
+            return (url.lastPathComponent, try MachineStorageFactory.read(from: url))
+        }
+
+        let instances = storages.map { item -> Instance in
+            let instanceName: String
+            let machineName: String
+            if item.0.hasSuffix(MachineDirectoryWrapper.dottedSuffix) {
+                machineName = item.0
+                instanceName = String(item.0.dropLast(MachineDirectoryWrapper.dottedSuffix.count))
+            } else {
+                instanceName = URL(fileURLWithPath: item.0).deletingPathExtension().lastPathComponent
+                machineName = instanceName + MachineDirectoryWrapper.dottedSuffix
+            }
+            return Instance(name: instanceName, typeFile: machineName, machine: item.1.machine)
+        }
+        return Arrangement(namedInstances: instances)
+    }
+
+    /// Attempt to load a single XMI input as either a machine or an arrangement.
+    private func loadSingleXMIInput(roundTrip: XMIRoundTrip) async throws -> MetamodelInput {
+        let inputURL = try resolvedInputURL(inputMachines[0])
+        do {
+            let decoded = try await roundTrip.readMachine(from: inputURL)
+            return .machine(decoded.machine)
+        } catch {
+            return .arrangement(try await roundTrip.readArrangement(from: inputURL))
+        }
+    }
+
+    /// Write an arrangement with the existing Swift wrapper pipeline.
+    private func writeArrangement(
+        _ arrangement: Arrangement,
+        outputURL: URL,
+        outputLanguage: any LanguageBinding
+    ) throws {
+        var wrapperMappings: [String: FileWrapper] = [:]
+        for instance in arrangement.namedInstances {
+            let machineName = instance.typeFile.hasSuffix(MachineDirectoryWrapper.dottedSuffix)
+                ? instance.typeFile
+                : instance.name + MachineDirectoryWrapper.dottedSuffix
+            let dirWrapper = MachineDirectoryWrapper(machine: instance.machine, named: machineName)
+            dirWrapper.language = outputLanguage
+            dirWrapper.isSuspensible = !nonSuspensible
+            wrapperMappings[machineName] = dirWrapper
+        }
+
+        let wrapper = ArrangementWrapper(
+            directoryWithFileWrappers: wrapperMappings,
+            for: arrangement,
+            named: outputURL.lastPathComponent,
+            language: outputLanguage
+        )
+        try wrapper.write(to: outputURL)
+    }
+
+    /// Resolve an input path, adding the `.machine` suffix when needed.
+    private func resolvedInputURL(_ input: String) throws -> URL {
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: input) {
+            return URL(fileURLWithPath: input)
+        }
+
+        let machinePath = input + MachineDirectoryWrapper.dottedSuffix
+        guard fileManager.fileExists(atPath: machinePath) else {
+            throw ValidationError("File '\(input)' does not exist")
+        }
+        return URL(fileURLWithPath: machinePath)
+    }
+
+    /// Derive the XMI root name from an output URL.
+    private func machineName(for outputURL: URL) -> String {
+        let stem = outputURL.deletingPathExtension().lastPathComponent
+        return stem.isEmpty ? "Machine" : stem
+    }
+
+    /// Resolve the language binding to use when writing a metamodel-backed arrangement.
+    private func outputLanguageForArrangement(_ arrangement: Arrangement) throws -> any LanguageBinding {
+        let defaultLanguage = arrangement.namedInstances.first?.machine.language
+        let outputFormat = format.isEmpty ? nil : Format(rawValue: format)
+        guard let outputLanguage = outputLanguage(for: outputFormat, default: defaultLanguage ?? ObjCPPBinding()) else {
+            throw ValidationError("No output language for format '\(format)'")
+        }
+        return outputLanguage
+    }
+}
+
+private enum MetamodelInput {
+    case machine(Machine)
+    case arrangement(Arrangement)
 }
