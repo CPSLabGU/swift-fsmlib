@@ -5,15 +5,29 @@
 //  Copyright © 2015, 2016, 2023, 2024, 2025 Rene Hexel. All rights reserved.
 //
 
-/// Generic implementation of an LLFSM
+/// LLFSM value type.
+///
+/// `LLFSM` stores the state graph for a low-level finite-state machine. It
+/// keeps stable identifiers for states and transitions while also maintaining
+/// lookup dictionaries used by higher-level machine storage, layout handling,
+/// and code generation code.
 public struct LLFSM: SuspensibleFSM, Equatable, Hashable {
-    /// The states this machine is made up of
+    /// State identifiers in declaration order.
+    ///
+    /// This array preserves the machine's state order while the internal state
+    /// dictionary provides efficient lookup by identifier.
     public var states: StateArray
 
-    /// Suspend state for the machine
+    /// Suspend state identifier.
+    ///
+    /// This optional identifier points to the machine's suspend state when the
+    /// model supports suspension.
     public var suspendState: StateID?
 
-    /// All transitions (including ones not (yet) linked to a state)
+    /// Transition identifiers in declaration order.
+    ///
+    /// This array preserves the machine's transition order while the internal
+    /// transition dictionary provides efficient lookup by identifier.
     public var transitions: TransitionArray
 
     /// Mapping from state IDs to states
@@ -22,7 +36,13 @@ public struct LLFSM: SuspensibleFSM, Equatable, Hashable {
     /// Mapping from transition IDs to transitions
     @usableFromInline var transitionMap: TransitionDictionary
 
-    /// Return the transitions whose source is the given state
+    /// Return transitions whose source is the given state.
+    ///
+    /// This helper filters the ordered transition list using the internal
+    /// transition lookup table, preserving transition order in the result.
+    ///
+    /// - Parameter s: State identifier to inspect.
+    /// - Returns: Transition identifiers whose source matches `s`.
     @inlinable
     public func transitionsFrom(_ s: StateID) -> TransitionArray {
         return transitions.filter { transitionMap[$0]?.source == s }
@@ -67,10 +87,13 @@ public struct LLFSM: SuspensibleFSM, Equatable, Hashable {
         return transitionMap[transitionID]?.label
     }
 
-    /// Return the transition for the given ID.
+    /// Return a transition value for an identifier.
     ///
-    /// - Parameter transitionID: The transition identifier to resolve.
-    /// - Returns: The transition, or `nil` if it does not exist.
+    /// Use this accessor when code outside the `FSM` module needs the full
+    /// stored transition rather than only its label, source, or target.
+    ///
+    /// - Parameter transitionID: Transition identifier to resolve.
+    /// - Returns: Stored transition value, or `nil` if it does not exist.
     @inlinable
     public func transition(for transitionID: TransitionID) -> Transition? {
         transitionMap[transitionID]

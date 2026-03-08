@@ -5,25 +5,36 @@
 //  Copyright © 2016, 2023, 2025 Rene Hexel. All rights reserved.
 //
 
-/// Abstract representation of a state layout.
+/// State node layout protocol.
 ///
-/// This protocol defines the visual representation of a state node within
-/// a finite state machine diagram. Each state node supports both an open
-/// (expanded) and a closed (collapsed) layout, allowing the graphical
-/// editor to toggle between a compact ellipse view and a detailed
-/// rectangular view that reveals the state's activities.
+/// `StateNodeLayout` defines the geometry required to render a state in both
+/// collapsed and expanded form. Conforming types expose the two shapes and the
+/// flag that selects which one is active.
 public protocol StateNodeLayout {
-    /// Layout of the state when closed
+    /// Closed-state geometry.
+    ///
+    /// This shape is used when the state is shown in its compact form.
     var closedLayout: Ellipse { get mutating set }
-    /// Layout of the state when open
+    /// Open-state geometry.
+    ///
+    /// This shape is used when the state is shown with its activity sections.
     var openLayout: Rectangle { get mutating set }
-    /// Representation of whether the state uses an open or closed layout
+    /// Open-state flag.
+    ///
+    /// This flag selects whether the state currently uses its open or closed
+    /// geometry.
     var isOpen: Bool { get mutating set }
 }
 
-/// Helper methods for laying out in the current mode (open or closed)
+/// Helper methods for state node layouts.
+///
+/// These helpers derive the currently active geometry from the open and closed
+/// layout values exposed by `StateNodeLayout`.
 public extension StateNodeLayout {
-    /// Current layout of the state
+    /// Active geometry for the current state mode.
+    ///
+    /// Reading this property returns the open or closed geometry depending on
+    /// `isOpen`. Writing through it updates the matching stored geometry.
     var layout: Rectangle {
         get { return isOpen ? openLayout : closedLayout }
         mutating set {
@@ -32,23 +43,27 @@ public extension StateNodeLayout {
     }
 }
 
-/// State layout structure.
+/// State layout value.
 ///
-/// This is the concrete implementation of `StateNodeLayout` that stores
-/// graphical positioning data for a state node. In addition to the open
-/// and closed layout frames, it records section heights for each of the
-/// state's activities (such as OnEntry, OnExit, Internal, OnSuspend, and
-/// OnResume), both at normal and zoomed scales. Any extra properties
-/// from the layout property list are also preserved to maintain
-/// compatibility with external tools.
+/// `StateLayout` stores the rendered geometry for a state together with the
+/// heights of each visible activity section. It preserves additional plist
+/// properties so imported layouts can round-trip without discarding editor
+/// metadata.
 public struct StateLayout: StateNodeLayout {
-    /// Representation of whether the state uses an open or closed layout
+    /// Open-state flag.
+    ///
+    /// This flag selects whether the state currently uses the expanded
+    /// geometry.
     public var isOpen: Bool
 
-    /// Layout of the state when open
+    /// Open-state geometry.
+    ///
+    /// This rectangle is used when the state is expanded.
     public var openLayout: Rectangle
 
-    /// Layout of the state when closed
+    /// Closed-state geometry.
+    ///
+    /// This ellipse is used when the state is collapsed.
     public var closedLayout: Ellipse
 
     /// Height of the onEntry section
@@ -89,12 +104,16 @@ public struct StateLayout: StateNodeLayout {
     /// to maintain compatibility with external tools like MiCASE.
     public var extraProperties: [String: Any]
 
-    /// Designated initialiser.
+    /// Create a state layout value.
+    ///
+    /// Use this initialiser when constructing a layout explicitly from decoded
+    /// geometry or test data, rather than from the property-list convenience
+    /// initialiser in `StateLayout+PList.swift`.
     ///
     /// - Parameters:
-    ///   - isOpen: Whether the state layout is expanded.
-    ///   - openLayout: The rectangle used for the expanded state.
-    ///   - closedLayout: The ellipse used for the collapsed state.
+    ///   - isOpen: Whether the layout should use the expanded geometry.
+    ///   - openLayout: Rectangle used for the expanded state.
+    ///   - closedLayout: Ellipse used for the collapsed state.
     ///   - onEntryHeight: Height of the on-entry section.
     ///   - onExitHeight: Height of the on-exit section.
     ///   - onSuspendHeight: Height of the on-suspend section.

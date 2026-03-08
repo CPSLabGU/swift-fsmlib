@@ -10,45 +10,61 @@ import EMFBase
 import FSM
 import Foundation
 
-/// Bidirectional codec between `Arrangement` and EObject representations.
+/// Arrangement codec for the structural metamodel.
 ///
-/// This struct provides encoding of `Arrangement` instances to EObject
-/// graphs and decoding of EObject graphs back to `Arrangement` instances,
-/// enabling lossless round-tripping through the LLFSMStructural metamodel.
+/// `ArrangementEcoreCodec` converts between `Arrangement` values from
+/// `swift-fsmlib` and reflective object graphs backed by `swift-ecore`. It
+/// delegates machine-level work to `MachineEcoreCodec` and is responsible for
+/// preserving arrangement instance names, type files, and containment
+/// structure.
 public struct ArrangementEcoreCodec {
-    /// The metamodel providing EClass definitions.
+    /// Metamodel used to resolve arrangement classifiers.
+    ///
+    /// This value provides the classifier definitions needed to construct and
+    /// decode arrangement-related dynamic objects.
     public let metamodel: LLFSMMetamodel
 
-    /// The machine codec used for individual machine encoding/decoding.
+    /// Machine codec used for instance payloads.
+    ///
+    /// Each arrangement instance contains a nested machine model, so this codec
+    /// delegates per-machine work to `MachineEcoreCodec`.
     public let machineCodec: MachineEcoreCodec
 
-    /// Create a codec with the given metamodel.
+    /// Create the arrangement codec.
     ///
-    /// - Parameter metamodel: The loaded LLFSMStructural metamodel.
+    /// This initialiser stores the supplied metamodel and prepares a matching
+    /// machine codec for nested machine values.
+    ///
+    /// - Parameter metamodel: Loaded structural metamodel to use for conversion.
     public init(metamodel: LLFSMMetamodel) {
         self.metamodel = metamodel
         self.machineCodec = MachineEcoreCodec(metamodel: metamodel)
     }
 
-    /// Encode an `Arrangement` to an EObject graph within a `Resource`.
+    /// Encode an arrangement into a resource-backed object graph.
+    ///
+    /// This method creates a dynamic arrangement object, encodes each named
+    /// machine instance as a contained object graph, and returns the resulting
+    /// root object ready for XMI serialisation.
     ///
     /// - Parameters:
-    ///   - arrangement: The arrangement to encode.
-    ///   - resource: The resource to add objects to.
-    /// - Returns: The root `DynamicEObject` representing the arrangement.
+    ///   - arrangement: Arrangement value to encode.
+    ///   - resource: Resource that will own the encoded objects.
+    /// - Returns: Root dynamic object representing the arrangement.
     public func encode(_ arrangement: Arrangement, into resource: Resource) async -> DynamicEObject {
         var instanceIDs = [EUUID]()
         for instance in arrangement.namedInstances {
             let machineObj = await machineCodec.encode(
                 instance.machine,
                 name: String(instance.typeName),
-                into: resource
+                into: resource,
+                addAsRoot: false
             )
             var instanceObj = DynamicEObject(eClass: metamodel.instanceClass)
             instanceObj.eSet("name", value: instance.name)
             instanceObj.eSet("typeFile", value: instance.typeFile)
             instanceObj.eSet("machine", value: machineObj.id)
-            await resource.add(instanceObj)
+            await resource.register(instanceObj)
             instanceIDs.append(instanceObj.id)
         }
 
@@ -58,13 +74,16 @@ public struct ArrangementEcoreCodec {
         return arrangementObj
     }
 
-    /// Decode an EObject graph back to an `Arrangement`.
+    /// Decode a dynamic arrangement object back into an `Arrangement`.
+    ///
+    /// This method resolves each encoded instance entry, decodes its nested
+    /// machine, and rebuilds the arrangement value used by `swift-fsmlib`.
     ///
     /// - Parameters:
-    ///   - arrangementObj: The root EObject representing an arrangement.
-    ///   - resource: The resource containing the object graph.
-    /// - Returns: A decoded `Arrangement` instance.
-    /// - Throws: `LLFSMMetamodelError` if required features are missing.
+    ///   - arrangementObj: Dynamic object representing the arrangement root.
+    ///   - resource: Resource containing the object graph.
+    /// - Returns: Decoded arrangement value.
+    /// - Throws: Throw an error if nested machine decoding fails.
     public func decode(_ arrangementObj: DynamicEObject, from resource: Resource) async throws -> Arrangement {
         let instanceIDs = await resource.eGet(objectId: arrangementObj.id, feature: "instances") as? [EUUID] ?? []
         var instances = [Instance]()

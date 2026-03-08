@@ -4,6 +4,19 @@ import XCTest
 import ECore
 
 final class MachineEcoreCodecTests: XCTestCase {
+    func testTrafficLightMachineRoundTripPreservesLoadedMachine() async throws {
+        let metamodel = try await LLFSMMetamodel()
+        let codec = MachineEcoreCodec(metamodel: metamodel)
+        let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()
+        let resource = Resource(uri: "memory:/TrafficLight.xmi")
+
+        let machineObject = await codec.encode(machine, name: "TrafficLight", into: resource)
+        let decoded = try await codec.decode(machineObject, from: resource)
+
+        XCTAssertEqual(decoded.name, "TrafficLight")
+        FSMEcoreTestSupport.assertMachinesEqual(machine, decoded.machine)
+    }
+
     func testMachineRoundTripPreservesTransitionsAndStateLayouts() async throws {
         let metamodel = try await LLFSMMetamodel()
         let codec = MachineEcoreCodec(metamodel: metamodel)

@@ -10,33 +10,52 @@ import EMFBase
 import FSM
 import Foundation
 
-/// Bidirectional codec between `Machine` and EObject representations.
+/// Machine codec for the structural metamodel.
 ///
-/// This struct provides encoding of `Machine` instances to EObject graphs
-/// (for XMI serialisation) and decoding of EObject graphs back to `Machine`
-/// instances (for XMI deserialisation), enabling lossless round-tripping
-/// through the LLFSMStructural metamodel.
+/// `MachineEcoreCodec` converts between `Machine` values from `swift-fsmlib`
+/// and dynamic object graphs backed by `swift-ecore`. It preserves LLFSM
+/// structure, boilerplate sections, state activities, visual layout data, and
+/// optional window layout bytes so machines can move between native Swift
+/// storage and XMI-based workflows.
 public struct MachineEcoreCodec {
-    /// The metamodel providing EClass definitions.
+    /// Metamodel used to resolve machine classifiers.
+    ///
+    /// This value provides the classifier definitions needed to construct and
+    /// decode machine-related dynamic objects.
     public let metamodel: LLFSMMetamodel
 
-    /// Create a codec with the given metamodel.
+    /// Create the machine codec.
     ///
-    /// - Parameter metamodel: The loaded LLFSMStructural metamodel.
+    /// This initialiser stores the supplied metamodel for later encode and
+    /// decode operations.
+    ///
+    /// - Parameter metamodel: Loaded structural metamodel to use for conversion.
     public init(metamodel: LLFSMMetamodel) {
         self.metamodel = metamodel
     }
 
     // MARK: - Encode
 
-    /// Encode a `Machine` to an EObject graph within a `Resource`.
+    /// Encode a machine into a resource-backed object graph.
+    ///
+    /// This method creates the dynamic objects required by the structural
+    /// metamodel, registers contained objects with the resource, and optionally
+    /// adds the resulting machine object as a root. Callers can disable root
+    /// insertion when the machine will be contained inside another encoded
+    /// object such as an arrangement instance.
     ///
     /// - Parameters:
-    ///   - machine: The machine to encode.
-    ///   - name: The name for the machine.
-    ///   - resource: The resource to add objects to.
-    /// - Returns: The root `DynamicEObject` representing the machine.
-    public func encode(_ machine: Machine, name: String, into resource: Resource) async -> DynamicEObject {
+    ///   - machine: Machine value to encode.
+    ///   - name: Machine name to store in the structural model.
+    ///   - resource: Resource that will own the encoded objects.
+    ///   - addAsRoot: Whether to add the resulting machine object as a resource root.
+    /// - Returns: Root dynamic object representing the machine.
+    public func encode(
+        _ machine: Machine,
+        name: String,
+        into resource: Resource,
+        addAsRoot: Bool = true
+    ) async -> DynamicEObject {
         // Build state objects and maintain ID mapping
         var stateObjects = [StateID: DynamicEObject]()
         for stateID in machine.llfsm.states {
@@ -53,11 +72,11 @@ public struct MachineEcoreCodec {
                 activitiesObj.eSet("internal", value: sections[.internal] ?? "")
                 activitiesObj.eSet("onSuspend", value: sections[.onSuspend] ?? "")
                 activitiesObj.eSet("onResume", value: sections[.onResume] ?? "")
-                await resource.add(activitiesObj)
+                await resource.register(activitiesObj)
                 stateObj.eSet("activities", value: activitiesObj.id)
             }
 
-            await resource.add(stateObj)
+            await resource.register(stateObj)
             stateObjects[stateID] = stateObj
         }
 
@@ -73,7 +92,7 @@ public struct MachineEcoreCodec {
             if let tgtObj = stateObjects[transition.target] {
                 transObj.eSet("target", value: tgtObj.id)
             }
-            await resource.add(transObj)
+            await resource.register(transObj)
             transitionObjects[transitionID] = transObj
         }
 
@@ -87,11 +106,11 @@ public struct MachineEcoreCodec {
            let suspendObj = stateObjects[suspendStateID] {
             llfsmObj.eSet("suspendState", value: suspendObj.id)
         }
-        await resource.add(llfsmObj)
+        await resource.register(llfsmObj)
 
         // Build machine boilerplate
         let bpObj = encodeBoilerplate(machine.boilerplate, language: machine.language)
-        await resource.add(bpObj)
+        await resource.register(bpObj)
 
         // Build state boilerplate entries
         var stateBoilerplateEntries = [EUUID]()
@@ -104,12 +123,12 @@ public struct MachineEcoreCodec {
             entryBpObj.eSet("includes", value: bpSections[.includes] ?? "")
             entryBpObj.eSet("variables", value: bpSections[.variables] ?? "")
             entryBpObj.eSet("functions", value: bpSections[.functions] ?? "")
-            await resource.add(entryBpObj)
+            await resource.register(entryBpObj)
 
             var entryObj = DynamicEObject(eClass: metamodel.stateBoilerplateEntryClass)
             entryObj.eSet("state", value: stateObj.id)
             entryObj.eSet("boilerplate", value: entryBpObj.id)
-            await resource.add(entryObj)
+            await resource.register(entryObj)
             stateBoilerplateEntries.append(entryObj.id)
         }
 
@@ -118,12 +137,12 @@ public struct MachineEcoreCodec {
         for (stateID, layout) in machine.stateLayout {
             guard let stateObj = stateObjects[stateID] else { continue }
             let layoutObj = encodeStateLayout(layout)
-            await resource.add(layoutObj)
+            await resource.register(layoutObj)
 
             var entryObj = DynamicEObject(eClass: metamodel.stateLayoutEntryClass)
             entryObj.eSet("state", value: stateObj.id)
             entryObj.eSet("layout", value: layoutObj.id)
-            await resource.add(entryObj)
+            await resource.register(entryObj)
             stateLayoutEntries.append(entryObj.id)
         }
 
@@ -136,17 +155,17 @@ public struct MachineEcoreCodec {
                 var pointObj = DynamicEObject(eClass: metamodel.point2DClass)
                 pointObj.eSet("x", value: point.x)
                 pointObj.eSet("y", value: point.y)
-                await resource.add(pointObj)
+                await resource.register(pointObj)
                 pointIDs.append(pointObj.id)
             }
             var tlObj = DynamicEObject(eClass: metamodel.transitionLayoutClass)
             tlObj.eSet("points", value: pointIDs)
-            await resource.add(tlObj)
+            await resource.register(tlObj)
 
             var entryObj = DynamicEObject(eClass: metamodel.transitionLayoutEntryClass)
             entryObj.eSet("transition", value: transObj.id)
             entryObj.eSet("layout", value: tlObj.id)
-            await resource.add(entryObj)
+            await resource.register(entryObj)
             transitionLayoutEntries.append(entryObj.id)
         }
 
@@ -168,20 +187,28 @@ public struct MachineEcoreCodec {
         if let windowData = machine.windowLayout {
             machineObj.eSet("windowLayout", value: windowData.base64EncodedString())
         }
-        await resource.add(machineObj)
+        if addAsRoot {
+            await resource.add(machineObj)
+        } else {
+            await resource.register(machineObj)
+        }
 
         return machineObj
     }
 
     // MARK: - Decode
 
-    /// Decode an EObject graph back to a `Machine`.
+    /// Decode a dynamic machine object back into a `Machine`.
+    ///
+    /// This method resolves the encoded LLFSM graph, machine and state
+    /// boilerplate, layouts, and optional window layout payload before
+    /// rebuilding the `Machine` value expected by the rest of the package.
     ///
     /// - Parameters:
-    ///   - machineObj: The root EObject representing a machine.
-    ///   - resource: The resource containing the object graph.
-    /// - Returns: A decoded `Machine` instance.
-    /// - Throws: `LLFSMMetamodelError` if required features are missing.
+    ///   - machineObj: Dynamic object representing the machine root.
+    ///   - resource: Resource containing the object graph.
+    /// - Returns: Decoded machine name and machine value.
+    /// - Throws: Throw an error if required structural features are missing.
     public func decode(_ machineObj: DynamicEObject, from resource: Resource) async throws -> (name: String, machine: Machine) {
         let machineName = await resource.eGet(objectId: machineObj.id, feature: "name") as? String ?? ""
         let languageName = await resource.eGet(objectId: machineObj.id, feature: "language") as? String ?? ""
@@ -210,7 +237,7 @@ public struct MachineEcoreCodec {
         var eobjectToTransID = [EUUID: TransitionID]()
         var transitionArray = [Transition]()
         for eID in transIDs {
-            let label = await resource.eGet(objectId: eID, feature: "label") as? String ?? ""
+            let label = await stringValue(ofFeature: "label", for: eID, in: resource)
             let srcEID = await resource.eGet(objectId: eID, feature: "source") as? EUUID
             let tgtEID = await resource.eGet(objectId: eID, feature: "target") as? EUUID
             let sourceID = srcEID.flatMap { eobjectToStateID[$0] } ?? StateID(uuid: UUID_NULL)
@@ -306,7 +333,15 @@ public struct MachineEcoreCodec {
 
     // MARK: - Private Helpers
 
-    /// Encode a `Boilerplate` to a `DynamicEObject`.
+    /// Encode boilerplate sections as a dynamic object.
+    ///
+    /// This helper normalises machine-level boilerplate into the structural
+    /// metamodel representation used during serialisation.
+    ///
+    /// - Parameters:
+    ///   - bp: Boilerplate value to encode.
+    ///   - language: Language binding used to extract normalised sections.
+    /// - Returns: Dynamic object representing the boilerplate value.
     private func encodeBoilerplate(_ bp: any Boilerplate, language: any LanguageBinding) -> DynamicEObject {
         let sections = language.extractSections(from: bp)
         var obj = DynamicEObject(eClass: metamodel.boilerplateClass)
@@ -317,7 +352,14 @@ public struct MachineEcoreCodec {
         return obj
     }
 
-    /// Encode a `StateLayout` to a `DynamicEObject`.
+    /// Encode a state layout as a dynamic object.
+    ///
+    /// This helper copies all state geometry and section height values into the
+    /// structural metamodel representation, including any preserved extra
+    /// properties.
+    ///
+    /// - Parameter layout: State layout value to encode.
+    /// - Returns: Dynamic object representing the state layout.
     private func encodeStateLayout(_ layout: StateLayout) -> DynamicEObject {
         var obj = DynamicEObject(eClass: metamodel.stateLayoutClass)
         obj.eSet("isOpen", value: layout.isOpen)
@@ -347,7 +389,16 @@ public struct MachineEcoreCodec {
         return obj
     }
 
-    /// Decode boilerplate sections from a resource.
+    /// Decode boilerplate sections from a dynamic object.
+    ///
+    /// This helper reads the normalised boilerplate fields stored in the
+    /// structural model and returns them in the section dictionary expected by
+    /// `LanguageBinding`.
+    ///
+    /// - Parameters:
+    ///   - bpID: Identifier of the encoded boilerplate object.
+    ///   - resource: Resource containing the encoded object.
+    /// - Returns: Normalised boilerplate sections.
     private func decodeBoilerplateSections(_ bpID: EUUID, from resource: Resource) async -> [StandardBoilerplateSection: String] {
         var sections = [StandardBoilerplateSection: String]()
         sections[.includePath] = await resource.eGet(objectId: bpID, feature: "includePath") as? String ?? ""
@@ -357,13 +408,31 @@ public struct MachineEcoreCodec {
         return sections
     }
 
-    /// Decode a boilerplate object from a resource.
+    /// Decode a boilerplate value from a dynamic object.
+    ///
+    /// This helper reconstructs a language-specific boilerplate value from the
+    /// normalised sections stored in the structural model.
+    ///
+    /// - Parameters:
+    ///   - bpID: Identifier of the encoded boilerplate object.
+    ///   - resource: Resource containing the encoded object.
+    ///   - language: Language binding used to rebuild the boilerplate value.
+    /// - Returns: Decoded boilerplate value.
     private func decodeBoilerplate(_ bpID: EUUID, from resource: Resource, language: any LanguageBinding) async -> any Boilerplate {
         let sections = await decodeBoilerplateSections(bpID, from: resource)
         return language.createBoilerplate(from: sections)
     }
 
-    /// Decode a state layout from a resource.
+    /// Decode a state layout from a dynamic object.
+    ///
+    /// This helper reconstructs the concrete `StateLayout` value used by
+    /// `swift-fsmlib` from the geometric attributes stored in the structural
+    /// model.
+    ///
+    /// - Parameters:
+    ///   - layoutID: Identifier of the encoded layout object.
+    ///   - resource: Resource containing the encoded object.
+    /// - Returns: Decoded state layout value.
     private func decodeStateLayout(_ layoutID: EUUID, from resource: Resource) async -> StateLayout {
         let isOpen = await resource.eGet(objectId: layoutID, feature: "isOpen") as? Bool ?? false
         let cx = await resource.eGet(objectId: layoutID, feature: "closedX") as? Double ?? 0
@@ -414,7 +483,15 @@ public struct MachineEcoreCodec {
         )
     }
 
-    /// Decode a transition layout from a resource.
+    /// Decode a transition layout from a dynamic object.
+    ///
+    /// This helper reads the encoded point list and rebuilds the path-based
+    /// `TransitionLayout` value used by `swift-fsmlib`.
+    ///
+    /// - Parameters:
+    ///   - layoutID: Identifier of the encoded layout object.
+    ///   - resource: Resource containing the encoded object.
+    /// - Returns: Decoded transition layout value.
     private func decodeTransitionLayout(_ layoutID: EUUID, from resource: Resource) async -> TransitionLayout {
         let pointIDs = await resource.eGet(objectId: layoutID, feature: "points") as? [EUUID] ?? []
         var points = [Point2D]()
@@ -424,5 +501,32 @@ public struct MachineEcoreCodec {
             points.append(Point2D(x, y))
         }
         return TransitionLayout(points)
+    }
+
+    /// Convert a primitive feature value into an FSM string.
+    ///
+    /// XMI parsing may infer booleans or numbers for primitive attributes. FSM
+    /// transition labels are stored as strings, so this helper converts parsed
+    /// primitive values back into the string form expected by the model layer.
+    ///
+    /// - Parameters:
+    ///   - feature: Feature name to read.
+    ///   - objectID: Identifier of the dynamic object to inspect.
+    ///   - resource: Resource containing the parsed object.
+    /// - Returns: String form of the stored primitive value, or an empty string.
+    private func stringValue(ofFeature feature: String, for objectID: EUUID, in resource: Resource) async -> String {
+        let value = await resource.eGet(objectId: objectID, feature: feature)
+        switch value {
+        case let string as String:
+            return string
+        case let bool as Bool:
+            return bool ? "true" : "false"
+        case let int as Int:
+            return String(int)
+        case let double as Double:
+            return String(double)
+        default:
+            return ""
+        }
     }
 }

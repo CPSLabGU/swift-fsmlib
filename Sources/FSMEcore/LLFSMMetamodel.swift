@@ -9,16 +9,29 @@ import ECore
 import EMFBase
 import Foundation
 
-/// Provides access to the LLFSMStructural metamodel EClasses.
+/// LLFSMStructural metamodel metadata.
 ///
-/// This struct loads the `LLFSMStructural.ecore` metamodel from the
-/// bundled resources and provides convenient access to each EClass
-/// definition for use in the codec layer.
+/// `LLFSMMetamodel` loads the bundled structural metamodel and keeps typed
+/// references to the `EClass` definitions used by the codec layer. This avoids
+/// repeating string-based classifier lookups throughout encoding and decoding
+/// code, and it provides a single validation point for required metamodel
+/// elements.
+///
+/// The stored `EClass` values correspond directly to the structural concepts
+/// used by `swift-fsmlib`, such as machines, states, transitions, layout
+/// entries, and arrangement instances.
 public struct LLFSMMetamodel: Sendable {
-    /// The loaded EPackage for the LLFSMStructural metamodel.
+    /// Loaded package for the LLFSMStructural metamodel.
+    ///
+    /// This package contains every classifier declared by the structural
+    /// metamodel resource. Use it when reflective access is needed beyond the
+    /// convenience properties exposed by this type.
     public let package: EPackage
 
-    /// The `Arrangement` EClass.
+    /// `EClass` for arrangement objects.
+    ///
+    /// This classifier describes the metamodel root used to group named
+    /// machine instances.
     public let arrangementClass: EClass
 
     /// The `Instance` EClass.
@@ -60,9 +73,13 @@ public struct LLFSMMetamodel: Sendable {
     /// The `Point2D` EClass.
     public let point2DClass: EClass
 
-    /// Load the metamodel from the bundled `.ecore` resource.
+    /// Load the bundled structural metamodel.
     ///
-    /// - Throws: An error if the resource cannot be found or loaded.
+    /// This initialiser resolves the packaged `.ecore` resource from the
+    /// module bundle and then delegates to `init(url:)` for parsing and
+    /// validation.
+    ///
+    /// - Throws: Throw an error if the resource cannot be found or parsed.
     public init() async throws {
         guard let url = Bundle.module.url(
             forResource: "LLFSMStructural",
@@ -74,10 +91,15 @@ public struct LLFSMMetamodel: Sendable {
         try await self.init(url: url)
     }
 
-    /// Load the metamodel from a given URL.
+    /// Load the structural metamodel from a file URL.
     ///
-    /// - Parameter url: The URL of the `.ecore` file to load.
-    /// - Throws: An error if the file cannot be parsed or is missing expected classes.
+    /// This initialiser parses the `.ecore` document, resolves the package, and
+    /// verifies that every classifier required by the codec layer is present.
+    /// It fails early if the metamodel shape does not match what `FSMEcore`
+    /// expects.
+    ///
+    /// - Parameter url: URL of the `.ecore` document to load.
+    /// - Throws: Throw an error if parsing fails or a required classifier is missing.
     public init(url: URL) async throws {
         package = try await EPackage(url: url)
 
@@ -116,16 +138,31 @@ public struct LLFSMMetamodel: Sendable {
     }
 }
 
-/// Errors that may occur when loading the LLFSM metamodel.
+/// Errors raised while loading the LLFSM metamodel.
+///
+/// These cases distinguish between resource lookup failures and structural
+/// validation failures so callers can report a more specific problem.
 public enum LLFSMMetamodelError: Error, CustomStringConvertible {
-    /// The `.ecore` resource was not found in the bundle.
+    /// Missing bundled `.ecore` resource.
+    ///
+    /// This case indicates that the module bundle did not contain the expected
+    /// structural metamodel resource.
     case resourceNotFound
-    /// One or more expected EClasses are missing from the metamodel.
+    /// Missing required classifier definitions.
+    ///
+    /// This case indicates that the parsed metamodel did not expose every
+    /// `EClass` needed by the codec layer.
     case missingClass
-    /// A required EClass feature is missing.
+    /// Missing required structural feature.
+    ///
+    /// This case indicates that decoding expected a feature that was not present
+    /// on the parsed object graph.
     case missingFeature(String)
 
-    /// A human-readable description of the error.
+    /// Human-readable error description.
+    ///
+    /// This description is suitable for surfacing loader failures in test
+    /// output or diagnostics.
     public var description: String {
         switch self {
         case .resourceNotFound:
