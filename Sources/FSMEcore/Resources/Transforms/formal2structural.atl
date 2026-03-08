@@ -1,0 +1,141 @@
+-- @path LLFSMFormal=../LLFSMFormal.ecore
+-- @path LLFSMStructural=../LLFSMStructural.ecore
+module formal2structural;
+create OUT : LLFSMStructural from IN : LLFSMFormal;
+
+rule FormalState2State {
+    from
+        s : LLFSMFormal!State
+    to
+        structuralState : LLFSMStructural!State (
+            name <- s.name,
+            activities <- activities
+        ),
+        activities : LLFSMStructural!StateActivities (
+            onEntry <- if s.onEntry.oclIsUndefined() then '' else s.onEntry.statements->first().code endif,
+            onExit <- if s.onExit.oclIsUndefined() then '' else s.onExit.statements->first().code endif,
+            internal <- if s.internal.oclIsUndefined() then '' else s.internal.statements->first().code endif,
+            onSuspend <- if s.onSuspend.oclIsUndefined() then '' else s.onSuspend.statements->first().code endif,
+            onResume <- if s.onResume.oclIsUndefined() then '' else s.onResume.statements->first().code endif
+        )
+}
+
+rule FormalTransition2Transition {
+    from
+        t : LLFSMFormal!Transition (t.condition.oclIsKindOf(LLFSMFormal!BooleanConstant))
+    to
+        structuralTransition : LLFSMStructural!Transition (
+            label <- if t.condition.value then 'true' else 'false' endif,
+            source <- thisModule.resolveTemp(t.source, 'structuralState'),
+            target <- thisModule.resolveTemp(t.target, 'structuralState')
+        )
+}
+
+rule FormalOpaqueTransition2Transition {
+    from
+        t : LLFSMFormal!Transition (t.condition.oclIsKindOf(LLFSMFormal!OpaqueExpression))
+    to
+        structuralTransition : LLFSMStructural!Transition (
+            label <- t.condition.code,
+            source <- thisModule.resolveTemp(t.source, 'structuralState'),
+            target <- thisModule.resolveTemp(t.target, 'structuralState')
+        )
+}
+
+rule FormalStateBoilerplateEntry2Entry {
+    from
+        e : LLFSMFormal!StateBoilerplateEntry
+    to
+        structuralEntry : LLFSMStructural!StateBoilerplateEntry (
+            state <- thisModule.resolveTemp(e.state, 'structuralState'),
+            boilerplate <- bp
+        ),
+        bp : LLFSMStructural!Boilerplate (
+            includePath <- e.boilerplate.includePath,
+            includes <- e.boilerplate.includes,
+            variables <- e.boilerplate.variables,
+            functions <- e.boilerplate.functions
+        )
+}
+
+rule FormalStateLayoutEntry2Entry {
+    from
+        e : LLFSMFormal!StateLayoutEntry
+    to
+        structuralStateLayoutEntry : LLFSMStructural!StateLayoutEntry (
+            state <- thisModule.resolveTemp(e.state, 'structuralState'),
+            layout <- layout
+        ),
+        layout : LLFSMStructural!StateLayout (
+            isOpen <- e.layout.isOpen,
+            closedX <- e.layout.closedX,
+            closedY <- e.layout.closedY,
+            closedW <- e.layout.closedW,
+            closedH <- e.layout.closedH,
+            openX <- e.layout.openX,
+            openY <- e.layout.openY,
+            openW <- e.layout.openW,
+            openH <- e.layout.openH,
+            onEntryHeight <- e.layout.onEntryHeight,
+            onExitHeight <- e.layout.onExitHeight,
+            internalHeight <- e.layout.internalHeight,
+            onSuspendHeight <- e.layout.onSuspendHeight,
+            onResumeHeight <- e.layout.onResumeHeight,
+            zoomedOnEntryHeight <- e.layout.zoomedOnEntryHeight,
+            zoomedOnExitHeight <- e.layout.zoomedOnExitHeight,
+            zoomedInternalHeight <- e.layout.zoomedInternalHeight,
+            zoomedOnSuspendHeight <- e.layout.zoomedOnSuspendHeight,
+            zoomedOnResumeHeight <- e.layout.zoomedOnResumeHeight,
+            extraProperties <- e.layout.extraProperties
+        )
+}
+
+rule FormalTransitionLayoutEntry2Entry {
+    from
+        e : LLFSMFormal!TransitionLayoutEntry
+    to
+        structuralTransitionLayoutEntry : LLFSMStructural!TransitionLayoutEntry (
+            transition <- thisModule.resolveTemp(e.transition, 'structuralTransition'),
+            layout <- layout
+        ),
+        layout : LLFSMStructural!TransitionLayout (
+            points <- e.layout.points->collect(p | thisModule.resolveTemp(p, 'structuralPoint'))
+        )
+}
+
+rule FormalPoint2Point {
+    from
+        p : LLFSMFormal!Point2D
+    to
+        structuralPoint : LLFSMStructural!Point2D (
+            x <- p.x,
+            y <- p.y
+        )
+}
+
+rule StateMachine2Machine {
+    from
+        m : LLFSMFormal!StateMachine
+    to
+        sm : LLFSMStructural!Machine (
+            name <- m.name,
+            language <- m.language,
+            llfsm <- llfsm,
+            boilerplate <- machineBoilerplate,
+            stateBoilerplates <- m.stateBoilerplates->collect(e | thisModule.resolveTemp(e, 'structuralEntry')),
+            stateLayouts <- m.stateLayouts->collect(e | thisModule.resolveTemp(e, 'structuralStateLayoutEntry')),
+            transitionLayouts <- m.transitionLayouts->collect(e | thisModule.resolveTemp(e, 'structuralTransitionLayoutEntry')),
+            windowLayout <- if m.windowLayout.oclIsUndefined() then '' else m.windowLayout.data endif
+        ),
+        llfsm : LLFSMStructural!LLFSM (
+            states <- m.states->collect(s | thisModule.resolveTemp(s, 'structuralState')),
+            transitions <- m.transitions->collect(t | thisModule.resolveTemp(t, 'structuralTransition')),
+            suspendState <- m.initialState
+        ),
+        machineBoilerplate : LLFSMStructural!Boilerplate (
+            includePath <- m.boilerplate.includePath,
+            includes <- m.boilerplate.includes,
+            variables <- m.boilerplate.variables,
+            functions <- m.boilerplate.functions
+        )
+}
