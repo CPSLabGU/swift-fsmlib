@@ -18,8 +18,15 @@ public struct ExecutableLLFSMMetamodel: Sendable {
     public let package: EPackage
 
     /// `EClass` for the arrangement root.
+    ///
+    /// This root class groups machine instances and direct machine references
+    /// so both native arrangement workflows and legacy template inputs can be
+    /// represented in one executable model.
     public let arrangementClass: EClass
     /// `EClass` for arrangement instance wrappers.
+    ///
+    /// Instance wrappers preserve the instance name and referenced type file
+    /// for arrangement-level generation and round-tripping.
     public let instanceClass: EClass
     /// `EClass` for state machines.
     public let stateMachineClass: EClass
@@ -163,6 +170,17 @@ public struct ExecutableLLFSMMetamodel: Sendable {
         windowLayoutClass = try Self.requireClass("WindowLayout", in: package)
     }
 
+    /// Look up a required executable classifier by name.
+    ///
+    /// This helper centralises missing-class validation so initialisation fails
+    /// at the first missing dependency instead of leaving partially initialised
+    /// metadata behind.
+    ///
+    /// - Parameters:
+    ///   - name: Name of the expected classifier.
+    ///   - package: Package containing the classifier.
+    /// - Returns: Matching executable `EClass`.
+    /// - Throws: Throw an error if the classifier is absent.
     private static func requireClass(_ name: String, in package: EPackage) throws -> EClass {
         guard let eClass = package.getEClass(name) else {
             throw ExecutableLLFSMMetamodelError.missingClass(name)
@@ -181,6 +199,9 @@ public enum ExecutableLLFSMMetamodelError: Error, CustomStringConvertible {
     case missingFeature(String)
 
     /// Human-readable error description.
+    ///
+    /// This value provides short diagnostics that are suitable for test output
+    /// and command-line error reporting.
     public var description: String {
         switch self {
         case .resourceNotFound:

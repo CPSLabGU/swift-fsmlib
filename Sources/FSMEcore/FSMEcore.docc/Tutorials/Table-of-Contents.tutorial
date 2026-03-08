@@ -1,0 +1,17 @@
+@Tutorials(name: "FSMEcore Tutorials") {
+    @Intro(title: "Learning FSMEcore") {
+        Explore structural and executable metamodel workflows for LLFSM machines and arrangements. These tutorials show how to move between native Swift values, XMI documents, ATL transforms, and MTL templates.
+    }
+
+    @Chapter(name: "Structural XMI") {
+        Export and import structural XMI while keeping the native Swift model as the reference shape.
+
+        @TutorialReference(tutorial: "doc:ExportingStructuralXMI")
+    }
+
+    @Chapter(name: "Executable Generation") {
+        Generate artefacts from executable LLFSM models with the bundled template set.
+
+        @TutorialReference(tutorial: "doc:GeneratingExecutableArtefacts")
+    }
+}

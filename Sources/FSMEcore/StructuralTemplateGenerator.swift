@@ -12,8 +12,20 @@ import MTL
 /// for phase 4 validation and later replacement.
 @MainActor
 public struct StructuralTemplateGenerator {
+    /// Descriptor package exposed to the MTL runtime.
+    ///
+    /// This in-memory package defines the small file-descriptor model that the
+    /// structural templates consume.
     private let descriptorPackage: EPackage
+    /// `EClass` describing the file-set root object.
+    ///
+    /// The root object contains the generated file descriptors that a template
+    /// will iterate over.
     private let fileSetClass: EClass
+    /// `EClass` describing one generated file descriptor.
+    ///
+    /// Each descriptor stores a relative output path and the file content to
+    /// write there.
     private let fileClass: EClass
 
     /// Create the template generator.
@@ -139,6 +151,16 @@ public struct StructuralTemplateGenerator {
         try await render(templateNamed: "structural2layout", descriptors: layoutDescriptors, to: url)
     }
 
+    /// Render a file descriptor set with one bundled structural template.
+    ///
+    /// The generator runs the MTL module in memory and then writes the emitted
+    /// files to disk using the generated relative paths.
+    ///
+    /// - Parameters:
+    ///   - name: Basename of the bundled template.
+    ///   - descriptors: File descriptors to expose to the template runtime.
+    ///   - url: Base directory for generated files.
+    /// - Throws: Throw an error if template parsing, generation, or file output fails.
     private func render(
         templateNamed name: String,
         descriptors: [GeneratedFileDescriptor],
@@ -166,6 +188,10 @@ public struct StructuralTemplateGenerator {
         try writeGeneratedFiles(generatedFiles, to: url)
     }
 
+    /// Build the root descriptor object for the MTL runtime.
+    ///
+    /// - Parameter descriptors: File descriptors to expose to the template.
+    /// - Returns: Root dynamic object for the in-memory descriptor model.
     private func descriptorRoot(for descriptors: [GeneratedFileDescriptor]) -> DynamicEObject {
         var root = DynamicEObject(eClass: fileSetClass)
         root.eSet("files", value: descriptors.map { descriptor in
@@ -177,6 +203,16 @@ public struct StructuralTemplateGenerator {
         return root
     }
 
+    /// Snapshot the files produced by the native machine writer.
+    ///
+    /// This helper writes a temporary `.machine` bundle through the native
+    /// serialiser and then reads the resulting text files back as descriptors.
+    ///
+    /// - Parameters:
+    ///   - machine: Machine to render natively.
+    ///   - bundleName: Temporary bundle name.
+    /// - Returns: Sorted generated file descriptors.
+    /// - Throws: Throw an error if native writing or file reading fails.
     private func makeMachineDescriptors(
         for machine: Machine,
         named bundleName: String
@@ -204,6 +240,13 @@ public struct StructuralTemplateGenerator {
         return descriptors.sorted { $0.path < $1.path }
     }
 
+    /// Read textual files from a directory tree as descriptors.
+    ///
+    /// - Parameters:
+    ///   - url: Directory to scan.
+    ///   - baseURL: Base directory used to compute relative paths.
+    /// - Returns: Sorted generated file descriptors.
+    /// - Throws: Throw an error if directory traversal or file reading fails.
     private func readDescriptors(from url: URL, relativeTo baseURL: URL) throws -> [GeneratedFileDescriptor] {
         let fileManager = FileManager.default
         let keys: [URLResourceKey] = [.isDirectoryKey]
@@ -224,6 +267,11 @@ public struct StructuralTemplateGenerator {
         return descriptors.sorted { $0.path < $1.path }
     }
 
+    /// Create a unique temporary directory for intermediate native output.
+    ///
+    /// - Parameter prefix: Prefix to include in the temporary directory name.
+    /// - Returns: Canonical temporary directory URL.
+    /// - Throws: Throw an error if directory creation fails.
     private func makeTemporaryDirectory(prefix: String) throws -> URL {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
             "\(prefix)-\(UUID().uuidString)",
@@ -233,6 +281,12 @@ public struct StructuralTemplateGenerator {
         return directory.standardizedFileURL.resolvingSymlinksInPath()
     }
 
+    /// Write generated files returned by the in-memory MTL strategy.
+    ///
+    /// - Parameters:
+    ///   - files: Generated file map keyed by output path.
+    ///   - baseURL: Base directory for file output.
+    /// - Throws: Throw an error if writing any file fails.
     private func writeGeneratedFiles(_ files: [String: String], to baseURL: URL) throws {
         for (rawPath, content) in files {
             guard rawPath != "stdout" else { continue }
@@ -247,6 +301,14 @@ public struct StructuralTemplateGenerator {
         }
     }
 
+    /// Normalise a generated output path before writing it to disk.
+    ///
+    /// Some generators report paths with an extra leading `/private` prefix on
+    /// Darwin. This helper strips those transient prefixes so the final layout
+    /// is stable across environments.
+    ///
+    /// - Parameter rawPath: Generated path reported by the template runtime.
+    /// - Returns: Normalised relative path.
     private func normalisedGeneratedPath(_ rawPath: String) -> String {
         if rawPath.hasPrefix("/private") {
             return String(rawPath.dropFirst("/private".count))

@@ -127,18 +127,38 @@ public struct ExecutableXMIRoundTrip {
 }
 
 struct ExecutableXMIWriter {
+    /// Executable metamodel used to resolve namespaced type information.
+    ///
+    /// The writer reads namespace and classifier metadata from this value while
+    /// building the XMI document.
     let metamodel: ExecutableLLFSMMetamodel
 
+    /// XML namespace prefix for executable elements.
+    ///
+    /// If the metamodel omits a prefix, the writer falls back to the historic
+    /// namespace prefix used by the legacy LLFSM resources.
     private var prefix: String {
         let candidate = metamodel.package.nsPrefix.trimmingCharacters(in: .whitespacesAndNewlines)
         return candidate.isEmpty ? "newGITmetamodelwithtypes" : candidate
     }
 
+    /// XML namespace URI for executable elements.
+    ///
+    /// If the metamodel omits a namespace URI, the writer falls back to the
+    /// historic URI used by the legacy LLFSM resources.
     private var namespaceURI: String {
         let candidate = metamodel.package.nsURI.trimmingCharacters(in: .whitespacesAndNewlines)
         return candidate.isEmpty ? "http://www.example.org/newGITmetamodelwithtypes" : candidate
     }
 
+    /// Serialise an executable resource as an XMI document.
+    ///
+    /// This method finds the effective root object, computes containment paths
+    /// for cross-reference `href` values, and then emits the XML document.
+    ///
+    /// - Parameter resource: Executable resource to serialise.
+    /// - Returns: XML text for the executable model.
+    /// - Throws: Throw an error if no suitable root object is available.
     func serialise(_ resource: Resource) async throws -> String {
         guard let root = await findRoot(in: resource) else {
             throw ExecutableLLFSMMetamodelError.missingFeature("root executable object")
@@ -159,6 +179,13 @@ struct ExecutableXMIWriter {
         return xml
     }
 
+    /// Find the preferred executable root object in a resource.
+    ///
+    /// The writer prefers an arrangement root, then a state-machine root, and
+    /// finally falls back to scanning the full object graph.
+    ///
+    /// - Parameter resource: Resource to inspect.
+    /// - Returns: Root executable object, or `nil` if none is found.
     private func findRoot(in resource: Resource) async -> DynamicEObject? {
         let roots = await resource.getRootObjects().compactMap { $0 as? DynamicEObject }
         if let arrangement = roots.first(where: { $0.eClass.name == metamodel.arrangementClass.name }) {
@@ -173,6 +200,16 @@ struct ExecutableXMIWriter {
         }
     }
 
+    /// Collect containment paths for every reachable object in the resource.
+    ///
+    /// These paths are later reused when serialising non-contained references
+    /// as fragment-only `href` attributes.
+    ///
+    /// - Parameters:
+    ///   - object: Current containment root.
+    ///   - currentPath: Fragment path accumulated so far.
+    ///   - resource: Resource that owns the object graph.
+    ///   - paths: Dictionary to populate with object identifiers and paths.
     private func collectPaths(
         for object: DynamicEObject,
         currentPath: String,
@@ -199,6 +236,20 @@ struct ExecutableXMIWriter {
         }
     }
 
+    /// Serialise a single dynamic object as an XML element.
+    ///
+    /// This helper writes scalar attributes inline and delegates contained
+    /// references to `serialiseReferenceChildren(of:in:paths:indent:)`.
+    ///
+    /// - Parameters:
+    ///   - elementName: Qualified XML element name.
+    ///   - object: Dynamic object to serialise.
+    ///   - resource: Resource that owns the object graph.
+    ///   - paths: Precomputed containment paths.
+    ///   - indent: Current indentation level.
+    ///   - includeNamespaceDeclarations: Whether to write namespace attributes.
+    ///   - includeTypeAttribute: Whether to include `xsi:type`.
+    /// - Returns: XML for the element and its children.
     private func serialiseElement(
         named elementName: String,
         object: DynamicEObject,
@@ -243,6 +294,17 @@ struct ExecutableXMIWriter {
         return "\(indentation)<\(elementName)\(attributeString)>\n\(children)\(indentation)</\(elementName)>\n"
     }
 
+    /// Serialise reference features for one object.
+    ///
+    /// Contained references become nested elements. Non-contained references
+    /// become fragment `href` elements that point at previously collected paths.
+    ///
+    /// - Parameters:
+    ///   - object: Dynamic object being serialised.
+    ///   - resource: Resource that owns the object graph.
+    ///   - paths: Precomputed containment paths.
+    ///   - indent: Current indentation level.
+    /// - Returns: XML children for the object’s references.
     private func serialiseReferenceChildren(
         of object: DynamicEObject,
         in resource: Resource,
@@ -307,6 +369,12 @@ struct ExecutableXMIWriter {
         return children
     }
 
+    /// Resolve a single executable object from a reflective reference value.
+    ///
+    /// - Parameters:
+    ///   - value: Reflective feature value.
+    ///   - resource: Resource used for identifier resolution.
+    /// - Returns: Resolved dynamic object, or `nil` if the value is empty.
     private func resolveObject(from value: Any?, in resource: Resource) async -> DynamicEObject? {
         guard let value else {
             return nil

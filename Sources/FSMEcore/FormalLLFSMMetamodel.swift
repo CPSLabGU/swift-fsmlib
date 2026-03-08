@@ -8,6 +8,9 @@ import ECore
 @available(*, deprecated, renamed: "ExecutableLLFSMMetamodel")
 public struct FormalLLFSMMetamodel: Sendable {
     /// Loaded package for the executable LLFSM metamodel.
+    ///
+    /// This property preserves the older wrapper surface for callers that only
+    /// need access to the loaded executable `EPackage`.
     public let package: EPackage
 
     /// Load the executable LLFSM metamodel.

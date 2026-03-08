@@ -1,31 +1,53 @@
 # swift-fsmlib
 
-A cross-platform Swift library for Logic-Labelled Finite-State Machines
-(LLFSMs) and FSM conversion tools.
+`swift-fsmlib` provides Logic-Labelled Finite-State Machine (LLFSM) types, file-format support, code generation, and metamodel-backed workflows for Swift packages and command-line tools.
+
+The package is split into three main surfaces:
+
+- `FSM` contains the native machine, arrangement, serialisation, and code-generation APIs.
+- `FSMEcore` adds structural and executable Ecore metamodels, XMI round-tripping, ATL model-to-model transforms, and MTL model-to-text generation.
+- `fsmconvert` wraps both modules in a command-line interface for native format conversion, arrangement assembly, XMI import and export, and template-driven generation.
+
+## Background
+
+The native Swift types remain the production reference implementation. They define the file formats that `swift-fsmlib` reads and writes today, and they act as the regression oracle for metamodel-backed workflows.
+
+The metamodel layer adds two complementary views of the same domain. The structural metamodel mirrors the current Swift runtime shape and is the fidelity model for `.machine`, `.arrangement`, `.scxml`, and structural XMI round-trips. The executable metamodel restores the typed hierarchy used by the legacy LLFSM templates so ATL and MTL workflows can generate the same outputs as the existing Swift generators.
 
 ## Overview
 
-`swift-fsmlib` provides robust, type-safe tools for defining, analysing,
-serialising, and converting finite-state machines. It supports both
-macOS and Linux and is designed for research and production use.
+The library supports:
 
-- **FSM**: Core framework for state machines, including states,
-  transitions, state activities, language bindings, and code generation.
-- **fsmconvert**: Command-line tool for converting machines between
-  language formats and creating arrangements from multiple FSMs.
-- **SCXML Support**: Full round-trip conversion between directory-based `.machine` and single-file `.scxml` formats.
+- Type-safe state and transition definitions with UUID-based identifiers.
+- Logic-labelled LLFSM execution structure with suspend and resume support.
+- Native `.machine`, `.arrangement`, and `.scxml` serialisation and parsing.
+- C, Objective-C++, Swift, and SCXML-oriented generation paths.
+- Structural and executable metamodel workflows built on Ecore, ATL, and MTL.
+- Layout and geometry support for editor-facing round-trips.
 
-## Features
+## Package Layout
 
-- Type-safe state and transition definitions with UUID-based identifiers
-- Logic-Labelled FSM model with Boolean transition expressions
-- Suspend and resume support for interruptible state machines
-- C and Objective-C++ language bindings with code generation
-- Arrangements for composing multiple FSMs into coordinated systems
-- CMake build system integration for generated code
-- Layout and geometry types for graphical FSM editors
-- Round-trip serialisation via `.machine`, `.arrangement`, and `.scxml` formats
-- Multi-namespace SCXML compatible with ScxmlEditor, Qt Creator, and other tools
+```text
+Sources/FSM/          Native LLFSM and arrangement APIs.
+Sources/FSMEcore/     Structural and executable metamodel support.
+Sources/fsmconvert/   Command-line interface and DocC for the tool.
+Tests/                Unit and end-to-end regression coverage.
+examples/             Sample machines, SCXML files, and arrangements.
+```
+
+## Building
+
+Build the package with Swift Package Manager:
+
+```bash
+swift build
+```
+
+Run the test suite:
+
+```bash
+swift test
+```
 
 ## Installation
 
@@ -37,77 +59,140 @@ dependencies: [
 ]
 ```
 
-Then add `FSM` as a target dependency:
+Then add the product you need to your target dependencies:
 
 ```swift
 .target(
     name: "YourTarget",
     dependencies: [
-        .product(name: "FSM", package: "swift-fsmlib")
+        .product(name: "FSM", package: "swift-fsmlib"),
+        .product(name: "FSMEcore", package: "swift-fsmlib")
     ]
 )
 ```
 
-## Quick Start
+## Native Usage
+
+Construct a machine directly in Swift:
 
 ```swift
 import FSM
 
-// Define states
-let red = State(name: "Red")
-let green = State(name: "Green")
+let idle = State(name: "Idle")
+let running = State(name: "Running")
+let start = Transition(label: "start", source: idle.id, target: running.id)
+let stop = Transition(label: "stop", source: running.id, target: idle.id)
 
-// Define transitions with Boolean expressions
-let toGreen = Transition(label: "after_ms(5000)", source: red.id, target: green.id)
-let toRed = Transition(label: "after_ms(5000)", source: green.id, target: red.id)
-
-// Create a logic-labelled FSM
-let fsm = LLFSM(states: [red, green], transitions: [toGreen, toRed])
-
-print("States: \(fsm.stateNames)")
-print("Initial state: \(fsm.initialState)")
+let llfsm = LLFSM(states: [idle, running], transitions: [start, stop], suspendState: nil)
+var machine = Machine()
+machine.llfsm = llfsm
 ```
 
-## Using fsmconvert
+Inspect the resulting machine:
 
-Convert a machine to a different language format:
-
-```bash
-swift run fsmconvert MyMachine.machine -f c -o MyMachine_C.machine
+```swift
+print(machine.llfsm.stateNames)
+print(machine.llfsm.initialState)
 ```
 
-Convert a machine to SCXML format:
+Write a machine bundle or SCXML file through the native storage layer:
+
+```swift
+import FSM
+import Foundation
+
+let outputURL = URL(fileURLWithPath: "Example.machine")
+try machine.write(to: outputURL, isSuspensible: true)
+```
+
+## Metamodel Usage
+
+Write a structural XMI document:
+
+```swift
+import FSM
+import FSMEcore
+import Foundation
+
+let metamodel = try await LLFSMMetamodel()
+let roundTrip = XMIRoundTrip(metamodel: metamodel)
+try await roundTrip.write(machine: machine, name: "Example", to: URL(fileURLWithPath: "Example.xmi"))
+```
+
+Generate an executable artefact through an MTL template:
+
+```swift
+import FSM
+import FSMEcore
+import Foundation
+
+let metamodel = try await ExecutableLLFSMMetamodel()
+let generator = ExecutableTemplateGenerator(metamodel: metamodel)
+let templateURL = try generator.bundledTemplateURL(named: "llfsm2dot")
+try await generator.generate(
+    templateURL: templateURL,
+    machine: machine,
+    name: "Example",
+    outputDirectory: URL(fileURLWithPath: "Generated")
+)
+```
+
+## Command-Line Usage
+
+Convert a native machine to SCXML:
 
 ```bash
-swift run fsmconvert MyMachine.machine -f scxml -o MyMachine.scxml
+fsmconvert Example.machine --format scxml --output Example.scxml
+```
+
+Export a machine as structural XMI:
+
+```bash
+fsmconvert Example.machine --metamodel structural --format xmi --output Example.xmi
+```
+
+Generate DOT from an executable model with the bundled ATL and MTL resources:
+
+```bash
+fsmconvert Example.machine \
+  --metamodel structural \
+  --atl structural2executable \
+  --transform llfsm2dot \
+  --output Generated
 ```
 
 Create an arrangement from multiple machines:
 
 ```bash
-swift run fsmconvert Machine1.machine Machine2.machine -a -o System.arrangement
+fsmconvert Machine1.machine Machine2.machine --arrangement --output System.arrangement
 ```
 
 Run with verbose output:
 
 ```bash
-swift run fsmconvert MyMachine.machine -v -o output.machine
+fsmconvert Example.machine --verbose --output output.machine
 ```
 
 ## Examples
 
-The `examples/` directory contains pre-built machines and arrangements:
+The `examples/` directory contains sample machines, arrangements, and SCXML files that exercise the native and metamodel-backed workflows.
 
-- `Counter.machine` / `CounterC.machine` / `CounterCPP.machine`:
-  Basic counter FSMs in different language formats.
-- `SuspendCounter.machine` / `SuspendCounterC.machine`:
-  Suspensible counter FSMs demonstrating suspend and resume.
-- `SuspendCounter.arrangement` / `Counter.arrangement`:
-  Multi-machine arrangements.
+Representative examples include:
 
-See `examples/README.md` for detailed descriptions.
+- `Counter.machine`, `CounterC.machine`, and `CounterCPP.machine` for basic machine formats.
+- `SuspendCounter.machine` and `SuspendCounterC.machine` for suspend and resume behaviour.
+- `Counter.arrangement` and `SuspendCounter.arrangement` for multi-machine composition.
+- `Counter.scxml` and related SCXML samples for single-file interchange.
 
 ## Documentation
+
+DocC catalogues are provided for:
+
+- `FSM` at `Sources/FSM/FSM.docc`
+- `FSMEcore` at `Sources/FSMEcore/FSMEcore.docc`
+- `fsmconvert` at `Sources/fsmconvert/fsmconvert.docc`
+
+Start with the package landing pages and tutorials there when you need the higher-level workflows or the expected conversion boundaries.
 
 Generate DocC documentation locally:
 
@@ -121,13 +206,6 @@ Preview the documentation in a browser:
 swift package --disable-sandbox preview-documentation --target FSM
 ```
 
-The documentation includes:
-- API reference for all public types and functions
-- Conceptual articles on architecture, language bindings, and
-  arrangement design
-- Hands-on tutorials for getting started, working with examples,
-  and using fsmconvert
-
 ## Licence
 
-Copyright &copy; 2015, 2016, 2023, 2025 Rene Hexel. All rights reserved.
+Copyright &copy; 2015, 2016, 2023, 2025, 2026 Rene Hexel. All rights reserved.

@@ -1,0 +1,63 @@
+@Tutorial {
+    @Intro(title: "Export Structural XMI") {
+        Learn how to write a native `Machine` value to structural XMI and read it back through the `FSMEcore` round-trip helper.
+
+        This workflow is useful when you want a faithful model representation for tests, interchange, or downstream transformation work while keeping the native Swift file formats as the behavioural reference.
+    }
+
+    @Section(title: "Create A Simple Machine") {
+        @ContentAndMedia {
+            Start with the same native `FSM` types used elsewhere in the package. The metamodel layer builds on those values rather than replacing them.
+        }
+
+        @Steps {
+            @Step {
+                Define two states and one transition.
+
+                ```swift
+                import FSM
+
+                let idle = State(name: "Idle")
+                let running = State(name: "Running")
+                let start = Transition(label: "start", source: idle.id, target: running.id)
+                let llfsm = LLFSM(states: [idle, running], transitions: [start], suspendState: nil)
+
+                var machine = Machine()
+                machine.llfsm = llfsm
+                ```
+            }
+        }
+    }
+
+    @Section(title: "Write And Read Structural XMI") {
+        @ContentAndMedia {
+            Load the bundled structural metamodel, write the machine as XMI, and then decode it again.
+        }
+
+        @Steps {
+            @Step {
+                Create the round-trip helper and write the file.
+
+                ```swift
+                import FSMEcore
+                import Foundation
+
+                let metamodel = try await LLFSMMetamodel()
+                let roundTrip = XMIRoundTrip(metamodel: metamodel)
+                let url = URL(fileURLWithPath: "Example.xmi")
+                try await roundTrip.write(machine: machine, name: "Example", to: url)
+                ```
+            }
+
+            @Step {
+                Read the machine back from the XMI document.
+
+                ```swift
+                let decoded = try await roundTrip.readMachine(from: url)
+                print(decoded.name)
+                print(decoded.machine.llfsm.states.count)
+                ```
+            }
+        }
+    }
+}

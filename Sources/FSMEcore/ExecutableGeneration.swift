@@ -13,6 +13,9 @@ import MTL
 @MainActor
 public struct ExecutableTemplateGenerator {
     /// Executable metamodel used for model loading and in-memory encoding.
+    ///
+    /// The generator uses this metamodel both to encode native Swift values and
+    /// to resolve already-loaded executable XMI resources.
     public let metamodel: ExecutableLLFSMMetamodel
 
     /// Create the executable template generator.
@@ -133,6 +136,18 @@ public struct ExecutableTemplateGenerator {
         )
     }
 
+    /// Select the template entry point to execute for a parsed MTL module.
+    ///
+    /// If the caller did not request a specific template, this helper prefers a
+    /// template marked as `main` and otherwise falls back to the first declared
+    /// template so existing legacy modules continue to work unchanged.
+    ///
+    /// - Parameters:
+    ///   - module: Parsed MTL module.
+    ///   - requested: Optional caller-specified template name.
+    /// - Returns: Name of the template to execute.
+    /// - Throws: Throw an error if the requested template does not exist or the
+    ///   module contains no templates.
     private func selectedTemplateName(in module: MTLModule, requested: String?) throws -> String {
         if let requested {
             guard module.templates[requested] != nil else {
@@ -231,6 +246,17 @@ public struct LLFSMATLTransformer {
         return targetResource
     }
 
+    /// Canonicalise target resources produced by known bundled ATL modules.
+    ///
+    /// Some ATL runs intentionally use Swift codec passes after execution so
+    /// the final target resource matches the package’s native semantics more
+    /// closely than a direct reflective copy would.
+    ///
+    /// - Parameters:
+    ///   - moduleName: Parsed ATL module name.
+    ///   - sourceResource: Source resource that drove the transformation.
+    ///   - targetResource: Resource produced by the ATL virtual machine.
+    /// - Throws: Throw an error if codec-based rebuilding fails.
     private func canonicaliseKnownTargetShapes(
         moduleName: String,
         sourceResource: Resource,
@@ -246,6 +272,16 @@ public struct LLFSMATLTransformer {
         }
     }
 
+    /// Rebuild an executable target resource from a structural source model.
+    ///
+    /// This helper decodes the structural source with the native codecs and
+    /// then re-encodes it as an executable model so the target graph matches
+    /// the executable fidelity rules used elsewhere in the package.
+    ///
+    /// - Parameters:
+    ///   - sourceResource: Structural source resource.
+    ///   - targetResource: Executable target resource to replace.
+    /// - Throws: Throw an error if decoding or encoding fails.
     private func rebuildExecutableTarget(from sourceResource: Resource, into targetResource: Resource) async throws {
         let structuralMetamodel = try await LLFSMMetamodel()
         let executableMetamodel = try await ExecutableLLFSMMetamodel()
@@ -274,6 +310,16 @@ public struct LLFSMATLTransformer {
         }
     }
 
+    /// Rebuild a structural target resource from an executable source model.
+    ///
+    /// This helper performs the inverse of `rebuildExecutableTarget(from:into:)`
+    /// so executable-to-structural transforms return to the canonical
+    /// structural shape used by the native codecs and round-trip tests.
+    ///
+    /// - Parameters:
+    ///   - sourceResource: Executable source resource.
+    ///   - targetResource: Structural target resource to replace.
+    /// - Throws: Throw an error if decoding or encoding fails.
     private func rebuildStructuralTarget(from sourceResource: Resource, into targetResource: Resource) async throws {
         let structuralMetamodel = try await LLFSMMetamodel()
         let executableMetamodel = try await ExecutableLLFSMMetamodel()

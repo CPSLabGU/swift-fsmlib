@@ -100,6 +100,11 @@ public struct ArrangementEcoreCodec {
 }
 
 private func referenceID(from value: Any?) -> EUUID? {
+    /// Extract the first referenced object identifier from a reflective value.
+    ///
+    /// `swift-ecore` references can appear as identifiers, dynamic objects, or
+    /// small collections depending on how a feature was parsed or queried. This
+    /// helper normalises those cases for the codec layer.
     switch value {
     case let id as EUUID:
         return id
@@ -122,6 +127,10 @@ private func referenceID(from value: Any?) -> EUUID? {
 }
 
 private func referenceIDs(from value: Any?) -> [EUUID] {
+    /// Extract every referenced object identifier from a reflective value.
+    ///
+    /// This helper flattens the different container shapes used by reflective
+    /// reference values into a consistent identifier array.
     switch value {
     case let ids as [EUUID]:
         return ids

@@ -758,11 +758,15 @@ struct FSMConvert: AsyncParsableCommand {
 }
 
 enum MetamodelLevel: String, ExpressibleByArgument {
+    /// Structural LLFSM model that mirrors the native Swift runtime shape.
     case structural
+    /// Executable LLFSM model used by the legacy typed templates.
     case executable
 }
 
 private enum MetamodelInput {
+    /// Native machine input with its preserved machine name.
     case machine(name: String, Machine)
+    /// Native arrangement input.
     case arrangement(Arrangement)
 }
