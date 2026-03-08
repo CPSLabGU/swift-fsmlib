@@ -1,0 +1,179 @@
+
+digraph FischerConcurrencyAlgorithm {
+	rankdir=TB;
+	bgcolor="white";
+
+	label=<
+<table border="0" cellborder="1" cellspacing="1">
+<tr><td align="left">Arrangement: FischerConcurrencyAlgorithm</td></tr>
+<tr><td align="left">Machines: Starter, Thread1, Thread2</td></tr>
+
+<tr><td align="left">Integer sensors: Thread1NonCriticalSectionWCET, Thread1CriticalSectionWCET, Thread2NonCriticalSectionWCET, Thread2CriticalSectionWCET</td></tr>
+
+
+
+
+
+<tr><td align="left">Integer whiteboard: SharedX</td></tr>
+
+
+</table>
+	>;
+
+
+	subgraph cluster_Starter {
+		label="Starter";
+		bgcolor="white";
+		fontname="Arial";
+		rankdir="TB";
+
+		// Pseudo-initial state
+		dInitStarter [shape=record, label="dInitStarter(0)"];
+
+		// Initial state
+
+		INITIAL [shape=record, label="INITIAL(1)"];
+
+
+		// Regular states
+
+
+		// Transition from pseudo-initial to initial state
+		dInitStarter -> INITIAL [label="1:[true]"];
+
+		// Transitions
+
+	}
+
+
+	subgraph cluster_Thread1 {
+		label="Thread1";
+		bgcolor="white";
+		fontname="Arial";
+		rankdir="TB";
+
+		// Pseudo-initial state
+		dInitThread1 [shape=record, label="dInitThread1(0)"];
+
+		// Initial state
+
+		T1NonCriticalSection [shape=record, label="T1NonCriticalSection(1)"];
+
+
+		// Regular states
+
+
+		T1WAIT [shape=record, label="T1WAIT(1)"];
+
+
+
+		T1ASSIGN [shape=record, label="T1ASSIGN(2)"];
+
+
+
+		T1CriticalSection [shape=record, label="T1CriticalSection(3)"];
+
+
+
+		T1LetGo [shape=record, label="T1LetGo(4)"];
+
+
+
+		// Transition from pseudo-initial to initial state
+		dInitThread1 -> T1NonCriticalSection [label="1:[true]"];
+
+		// Transitions
+
+
+		T1NonCriticalSection -> T1WAIT [label="1:[true]"];
+
+
+
+		T1WAIT -> T1ASSIGN [label="2:[NotAThread=SharedX]"];
+
+
+
+		T1ASSIGN -> T1WAIT [label="3:[!IamThreadT1=SharedX]"];
+
+
+
+		T1ASSIGN -> T1CriticalSection [label="4:[true]"];
+
+
+
+		T1CriticalSection -> T1LetGo [label="5:[true]"];
+
+
+
+		T1LetGo -> T1NonCriticalSection [label="6:[true]"];
+
+
+	}
+
+
+	subgraph cluster_Thread2 {
+		label="Thread2";
+		bgcolor="white";
+		fontname="Arial";
+		rankdir="TB";
+
+		// Pseudo-initial state
+		dInitThread2 [shape=record, label="dInitThread2(0)"];
+
+		// Initial state
+
+		T2NonCriticalSection [shape=record, label="T2NonCriticalSection(1)"];
+
+
+		// Regular states
+
+
+		T2WAIT [shape=record, label="T2WAIT(1)"];
+
+
+
+		T2ASSIGN [shape=record, label="T2ASSIGN(2)"];
+
+
+
+		T2CriticalSection [shape=record, label="T2CriticalSection(3)"];
+
+
+
+		T2LetGo [shape=record, label="T2LetGo(4)"];
+
+
+
+		// Transition from pseudo-initial to initial state
+		dInitThread2 -> T2NonCriticalSection [label="1:[true]"];
+
+		// Transitions
+
+
+		T2NonCriticalSection -> T2WAIT [label="1:[true]"];
+
+
+
+		T2WAIT -> T2ASSIGN [label="2:[NotAThread=SharedX]"];
+
+
+
+		T2ASSIGN -> T2WAIT [label="3:[!IamThreadT2=SharedX]"];
+
+
+
+		T2ASSIGN -> T2CriticalSection [label="4:[true]"];
+
+
+
+		T2CriticalSection -> T2LetGo [label="5:[true]"];
+
+
+
+		T2LetGo -> T2NonCriticalSection [label="6:[true]"];
+
+
+	}
+
+
+}

@@ -1,0 +1,70 @@
+[module llfsm2dot('http://www.example.org/newGITmetamodelwithtypes')]
+
+[template main(arr : Arrangement)]
+[file (arr.arrangementName + '.dot', false)]
+digraph [arr.arrangementName/] {
+	rankdir=TB;
+	bgcolor="white";
+
+	label=<
+<table border="0" cellborder="1" cellspacing="1">
+<tr><td align="left">Arrangement: [arr.arrangementName/]</td></tr>
+<tr><td align="left">Machines: [for (sm : StateMachine in arr.stateMachine) separator(', ')][sm.name/][/for]</td></tr>
+[if (arr.sensorVariables.variables->notEmpty())]
+<tr><td align="left">Integer sensors: [for (v : IntegerVariable in arr.sensorVariables.variables) separator(', ')][v.variableID/][/for]</td></tr>
+[/if]
+[if (arr.booleanSensorVariables.variables->notEmpty())]
+<tr><td align="left">Boolean sensors: [for (v : BooleanVariable in arr.booleanSensorVariables.variables) separator(', ')][v.variableID/][/for]</td></tr>
+[/if]
+[if (arr.effectorVariables.variables->notEmpty())]
+<tr><td align="left">Integer effectors: [for (v : IntegerVariable in arr.effectorVariables.variables) separator(', ')][v.variableID/][/for]</td></tr>
+[/if]
+[if (arr.booleanEffectorVariables.variables->notEmpty())]
+<tr><td align="left">Boolean effectors: [for (v : BooleanVariable in arr.booleanEffectorVariables.variables) separator(', ')][v.variableID/][/for]</td></tr>
+[/if]
+[if (arr.whiteboardVariables.variables->notEmpty())]
+<tr><td align="left">Integer whiteboard: [for (v : IntegerVariable in arr.whiteboardVariables.variables) separator(', ')][v.variableID/][/for]</td></tr>
+[/if]
+[if (arr.booleanWhiteboardVariables.variables->notEmpty())]
+<tr><td align="left">Boolean whiteboard: [for (v : BooleanVariable in arr.booleanWhiteboardVariables.variables) separator(', ')][v.variableID/][/for]</td></tr>
+[/if]
+</table>
+	>;
+
+[for (sm : StateMachine in arr.stateMachine)]
+	subgraph cluster_[sm.name/] {
+		label="[sm.name/]";
+		bgcolor="white";
+		fontname="Arial";
+		rankdir="TB";
+
+		// Pseudo-initial state
+		dInit[sm.name/] ['['/]shape=record, label="dInit[sm.name/](0)"[']'/];
+
+		// Initial state
+[let init : InitialState = sm.initialState]
+		[init.stateName/] ['['/]shape=record, label="[init.stateName/](1)"[']'/];
+[/let]
+
+		// Regular states
+[for (s : State in sm.states)]
+[let stateID : Integer = sm.states->indexOf(s) + 1]
+		[s.stateName/] ['['/]shape=record, label="[s.stateName/]([stateID/])"[']'/];
+[/let]
+[/for]
+
+		// Transition from pseudo-initial to initial state
+		dInit[sm.name/] -> [sm.initialState.stateName/] ['['/]label="1:['['/]true[']'/]"[']'/];
+
+		// Transitions
+[for (tr : Transition in sm.transitions)]
+[let transIdx : Integer = sm.transitions->indexOf(tr) + 1]
+		[tr.sourceState.stateName/] -> [tr.targetState.stateName/] ['['/]label="[transIdx/]:['['/][if (tr.booleanExpression.oclIsKindOf(BooleanConstant))][if (tr.booleanExpression.oclAsType(BooleanConstant).aBooleanValue)]true[else]false[/if][elseif (tr.booleanExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][elseif (tr.booleanExpression.oclIsKindOf(EqualExpression))][let eq : EqualExpression = tr.booleanExpression.oclAsType(EqualExpression)][if (eq.leftExpression.oclIsKindOf(IntegerConstant))][eq.leftExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (eq.leftExpression.oclIsKindOf(PredefinedIntegerConstant))][eq.leftExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][elseif (eq.leftExpression.oclIsKindOf(IntegerVariableReference))][eq.leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if]=[if (eq.rightExpression.oclIsKindOf(IntegerConstant))][eq.rightExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (eq.rightExpression.oclIsKindOf(PredefinedIntegerConstant))][eq.rightExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][elseif (eq.rightExpression.oclIsKindOf(IntegerVariableReference))][eq.rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if][/let][elseif (tr.booleanExpression.oclIsKindOf(NotExpression))][let notExpr : NotExpression = tr.booleanExpression.oclAsType(NotExpression)]![if (notExpr.theExpression.oclIsKindOf(BooleanVariableReference))][notExpr.theExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][elseif (notExpr.theExpression.oclIsKindOf(EqualExpression))][let eq : EqualExpression = notExpr.theExpression.oclAsType(EqualExpression)][if (eq.leftExpression.oclIsKindOf(IntegerConstant))][eq.leftExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (eq.leftExpression.oclIsKindOf(PredefinedIntegerConstant))][eq.leftExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][elseif (eq.leftExpression.oclIsKindOf(IntegerVariableReference))][eq.leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if]=[if (eq.rightExpression.oclIsKindOf(IntegerConstant))][eq.rightExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (eq.rightExpression.oclIsKindOf(PredefinedIntegerConstant))][eq.rightExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][elseif (eq.rightExpression.oclIsKindOf(IntegerVariableReference))][eq.rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if][/let][/if][/let][else]true[/if][']'/]"[']'/];
+[/let]
+[/for]
+	}
+
+[/for]
+}
+[/file]
+[/template]

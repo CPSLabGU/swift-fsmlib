@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
+<nta>
+  <declaration>
+
+// Global Constants
+
+const int NotAThread = 0;
+
+
+
+// Scheduler variables
+int[-1,2] turn = -1;
+bool scheduler_turn;
+
+
+// Boolean Sensor Variables (represented as int[0,1])
+
+int[0,1] T1NonCriticalSectionDelay;
+
+int[0,1] T1CriticalSectionDelay;
+
+int[0,1] T2NonCriticalSectionDelay;
+
+int[0,1] T2CriticalSectionDelay;
+
+
+
+
+// Whiteboard Variables
+
+int[,2] SharedX;
+
+
+
+
+
+
+
+  </declaration>
+
+  <!-- Scheduler Template -->
+  <template>
+    <name>Scheduler</name>
+    <declaration>// Scheduler local declarations</declaration>
+    <location id="id0" x="0" y="0">
+      <name>pseudo_init_Scheduler</name>
+    </location>
+    <location id="id1" x="200" y="0">
+      <name>turn_updated</name>
+    </location>
+    <init ref="id0"/>
+    <transition>
+      <source ref="id0"/>
+      <target ref="id1"/>
+      <label kind="assignment">turn := 0,
+scheduler_turn := false</label>
+    </transition>
+    <transition>
+      <source ref="id1"/>
+      <target ref="id1"/>
+      <label kind="select">Sensor_T1NonCriticalSectionDelay : int[0,1],
+Sensor_T1CriticalSectionDelay : int[0,1],
+Sensor_T2NonCriticalSectionDelay : int[0,1],
+Sensor_T2CriticalSectionDelay : int[0,1]</label>
+      <label kind="guard">scheduler_turn</label>
+      <label kind="assignment">T1NonCriticalSectionDelay := Sensor_T1NonCriticalSectionDelay,
+T1CriticalSectionDelay := Sensor_T1CriticalSectionDelay,
+T2NonCriticalSectionDelay := Sensor_T2NonCriticalSectionDelay,
+T2CriticalSectionDelay := Sensor_T2CriticalSectionDelay,
+turn := (turn + 1) % 3,
+scheduler_turn := false</label>
+    </transition>
+  </template>
+
+
+
+
+  <!-- State Machine Template: STARTER -->
+  <template>
+    <name>STARTER</name>
+    <declaration>
+
+
+    </declaration>
+    <!-- Pseudo-initial location -->
+    <location id="id100" x="0" y="0">
+      <name>pseudo_init_STARTER</name>
+    </location>
+    <!-- Initial state location -->
+    <location id="id101" x="200" y="0">
+      <name>START</name>
+    </location>
+
+    <init ref="id100"/>
+    <!-- Transition from pseudo-initial to initial state -->
+    <transition>
+      <source ref="id100"/>
+      <target ref="id101"/>
+      <label kind="guard">turn == 0 &amp;&amp; !scheduler_turn</label>
+      <label kind="assignment">scheduler_turn := true,
+SharedX := NotAThread</label>
+    </transition>
+
+  </template>
+
+
+
+
+
+
+  <!-- State Machine Template: THREAD_1 -->
+  <template>
+    <name>THREAD_1</name>
+    <declaration>
+
+// Local variables
+
+int[,2] IamThreadT1;
+
+
+
+    </declaration>
+    <!-- Pseudo-initial location -->
+    <location id="id1100" x="0" y="0">
+      <name>pseudo_init_THREAD_1</name>
+    </location>
+    <!-- Initial state location -->
+    <location id="id1101" x="200" y="0">
+      <name>T1NonCriticalSection</name>
+    </location>
+
+
+    <!-- State: T1Wait -->
+    <location id="id1102" x="300" y="0">
+      <name>T1Wait</name>
+    </location>
+
+
+
+    <!-- State: T1Assign -->
+    <location id="id1103" x="400" y="0">
+      <name>T1Assign</name>
+    </location>
+
+
+
+    <!-- State: T1CriticalSection -->
+    <location id="id1104" x="500" y="0">
+      <name>T1CriticalSection</name>
+    </location>
+
+
+
+    <!-- State: T1LetGo -->
+    <location id="id1105" x="600" y="0">
+      <name>T1LetGo</name>
+    </location>
+
+
+    <init ref="id1100"/>
+    <!-- Transition from pseudo-initial to initial state -->
+    <transition>
+      <source ref="id1100"/>
+      <target ref="id1101"/>
+      <label kind="guard">turn == 1 &amp;&amp; !scheduler_turn</label>
+      <label kind="assignment">scheduler_turn := true,
+IamThreadT1 := 1</label>
+    </transition>
+
+    <!-- Transition: T1NonCriticalSection -> T1Wait -->
+    <transition>
+
+      <source ref="id1101"/>
+
+
+      <target ref="id1102"/>
+
+      <label kind="guard">turn == 1 &amp;&amp; !scheduler_turn &amp;&amp; (T1NonCriticalSectionDelay == 1)</label>
+      <label kind="assignment">scheduler_turn := true</label>
+    </transition>
+
+    <!-- Transition: T1Wait -> T1Assign -->
+    <transition>
+
+      <source ref="id1102"/>
+
+
+      <target ref="id1103"/>
+
+      <label kind="guard">turn == 1 &amp;&amp; !scheduler_turn &amp;&amp; ((NotAThread == SharedX))</label>
+      <label kind="assignment">scheduler_turn := true,
+SharedX := IamThreadT1</label>
+    </transition>
+
+    <!-- Transition: T1Assign -> T1Wait -->
+    <transition>
+
+      <source ref="id1103"/>
+
+
+      <target ref="id1102"/>
+
+      <label kind="guard">turn == 1 &amp;&amp; !scheduler_turn &amp;&amp; (!(IamThreadT1 == SharedX))</label>
+      <label kind="assignment">scheduler_turn := true</label>
+    </transition>
+
+    <!-- Transition: T1Assign -> T1CriticalSection -->
+    <transition>
+
+      <source ref="id1103"/>
+
+
+      <target ref="id1104"/>
+
+      <label kind="guard">turn == 1 &amp;&amp; !scheduler_turn &amp;&amp; (true)</label>
+      <label kind="assignment">scheduler_turn := true</label>
+    </transition>
+
+    <!-- Transition: T1CriticalSection -> T1LetGo -->
+    <transition>
+
+      <source ref="id1104"/>
+
+
+      <target ref="id1105"/>
+
+      <label kind="guard">turn == 1 &amp;&amp; !scheduler_turn &amp;&amp; (T1CriticalSectionDelay == 1)</label>
+      <label kind="assignment">scheduler_turn := true,
+SharedX := NotAThread</label>
+    </transition>
+
+    <!-- Transition: T1LetGo -> T1NonCriticalSection -->
+    <transition>
+
+      <source ref="id1105"/>
+
+
+      <target ref="id1101"/>
+
+      <label kind="guard">turn == 1 &amp;&amp; !scheduler_turn &amp;&amp; (true)</label>
+      <label kind="assignment">scheduler_turn := true,
+IamThreadT1 := 1</label>
+    </transition>
+
+  </template>
+
+
+
+
+
+
+  <!-- State Machine Template: THREAD_2 -->
+  <template>
+    <name>THREAD_2</name>
+    <declaration>
+
+// Local variables
+
+int[,2] IamThreadT2;
+
+
+
+    </declaration>
+    <!-- Pseudo-initial location -->
+    <location id="id2100" x="0" y="0">
+      <name>pseudo_init_THREAD_2</name>
+    </location>
+    <!-- Initial state location -->
+    <location id="id2101" x="200" y="0">
+      <name>T2NonCriticalSection</name>
+    </location>
+
+
+    <!-- State: T2Wait -->
+    <location id="id2102" x="300" y="0">
+      <name>T2Wait</name>
+    </location>
+
+
+
+    <!-- State: T2Assign -->
+    <location id="id2103" x="400" y="0">
+      <name>T2Assign</name>
+    </location>
+
+
+
+    <!-- State: T2CriticalSection -->
+    <location id="id2104" x="500" y="0">
+      <name>T2CriticalSection</name>
+    </location>
+
+
+
+    <!-- State: T2LetGo -->
+    <location id="id2105" x="600" y="0">
+      <name>T2LetGo</name>
+    </location>
+
+
+    <init ref="id2100"/>
+    <!-- Transition from pseudo-initial to initial state -->
+    <transition>
+      <source ref="id2100"/>
+      <target ref="id2101"/>
+      <label kind="guard">turn == 2 &amp;&amp; !scheduler_turn</label>
+      <label kind="assignment">scheduler_turn := true,
+IamThreadT2 := 2</label>
+    </transition>
+
+    <!-- Transition: T2NonCriticalSection -> T2Wait -->
+    <transition>
+
+      <source ref="id2101"/>
+
+
+      <target ref="id2102"/>
+
+      <label kind="guard">turn == 2 &amp;&amp; !scheduler_turn &amp;&amp; (T2NonCriticalSectionDelay == 1)</label>
+      <label kind="assignment">scheduler_turn := true</label>
+    </transition>
+
+    <!-- Transition: T2Wait -> T2Assign -->
+    <transition>
+
+      <source ref="id2102"/>
+
+
+      <target ref="id2103"/>
+
+      <label kind="guard">turn == 2 &amp;&amp; !scheduler_turn &amp;&amp; ((NotAThread == SharedX))</label>
+      <label kind="assignment">scheduler_turn := true,
+SharedX := IamThreadT2</label>
+    </transition>
+
+    <!-- Transition: T2Assign -> T2Wait -->
+    <transition>
+
+      <source ref="id2103"/>
+
+
+      <target ref="id2102"/>
+
+      <label kind="guard">turn == 2 &amp;&amp; !scheduler_turn &amp;&amp; (!(IamThreadT2 == SharedX))</label>
+      <label kind="assignment">scheduler_turn := true</label>
+    </transition>
+
+    <!-- Transition: T2Assign -> T2CriticalSection -->
+    <transition>
+
+      <source ref="id2103"/>
+
+
+      <target ref="id2104"/>
+
+      <label kind="guard">turn == 2 &amp;&amp; !scheduler_turn &amp;&amp; (true)</label>
+      <label kind="assignment">scheduler_turn := true</label>
+    </transition>
+
+    <!-- Transition: T2CriticalSection -> T2LetGo -->
+    <transition>
+
+      <source ref="id2104"/>
+
+
+      <target ref="id2105"/>
+
+      <label kind="guard">turn == 2 &amp;&amp; !scheduler_turn &amp;&amp; (T2CriticalSectionDelay == 1)</label>
+      <label kind="assignment">scheduler_turn := true,
+SharedX := NotAThread</label>
+    </transition>
+
+    <!-- Transition: T2LetGo -> T2NonCriticalSection -->
+    <transition>
+
+      <source ref="id2105"/>
+
+
+      <target ref="id2101"/>
+
+      <label kind="guard">turn == 2 &amp;&amp; !scheduler_turn &amp;&amp; (true)</label>
+      <label kind="assignment">scheduler_turn := true,
+IamThreadT2 := 2</label>
+    </transition>
+
+  </template>
+
+
+
+
+
+  <!-- System declaration -->
+  <system>
+// System instantiation
+system Scheduler, STARTER, THREAD_1, THREAD_2;
+  </system>
+</nta>

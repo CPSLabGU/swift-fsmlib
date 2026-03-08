@@ -85,16 +85,55 @@ public struct ArrangementEcoreCodec {
     /// - Returns: Decoded arrangement value.
     /// - Throws: Throw an error if nested machine decoding fails.
     public func decode(_ arrangementObj: DynamicEObject, from resource: Resource) async throws -> Arrangement {
-        let instanceIDs = await resource.eGet(objectId: arrangementObj.id, feature: "instances") as? [EUUID] ?? []
+        let instanceIDs = referenceIDs(from: await resource.eGet(objectId: arrangementObj.id, feature: "instances"))
         var instances = [Instance]()
         for instID in instanceIDs {
             let name = await resource.eGet(objectId: instID, feature: "name") as? String ?? ""
             let typeFile = await resource.eGet(objectId: instID, feature: "typeFile") as? String ?? ""
-            guard let machineID = await resource.eGet(objectId: instID, feature: "machine") as? EUUID,
+            guard let machineID = referenceID(from: await resource.eGet(objectId: instID, feature: "machine")),
                   let machineObj = await resource.resolve(machineID) as? DynamicEObject else { continue }
             let (_, machine) = try await machineCodec.decode(machineObj, from: resource)
             instances.append(Instance(name: name, typeFile: typeFile, machine: machine))
         }
         return Arrangement(namedInstances: instances)
+    }
+}
+
+private func referenceID(from value: Any?) -> EUUID? {
+    switch value {
+    case let id as EUUID:
+        return id
+    case let object as DynamicEObject:
+        return object.id
+    case let objects as [DynamicEObject]:
+        return objects.first?.id
+    case let ids as [EUUID]:
+        return ids.first
+    case let values as [Any]:
+        for candidate in values {
+            if let reference = referenceID(from: candidate) {
+                return reference
+            }
+        }
+        return nil
+    default:
+        return nil
+    }
+}
+
+private func referenceIDs(from value: Any?) -> [EUUID] {
+    switch value {
+    case let ids as [EUUID]:
+        return ids
+    case let id as EUUID:
+        return [id]
+    case let objects as [DynamicEObject]:
+        return objects.map(\.id)
+    case let object as DynamicEObject:
+        return [object.id]
+    case let values as [Any]:
+        return values.compactMap { referenceID(from: $0) }
+    default:
+        return []
     }
 }

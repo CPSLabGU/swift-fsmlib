@@ -1,0 +1,210 @@
+-- @path LLFSMStructural=../LLFSMStructural.ecore
+-- @path LLFSMExecutable=../LLFSMExecutable.ecore
+module structural2executable;
+create OUT : LLFSMExecutable from IN : LLFSMStructural;
+
+helper def : machineLanguage(machine : LLFSMStructural!Machine) : String =
+    if machine.language.oclIsUndefined() then 'opaque' else machine.language endif;
+
+rule State2ExecutableState {
+    from
+        s : LLFSMStructural!State
+    to
+        executableState : LLFSMExecutable!State (
+            stateName <- s.name,
+            onEntry <- entry,
+            onExit <- exit,
+            internal <- internalSection,
+            onSuspend <- suspend,
+            onResume <- resume
+        ),
+        entry : LLFSMExecutable!OnEntrySection (
+            statements <- if s.activities.oclIsUndefined() or s.activities.onEntry = '' then Sequence{} else Sequence{entryStatement} endif
+        ),
+        entryStatement : LLFSMExecutable!OpaqueStatement (
+            code <- if s.activities.oclIsUndefined() then '' else s.activities.onEntry endif,
+            language <- 'opaque'
+        ),
+        exit : LLFSMExecutable!OnExitSection (
+            statements <- if s.activities.oclIsUndefined() or s.activities.onExit = '' then Sequence{} else Sequence{exitStatement} endif
+        ),
+        exitStatement : LLFSMExecutable!OpaqueStatement (
+            code <- if s.activities.oclIsUndefined() then '' else s.activities.onExit endif,
+            language <- 'opaque'
+        ),
+        internalSection : LLFSMExecutable!InternalSection (
+            statements <- if s.activities.oclIsUndefined() or s.activities.internal = '' then Sequence{} else Sequence{internalStatement} endif
+        ),
+        internalStatement : LLFSMExecutable!OpaqueStatement (
+            code <- if s.activities.oclIsUndefined() then '' else s.activities.internal endif,
+            language <- 'opaque'
+        ),
+        suspend : LLFSMExecutable!OnSuspendSection (
+            statements <- if s.activities.oclIsUndefined() or s.activities.onSuspend = '' then Sequence{} else Sequence{suspendStatement} endif
+        ),
+        suspendStatement : LLFSMExecutable!OpaqueStatement (
+            code <- if s.activities.oclIsUndefined() then '' else s.activities.onSuspend endif,
+            language <- 'opaque'
+        ),
+        resume : LLFSMExecutable!OnResumeSection (
+            statements <- if s.activities.oclIsUndefined() or s.activities.onResume = '' then Sequence{} else Sequence{resumeStatement} endif
+        ),
+        resumeStatement : LLFSMExecutable!OpaqueStatement (
+            code <- if s.activities.oclIsUndefined() then '' else s.activities.onResume endif,
+            language <- 'opaque'
+        )
+}
+
+rule TrueTransition2ExecutableTransition {
+    from
+        t : LLFSMStructural!Transition (t.label = 'true' or t.label = 'false')
+    to
+        executableTransition : LLFSMExecutable!Transition (
+            sourceState <- thisModule.resolveTemp(t.source, 'executableState'),
+            targetState <- thisModule.resolveTemp(t.target, 'executableState'),
+            booleanExpression <- expression
+        ),
+        expression : LLFSMExecutable!BooleanConstant (
+            aBooleanValue <- t.label = 'true'
+        )
+}
+
+rule LabelTransition2ExecutableTransition {
+    from
+        t : LLFSMStructural!Transition (t.label <> 'true' and t.label <> 'false')
+    to
+        executableTransition : LLFSMExecutable!Transition (
+            sourceState <- thisModule.resolveTemp(t.source, 'executableState'),
+            targetState <- thisModule.resolveTemp(t.target, 'executableState'),
+            booleanExpression <- expression
+        ),
+        expression : LLFSMExecutable!OpaqueExpression (
+            code <- t.label,
+            language <- 'opaque'
+        )
+}
+
+rule StateBoilerplateEntry2ExecutableEntry {
+    from
+        e : LLFSMStructural!StateBoilerplateEntry
+    to
+        executableEntry : LLFSMExecutable!StateBoilerplateEntry (
+            state <- thisModule.resolveTemp(e.state, 'executableState'),
+            boilerplate <- boilerplate
+        ),
+        boilerplate : LLFSMExecutable!Boilerplate (
+            includePath <- e.boilerplate.includePath,
+            includes <- e.boilerplate.includes,
+            variables <- e.boilerplate.variables,
+            functions <- e.boilerplate.functions
+        )
+}
+
+rule StateLayoutEntry2ExecutableEntry {
+    from
+        e : LLFSMStructural!StateLayoutEntry
+    to
+        executableEntry : LLFSMExecutable!StateLayoutEntry (
+            state <- thisModule.resolveTemp(e.state, 'executableState'),
+            layout <- layout
+        ),
+        layout : LLFSMExecutable!StateLayout (
+            isOpen <- e.layout.isOpen,
+            closedX <- e.layout.closedX,
+            closedY <- e.layout.closedY,
+            closedW <- e.layout.closedW,
+            closedH <- e.layout.closedH,
+            openX <- e.layout.openX,
+            openY <- e.layout.openY,
+            openW <- e.layout.openW,
+            openH <- e.layout.openH,
+            onEntryHeight <- e.layout.onEntryHeight,
+            onExitHeight <- e.layout.onExitHeight,
+            internalHeight <- e.layout.internalHeight,
+            onSuspendHeight <- e.layout.onSuspendHeight,
+            onResumeHeight <- e.layout.onResumeHeight,
+            zoomedOnEntryHeight <- e.layout.zoomedOnEntryHeight,
+            zoomedOnExitHeight <- e.layout.zoomedOnExitHeight,
+            zoomedInternalHeight <- e.layout.zoomedInternalHeight,
+            zoomedOnSuspendHeight <- e.layout.zoomedOnSuspendHeight,
+            zoomedOnResumeHeight <- e.layout.zoomedOnResumeHeight,
+            extraProperties <- e.layout.extraProperties
+        )
+}
+
+rule Point2ExecutablePoint {
+    from
+        p : LLFSMStructural!Point2D
+    to
+        executablePoint : LLFSMExecutable!Point2D (
+            x <- p.x,
+            y <- p.y
+        )
+}
+
+rule TransitionLayoutEntry2ExecutableEntry {
+    from
+        e : LLFSMStructural!TransitionLayoutEntry
+    to
+        executableEntry : LLFSMExecutable!TransitionLayoutEntry (
+            transition <- thisModule.resolveTemp(e.transition, 'executableTransition'),
+            layout <- layout
+        ),
+        layout : LLFSMExecutable!TransitionLayout (
+            points <- e.layout.points->collect(p | thisModule.resolveTemp(p, 'executablePoint'))
+        )
+}
+
+rule Machine2ExecutableStateMachine {
+    from
+        m : LLFSMStructural!Machine
+    to
+        executableMachine : LLFSMExecutable!StateMachine (
+            name <- m.name,
+            language <- thisModule.machineLanguage(m),
+            initialState <- thisModule.resolveTemp(m.llfsm.states->first(), 'executableState'),
+            states <- m.llfsm.states->excluding(m.llfsm.states->first())->collect(s | thisModule.resolveTemp(s, 'executableState')),
+            transitions <- m.llfsm.transitions->collect(t | thisModule.resolveTemp(t, 'executableTransition')),
+            boilerplate <- machineBoilerplate,
+            stateBoilerplates <- m.stateBoilerplates->collect(e | thisModule.resolveTemp(e, 'executableEntry')),
+            stateLayouts <- m.stateLayouts->collect(e | thisModule.resolveTemp(e, 'executableEntry')),
+            transitionLayouts <- m.transitionLayouts->collect(e | thisModule.resolveTemp(e, 'executableEntry')),
+            windowLayout <- windowLayout,
+            probabilistic <- false,
+            copies <- copies
+        ),
+        machineBoilerplate : LLFSMExecutable!Boilerplate (
+            includePath <- m.boilerplate.includePath,
+            includes <- m.boilerplate.includes,
+            variables <- m.boilerplate.variables,
+            functions <- m.boilerplate.functions
+        ),
+        windowLayout : LLFSMExecutable!WindowLayout (
+            data <- if m.windowLayout.oclIsUndefined() then '' else m.windowLayout endif
+        ),
+        copies : LLFSMExecutable!IntegerConstant (
+            anIntegerValue <- 1
+        )
+}
+
+rule Instance2ExecutableInstance {
+    from
+        i : LLFSMStructural!Instance
+    to
+        executableInstance : LLFSMExecutable!Instance (
+            name <- i.name,
+            typeFile <- i.typeFile,
+            machine <- thisModule.resolveTemp(i.machine, 'executableMachine')
+        )
+}
+
+rule Arrangement2ExecutableArrangement {
+    from
+        a : LLFSMStructural!Arrangement
+    to
+        executableArrangement : LLFSMExecutable!Arrangement (
+            arrangementName <- 'Arrangement',
+            instances <- a.instances->collect(i | thisModule.resolveTemp(i, 'executableInstance')),
+            stateMachine <- a.instances->collect(i | thisModule.resolveTemp(i.machine, 'executableMachine'))
+        )
+}

@@ -1,0 +1,179 @@
+
+digraph FischerDelaysByBooleanSensors {
+	rankdir=TB;
+	bgcolor="white";
+
+	label=<
+<table border="0" cellborder="1" cellspacing="1">
+<tr><td align="left">Arrangement: FischerDelaysByBooleanSensors</td></tr>
+<tr><td align="left">Machines: STARTER, THREAD_1, THREAD_2</td></tr>
+
+
+<tr><td align="left">Boolean sensors: T1NonCriticalSectionDelay, T1CriticalSectionDelay, T2NonCriticalSectionDelay, T2CriticalSectionDelay</td></tr>
+
+
+
+
+<tr><td align="left">Integer whiteboard: SharedX</td></tr>
+
+
+</table>
+	>;
+
+
+	subgraph cluster_STARTER {
+		label="STARTER";
+		bgcolor="white";
+		fontname="Arial";
+		rankdir="TB";
+
+		// Pseudo-initial state
+		dInitSTARTER [shape=record, label="dInitSTARTER(0)"];
+
+		// Initial state
+
+		START [shape=record, label="START(1)"];
+
+
+		// Regular states
+
+
+		// Transition from pseudo-initial to initial state
+		dInitSTARTER -> START [label="1:[true]"];
+
+		// Transitions
+
+	}
+
+
+	subgraph cluster_THREAD_1 {
+		label="THREAD_1";
+		bgcolor="white";
+		fontname="Arial";
+		rankdir="TB";
+
+		// Pseudo-initial state
+		dInitTHREAD_1 [shape=record, label="dInitTHREAD_1(0)"];
+
+		// Initial state
+
+		T1NonCriticalSection [shape=record, label="T1NonCriticalSection(1)"];
+
+
+		// Regular states
+
+
+		T1Wait [shape=record, label="T1Wait(1)"];
+
+
+
+		T1Assign [shape=record, label="T1Assign(2)"];
+
+
+
+		T1CriticalSection [shape=record, label="T1CriticalSection(3)"];
+
+
+
+		T1LetGo [shape=record, label="T1LetGo(4)"];
+
+
+
+		// Transition from pseudo-initial to initial state
+		dInitTHREAD_1 -> T1NonCriticalSection [label="1:[true]"];
+
+		// Transitions
+
+
+		T1NonCriticalSection -> T1Wait [label="1:[T1NonCriticalSectionDelay]"];
+
+
+
+		T1Wait -> T1Assign [label="2:[NotAThread=SharedX]"];
+
+
+
+		T1Assign -> T1Wait [label="3:[!IamThreadT1=SharedX]"];
+
+
+
+		T1Assign -> T1CriticalSection [label="4:[true]"];
+
+
+
+		T1CriticalSection -> T1LetGo [label="5:[T1CriticalSectionDelay]"];
+
+
+
+		T1LetGo -> T1NonCriticalSection [label="6:[true]"];
+
+
+	}
+
+
+	subgraph cluster_THREAD_2 {
+		label="THREAD_2";
+		bgcolor="white";
+		fontname="Arial";
+		rankdir="TB";
+
+		// Pseudo-initial state
+		dInitTHREAD_2 [shape=record, label="dInitTHREAD_2(0)"];
+
+		// Initial state
+
+		T2NonCriticalSection [shape=record, label="T2NonCriticalSection(1)"];
+
+
+		// Regular states
+
+
+		T2Wait [shape=record, label="T2Wait(1)"];
+
+
+
+		T2Assign [shape=record, label="T2Assign(2)"];
+
+
+
+		T2CriticalSection [shape=record, label="T2CriticalSection(3)"];
+
+
+
+		T2LetGo [shape=record, label="T2LetGo(4)"];
+
+
+
+		// Transition from pseudo-initial to initial state
+		dInitTHREAD_2 -> T2NonCriticalSection [label="1:[true]"];
+
+		// Transitions
+
+
+		T2NonCriticalSection -> T2Wait [label="1:[T2NonCriticalSectionDelay]"];
+
+
+
+		T2Wait -> T2Assign [label="2:[NotAThread=SharedX]"];
+
+
+
+		T2Assign -> T2Wait [label="3:[!IamThreadT2=SharedX]"];
+
+
+
+		T2Assign -> T2CriticalSection [label="4:[true]"];
+
+
+
+		T2CriticalSection -> T2LetGo [label="5:[T2CriticalSectionDelay]"];
+
+
+
+		T2LetGo -> T2NonCriticalSection [label="6:[true]"];
+
+
+	}
+
+
+}

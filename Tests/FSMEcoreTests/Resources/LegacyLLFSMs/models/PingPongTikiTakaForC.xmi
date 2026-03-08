@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="ASCII"?>
+<newGITmetamodelwithtypes:Arrangement xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:newGITmetamodelwithtypes="http://www.example.org/newGITmetamodelwithtypes" arrangementName="PingPongTikiTakaForC">
+  <stateMachine name="PingPong">
+    <initialState stateName="START_PING_PONG">
+      <onEntry>
+        <statements xsi:type="newGITmetamodelwithtypes:OutputLine" theLine="Start Ping Pong"/>
+      </onEntry>
+    </initialState>
+    <states stateName="PING">
+      <onEntry>
+        <statements xsi:type="newGITmetamodelwithtypes:OutputLine" theLine="ping"/>
+      </onEntry>
+    </states>
+    <states stateName="PONG">
+      <onEntry>
+        <statements xsi:type="newGITmetamodelwithtypes:OutputLine" theLine="pong"/>
+      </onEntry>
+    </states>
+    <transitions sourceState="//@stateMachine.0/@initialState" targetState="//@stateMachine.0/@states.0">
+      <booleanExpression xsi:type="newGITmetamodelwithtypes:BooleanConstant" aBooleanValue="true"/>
+    </transitions>
+    <transitions sourceState="//@stateMachine.0/@states.0" targetState="//@stateMachine.0/@states.1">
+      <booleanExpression xsi:type="newGITmetamodelwithtypes:BooleanConstant" aBooleanValue="true"/>
+    </transitions>
+    <transitions sourceState="//@stateMachine.0/@states.1" targetState="//@stateMachine.0/@states.0">
+      <booleanExpression xsi:type="newGITmetamodelwithtypes:BooleanConstant" aBooleanValue="true"/>
+    </transitions>
+    <copies xsi:type="newGITmetamodelwithtypes:IntegerConstant" anIntegerValue="1"/>
+  </stateMachine>
+</newGITmetamodelwithtypes:Arrangement>

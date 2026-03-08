@@ -1,0 +1,305 @@
+[module llfsm2mips('http://www.example.org/newGITmetamodelwithtypes')]
+
+[template main(arr : Arrangement)]
+[file (arr.arrangementName + '.asm', false)]
+################################################################################
+# MIPS Assembly generated from LLFSM arrangement [arr.arrangementName/]
+################################################################################
+
+.data
+
+[if (not arr.integerConstantDefinitions.oclIsUndefined() and arr.integerConstantDefinitions.definitionsIntegerConstants->notEmpty())]
+# Global Integer Constants
+[for (c : GlobalIntegerConstantDefinition in arr.integerConstantDefinitions.definitionsIntegerConstants)]
+.eqv CNT_[c.Identifier/], [if (c.oclIsKindOf(GlobalIntegerConstantMetaModelDefinition))][c.oclAsType(GlobalIntegerConstantMetaModelDefinition).anIntegerValue/][elseif (c.oclIsKindOf(GlobalIntegerParameterDefinition))][c.oclAsType(GlobalIntegerParameterDefinition).anIntegerValue/][else]0[/if]
+[/for]
+[/if]
+
+# State encoding
+[for (sm : StateMachine in arr.stateMachine)]
+.eqv [sm.name/]_DINIT, 0
+.eqv [sm.name/]_[sm.initialState.stateName/], 1
+[for (s : State in sm.states)]
+.eqv [sm.name/]_[s.stateName/], [sm.states->indexOf(s) + 2/]
+[/for]
+[/for]
+
+.eqv MAX_STEPS, 20
+.eqv NUM_MACHINES, [arr.stateMachine->size()/]
+
+# String constants
+arr_name:       .asciiz "LLFSM Arrangement: [arr.arrangementName/]\n"
+running_msg:    .asciiz "Running 20 scheduler steps\n\n"
+step_prefix:    .asciiz "Step "
+turn_prefix:    .asciiz " (turn="
+turn_suffix:    .asciiz "):\n"
+arrow:          .asciiz " -> "
+newline:        .asciiz "\n"
+complete_msg:   .asciiz "\nSimulation complete.\n"
+dinit_prefix:   .asciiz "  ['['/]"
+dinit_mid:      .asciiz "[']'/] dInit"
+bracket_space:  .asciiz "[']'/] "
+
+[for (sm : StateMachine in arr.stateMachine)]
+# State name strings for [sm.name/]
+sm_[sm.name/]_name: .asciiz "[sm.name/]"
+sn_[sm.name/]_dinit: .asciiz "dInit[sm.name/]"
+sn_[sm.name/]_[sm.initialState.stateName/]: .asciiz "[sm.initialState.stateName/]"
+[for (s : State in sm.states)]
+sn_[sm.name/]_[s.stateName/]: .asciiz "[s.stateName/]"
+[/for]
+# OnEntry strings for [sm.name/]
+[if (not sm.initialState.onEntry.oclIsUndefined() and sm.initialState.onEntry.statements->notEmpty())]
+[for (stmt : Statement in sm.initialState.onEntry.statements)]
+[if (stmt.oclIsKindOf(OutputLine))]
+oe_[sm.name/]_[sm.initialState.stateName/]_[sm.initialState.onEntry.statements->indexOf(stmt)/]: .asciiz "[stmt.oclAsType(OutputLine).theLine/]\n"
+[/if]
+[/for]
+[/if]
+[for (s : State in sm.states)]
+[if (not s.onEntry.oclIsUndefined() and s.onEntry.statements->notEmpty())]
+[for (stmt : Statement in s.onEntry.statements)]
+[if (stmt.oclIsKindOf(OutputLine))]
+oe_[sm.name/]_[s.stateName/]_[s.onEntry.statements->indexOf(stmt)/]: .asciiz "[stmt.oclAsType(OutputLine).theLine/]\n"
+[/if]
+[/for]
+[/if]
+[/for]
+[/for]
+
+# Variables
+[if (not arr.whiteboardVariables.oclIsUndefined() and arr.whiteboardVariables.variables->notEmpty())]
+[for (v : IntegerVariable in arr.whiteboardVariables.variables)]
+var_[v.variableID/]:    .word 0
+[/for]
+[/if]
+[if (not arr.booleanSensorVariables.oclIsUndefined() and arr.booleanSensorVariables.variables->notEmpty())]
+[for (v : BooleanVariable in arr.booleanSensorVariables.variables)]
+var_[v.variableID/]:    .word 0
+[/for]
+[/if]
+[if (not arr.booleanWhiteboardVariables.oclIsUndefined() and arr.booleanWhiteboardVariables.variables->notEmpty())]
+[for (v : BooleanVariable in arr.booleanWhiteboardVariables.variables)]
+var_[v.variableID/]:    .word 0
+[/for]
+[/if]
+[for (sm : StateMachine in arr.stateMachine)]
+pc_[sm.name/]:  .word 0
+[if (not sm.localVariables.oclIsUndefined() and sm.localVariables.variables->notEmpty())]
+[for (v : IntegerVariable in sm.localVariables.variables)]
+var_[sm.name/]_[v.variableID/]:    .word 0
+[/for]
+[/if]
+[if (not sm.booleanLocalVariables.oclIsUndefined() and sm.booleanLocalVariables.variables->notEmpty())]
+[for (v : BooleanVariable in sm.booleanLocalVariables.variables)]
+var_[sm.name/]_[v.variableID/]:    .word 0
+[/for]
+[/if]
+[/for]
+
+################################################################################
+.text
+.globl main
+
+# Print string macro: la $a0, label; jal print_str
+print_str:
+    li $v0, 4
+    syscall
+    jr $ra
+
+# Print integer macro: move $a0, value; jal print_int
+print_int:
+    li $v0, 1
+    syscall
+    jr $ra
+
+################################################################################
+# OnEntry action functions
+################################################################################
+[for (sm : StateMachine in arr.stateMachine)]
+onEntry_[sm.name/]_[sm.initialState.stateName/]:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+[if (not sm.initialState.onEntry.oclIsUndefined() and sm.initialState.onEntry.statements->notEmpty())]
+[for (stmt : Statement in sm.initialState.onEntry.statements)]
+[if (stmt.oclIsKindOf(OutputLine))]
+    la $a0, oe_[sm.name/]_[sm.initialState.stateName/]_[sm.initialState.onEntry.statements->indexOf(stmt)/]
+    jal print_str
+[elseif (stmt.oclIsKindOf(AssignmentIntegerLHS))]
+[let asgn : AssignmentIntegerLHS = stmt.oclAsType(AssignmentIntegerLHS)]
+    [if (asgn.anArithmeticExpression.oclIsKindOf(IntegerConstant))]li $t0, [asgn.anArithmeticExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (asgn.anArithmeticExpression.oclIsKindOf(IntegerVariableReference))]lw $t0, var_[asgn.anArithmeticExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][elseif (asgn.anArithmeticExpression.oclIsKindOf(PredefinedIntegerConstant))]li $t0, CNT_[asgn.anArithmeticExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][else]li $t0, 0[/if]
+    sw $t0, var_[asgn.variable.variableID/]
+[/let]
+[elseif (stmt.oclIsKindOf(AssignmentBooleanLHS))]
+[let asgn : AssignmentBooleanLHS = stmt.oclAsType(AssignmentBooleanLHS)]
+    [if (asgn.aBooleanExpression.oclIsKindOf(BooleanConstant))][if (asgn.aBooleanExpression.oclAsType(BooleanConstant).aBooleanValue)]li $t0, 1[else]li $t0, 0[/if][elseif (asgn.aBooleanExpression.oclIsKindOf(BooleanVariableReference))]lw $t0, var_[asgn.aBooleanExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][else]li $t0, 0[/if]
+    sw $t0, var_[asgn.variable.variableID/]
+[/let]
+[/if]
+[/for]
+[/if]
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
+
+[for (s : State in sm.states)]
+onEntry_[sm.name/]_[s.stateName/]:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+[if (not s.onEntry.oclIsUndefined() and s.onEntry.statements->notEmpty())]
+[for (stmt : Statement in s.onEntry.statements)]
+[if (stmt.oclIsKindOf(OutputLine))]
+    la $a0, oe_[sm.name/]_[s.stateName/]_[s.onEntry.statements->indexOf(stmt)/]
+    jal print_str
+[elseif (stmt.oclIsKindOf(AssignmentIntegerLHS))]
+[let asgn : AssignmentIntegerLHS = stmt.oclAsType(AssignmentIntegerLHS)]
+    [if (asgn.anArithmeticExpression.oclIsKindOf(IntegerConstant))]li $t0, [asgn.anArithmeticExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (asgn.anArithmeticExpression.oclIsKindOf(IntegerVariableReference))]lw $t0, var_[asgn.anArithmeticExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][elseif (asgn.anArithmeticExpression.oclIsKindOf(PredefinedIntegerConstant))]li $t0, CNT_[asgn.anArithmeticExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][else]li $t0, 0[/if]
+    sw $t0, var_[asgn.variable.variableID/]
+[/let]
+[elseif (stmt.oclIsKindOf(AssignmentBooleanLHS))]
+[let asgn : AssignmentBooleanLHS = stmt.oclAsType(AssignmentBooleanLHS)]
+    [if (asgn.aBooleanExpression.oclIsKindOf(BooleanConstant))][if (asgn.aBooleanExpression.oclAsType(BooleanConstant).aBooleanValue)]li $t0, 1[else]li $t0, 0[/if][elseif (asgn.aBooleanExpression.oclIsKindOf(BooleanVariableReference))]lw $t0, var_[asgn.aBooleanExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][else]li $t0, 0[/if]
+    sw $t0, var_[asgn.variable.variableID/]
+[/let]
+[/if]
+[/for]
+[/if]
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
+
+[/for]
+[/for]
+
+################################################################################
+# Step functions
+################################################################################
+[for (sm : StateMachine in arr.stateMachine)]
+step_[sm.name/]:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    lw $t1, pc_[sm.name/]
+    # Check pseudo-initial
+    bne $t1, [sm.name/]_DINIT, step_[sm.name/]_check_trans
+    li $t0, [sm.name/]_[sm.initialState.stateName/]
+    sw $t0, pc_[sm.name/]
+    jal onEntry_[sm.name/]_[sm.initialState.stateName/]
+    # Print transition
+    la $a0, dinit_prefix
+    jal print_str
+    la $a0, sm_[sm.name/]_name
+    jal print_str
+    la $a0, bracket_space
+    jal print_str
+    la $a0, sn_[sm.name/]_dinit
+    jal print_str
+    la $a0, arrow
+    jal print_str
+    la $a0, sn_[sm.name/]_[sm.initialState.stateName/]
+    jal print_str
+    la $a0, newline
+    jal print_str
+    j step_[sm.name/]_done
+
+step_[sm.name/]_check_trans:
+[for (tr : Transition in sm.transitions)]
+[let transIdx : Integer = sm.transitions->indexOf(tr)]
+    # Transition [transIdx/]: [tr.sourceState.stateName/] -> [tr.targetState.stateName/]
+    lw $t1, pc_[sm.name/]
+    bne $t1, [if (tr.sourceState.stateName = sm.initialState.stateName)][sm.name/]_[sm.initialState.stateName/][else][sm.name/]_[tr.sourceState.stateName/][/if], skip_[sm.name/]_tr[transIdx/]
+    # Evaluate guard
+    [if (tr.booleanExpression.oclIsKindOf(BooleanConstant))][if (tr.booleanExpression.oclAsType(BooleanConstant).aBooleanValue)]li $t2, 1[else]li $t2, 0[/if][elseif (tr.booleanExpression.oclIsKindOf(BooleanVariableReference))]lw $t2, var_[tr.booleanExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][elseif (tr.booleanExpression.oclIsKindOf(EqualExpression))][if (tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclIsKindOf(IntegerConstant))]li $t3, [tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclIsKindOf(IntegerVariableReference))]lw $t3, var_[tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][elseif (tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclIsKindOf(PredefinedIntegerConstant))]li $t3, CNT_[tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][/if]
+    [if (tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclIsKindOf(IntegerConstant))]li $t4, [tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclIsKindOf(IntegerVariableReference))]lw $t4, var_[tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][elseif (tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclIsKindOf(PredefinedIntegerConstant))]li $t4, CNT_[tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][/if]
+    seq $t2, $t3, $t4[elseif (tr.booleanExpression.oclIsKindOf(NotExpression))][if (tr.booleanExpression.oclAsType(NotExpression).theExpression.oclIsKindOf(BooleanVariableReference))]lw $t2, var_[tr.booleanExpression.oclAsType(NotExpression).theExpression.oclAsType(BooleanVariableReference).theVariable.variableID/]
+    xori $t2, $t2, 1[elseif (tr.booleanExpression.oclAsType(NotExpression).theExpression.oclIsKindOf(EqualExpression))]lw $t3, var_[tr.booleanExpression.oclAsType(NotExpression).theExpression.oclAsType(EqualExpression).leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/]
+    lw $t4, var_[tr.booleanExpression.oclAsType(NotExpression).theExpression.oclAsType(EqualExpression).rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/]
+    sne $t2, $t3, $t4[/if][elseif (tr.booleanExpression.oclIsKindOf(LessThanExpression))][if (tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclIsKindOf(IntegerConstant))]li $t3, [tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclIsKindOf(IntegerVariableReference))]lw $t3, var_[tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if]
+    [if (tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclIsKindOf(IntegerConstant))]li $t4, [tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclIsKindOf(IntegerVariableReference))]lw $t4, var_[tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if]
+    slt $t2, $t3, $t4[else]li $t2, 1[/if]
+    beq $t2, $zero, skip_[sm.name/]_tr[transIdx/]
+    # Take transition
+    li $t0, [if (tr.targetState.stateName = sm.initialState.stateName)][sm.name/]_[sm.initialState.stateName/][else][sm.name/]_[tr.targetState.stateName/][/if]
+    sw $t0, pc_[sm.name/]
+    jal onEntry_[sm.name/]_[if (tr.targetState.stateName = sm.initialState.stateName)][sm.initialState.stateName/][else][tr.targetState.stateName/][/if]
+    # Print transition
+    la $a0, dinit_prefix
+    jal print_str
+    la $a0, sm_[sm.name/]_name
+    jal print_str
+    la $a0, bracket_space
+    jal print_str
+    la $a0, sn_[sm.name/]_[tr.sourceState.stateName/]
+    jal print_str
+    la $a0, arrow
+    jal print_str
+    la $a0, sn_[sm.name/]_[if (tr.targetState.stateName = sm.initialState.stateName)][sm.initialState.stateName/][else][tr.targetState.stateName/][/if]
+    jal print_str
+    la $a0, newline
+    jal print_str
+    j step_[sm.name/]_done
+skip_[sm.name/]_tr[transIdx/]:
+[/let]
+[/for]
+    # No transition taken
+
+step_[sm.name/]_done:
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
+
+[/for]
+
+################################################################################
+# Main entry point
+################################################################################
+main:
+    # Print header
+    la $a0, arr_name
+    jal print_str
+    la $a0, running_msg
+    jal print_str
+
+    li $s0, 0           # i = step counter
+    li $s1, 0           # turn
+    li $s2, MAX_STEPS   # max steps
+
+scheduler_loop:
+    bge $s0, $s2, scheduler_done
+
+    # Print "Step X (turn=Y):\n"
+    la $a0, step_prefix
+    jal print_str
+    move $a0, $s0
+    jal print_int
+    la $a0, turn_prefix
+    jal print_str
+    move $a0, $s1
+    jal print_int
+    la $a0, turn_suffix
+    jal print_str
+
+    # Dispatch based on turn
+[for (sm : StateMachine in arr.stateMachine)]
+[let machineIdx : Integer = arr.stateMachine->indexOf(sm)]
+    li $t0, [machineIdx/]
+    bne $s1, $t0, sched_skip_[machineIdx/]
+    jal step_[sm.name/]
+    j sched_next
+sched_skip_[machineIdx/]:
+[/let]
+[/for]
+
+sched_next:
+    addi $s0, $s0, 1
+    addi $s1, $s1, 1
+    li $t0, NUM_MACHINES
+    rem $s1, $s1, $t0
+    j scheduler_loop
+
+scheduler_done:
+    la $a0, complete_msg
+    jal print_str
+    li $v0, 10
+    syscall
+[/file]
+[/template]

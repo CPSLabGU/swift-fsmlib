@@ -1,0 +1,160 @@
+[module llfsm2lisp('http://www.example.org/newGITmetamodelwithtypes')]
+
+[template main(arr : Arrangement)]
+[file (arr.arrangementName + '.lisp', false)]
+;;;; Common Lisp simulation generated from LLFSM arrangement: [arr.arrangementName/]
+
+;;; ========================================================================
+;;; Constants
+;;; ========================================================================
+[if (not arr.integerConstantDefinitions.oclIsUndefined() and arr.integerConstantDefinitions.definitionsIntegerConstants->notEmpty())]
+[for (c : GlobalIntegerConstantDefinition in arr.integerConstantDefinitions.definitionsIntegerConstants)]
+(defconstant +[c.Identifier/]+ [if (c.oclIsKindOf(GlobalIntegerConstantMetaModelDefinition))][c.oclAsType(GlobalIntegerConstantMetaModelDefinition).anIntegerValue/][elseif (c.oclIsKindOf(GlobalIntegerParameterDefinition))][c.oclAsType(GlobalIntegerParameterDefinition).anIntegerValue/][else]0[/if])
+[/for]
+[/if]
+(defconstant +max-steps+ 20)
+(defconstant +num-machines+ [arr.stateMachine->size()/])
+
+;;; ========================================================================
+;;; State encoding
+;;; ========================================================================
+[for (sm : StateMachine in arr.stateMachine)]
+;; States for [sm.name/]
+(defconstant +[sm.name/]-DINIT+ 0)
+(defconstant +[sm.name/]-[sm.initialState.stateName/]+ 1)
+[for (s : State in sm.states)]
+(defconstant +[sm.name/]-[s.stateName/]+ [sm.states->indexOf(s) + 2/])
+[/for]
+(defparameter *[sm.name/]-state-names*
+  (vector "dInit[sm.name/]" "[sm.initialState.stateName/]"[for (s : State in sm.states)] "[s.stateName/]"[/for]))
+[/for]
+
+;;; ========================================================================
+;;; Variables
+;;; ========================================================================
+[if (not arr.whiteboardVariables.oclIsUndefined() and arr.whiteboardVariables.variables->notEmpty())]
+;; Whiteboard variables
+[for (v : IntegerVariable in arr.whiteboardVariables.variables)]
+(defparameter *[v.variableID/]* 0)
+[/for]
+[/if]
+[if (not arr.booleanSensorVariables.oclIsUndefined() and arr.booleanSensorVariables.variables->notEmpty())]
+;; Boolean sensor variables
+[for (v : BooleanVariable in arr.booleanSensorVariables.variables)]
+(defparameter *[v.variableID/]* nil)
+[/for]
+[/if]
+[if (not arr.booleanWhiteboardVariables.oclIsUndefined() and arr.booleanWhiteboardVariables.variables->notEmpty())]
+;; Boolean whiteboard variables
+[for (v : BooleanVariable in arr.booleanWhiteboardVariables.variables)]
+(defparameter *[v.variableID/]* nil)
+[/for]
+[/if]
+[for (sm : StateMachine in arr.stateMachine)]
+;; Program counter for [sm.name/]
+(defparameter *pc-[sm.name/]* 0)
+[if (not sm.localVariables.oclIsUndefined() and sm.localVariables.variables->notEmpty())]
+;; Local variables for [sm.name/]
+[for (v : IntegerVariable in sm.localVariables.variables)]
+(defparameter *[v.variableID/]* 0)
+[/for]
+[/if]
+[if (not sm.booleanLocalVariables.oclIsUndefined() and sm.booleanLocalVariables.variables->notEmpty())]
+[for (v : BooleanVariable in sm.booleanLocalVariables.variables)]
+(defparameter *[v.variableID/]* nil)
+[/for]
+[/if]
+[/for]
+
+;;; ========================================================================
+;;; OnEntry actions
+;;; ========================================================================
+[for (sm : StateMachine in arr.stateMachine)]
+(defun on-entry-[sm.name/]-[sm.initialState.stateName/] ()
+[if (not sm.initialState.onEntry.oclIsUndefined() and sm.initialState.onEntry.statements->notEmpty())]
+[for (stmt : Statement in sm.initialState.onEntry.statements)]
+[if (stmt.oclIsKindOf(OutputLine))]
+  (format t "[stmt.oclAsType(OutputLine).theLine/]~%")
+[elseif (stmt.oclIsKindOf(AssignmentIntegerLHS))]
+[let asgn : AssignmentIntegerLHS = stmt.oclAsType(AssignmentIntegerLHS)]
+  (setf *[asgn.variable.variableID/]* [if (asgn.anArithmeticExpression.oclIsKindOf(IntegerConstant))][asgn.anArithmeticExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (asgn.anArithmeticExpression.oclIsKindOf(IntegerVariableReference))]*[asgn.anArithmeticExpression.oclAsType(IntegerVariableReference).theVariable.variableID/]*[elseif (asgn.anArithmeticExpression.oclIsKindOf(PredefinedIntegerConstant))]+[asgn.anArithmeticExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/]+[else]0[/if])
+[/let]
+[elseif (stmt.oclIsKindOf(AssignmentBooleanLHS))]
+[let asgn : AssignmentBooleanLHS = stmt.oclAsType(AssignmentBooleanLHS)]
+  (setf *[asgn.variable.variableID/]* [if (asgn.aBooleanExpression.oclIsKindOf(BooleanConstant))][if (asgn.aBooleanExpression.oclAsType(BooleanConstant).aBooleanValue)]t[else]nil[/if][elseif (asgn.aBooleanExpression.oclIsKindOf(BooleanVariableReference))]*[asgn.aBooleanExpression.oclAsType(BooleanVariableReference).theVariable.variableID/]*[else]nil[/if])
+[/let]
+[/if]
+[/for]
+[else]
+  nil
+[/if])
+[for (s : State in sm.states)]
+(defun on-entry-[sm.name/]-[s.stateName/] ()
+[if (not s.onEntry.oclIsUndefined() and s.onEntry.statements->notEmpty())]
+[for (stmt : Statement in s.onEntry.statements)]
+[if (stmt.oclIsKindOf(OutputLine))]
+  (format t "[stmt.oclAsType(OutputLine).theLine/]~%")
+[elseif (stmt.oclIsKindOf(AssignmentIntegerLHS))]
+[let asgn : AssignmentIntegerLHS = stmt.oclAsType(AssignmentIntegerLHS)]
+  (setf *[asgn.variable.variableID/]* [if (asgn.anArithmeticExpression.oclIsKindOf(IntegerConstant))][asgn.anArithmeticExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (asgn.anArithmeticExpression.oclIsKindOf(IntegerVariableReference))]*[asgn.anArithmeticExpression.oclAsType(IntegerVariableReference).theVariable.variableID/]*[elseif (asgn.anArithmeticExpression.oclIsKindOf(PredefinedIntegerConstant))]+[asgn.anArithmeticExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/]+[else]0[/if])
+[/let]
+[elseif (stmt.oclIsKindOf(AssignmentBooleanLHS))]
+[let asgn : AssignmentBooleanLHS = stmt.oclAsType(AssignmentBooleanLHS)]
+  (setf *[asgn.variable.variableID/]* [if (asgn.aBooleanExpression.oclIsKindOf(BooleanConstant))][if (asgn.aBooleanExpression.oclAsType(BooleanConstant).aBooleanValue)]t[else]nil[/if][elseif (asgn.aBooleanExpression.oclIsKindOf(BooleanVariableReference))]*[asgn.aBooleanExpression.oclAsType(BooleanVariableReference).theVariable.variableID/]*[else]nil[/if])
+[/let]
+[/if]
+[/for]
+[else]
+  nil
+[/if])
+[/for]
+[/for]
+
+;;; ========================================================================
+;;; Step functions
+;;; ========================================================================
+[for (sm : StateMachine in arr.stateMachine)]
+(defun step-[sm.name/] ()
+  (let ((old-pc *pc-[sm.name/]*))
+    ;; Pseudo-initial transition
+    (when (= *pc-[sm.name/]* +[sm.name/]-DINIT+)
+      (setf *pc-[sm.name/]* +[sm.name/]-[sm.initialState.stateName/]+)
+      (on-entry-[sm.name/]-[sm.initialState.stateName/])
+      (format t "  ['['/][sm.name/][']'/] ~A -> ~A~%" (aref *[sm.name/]-state-names* old-pc) (aref *[sm.name/]-state-names* *pc-[sm.name/]*))
+      (return-from step-[sm.name/]))
+    ;; Transitions with priority ordering
+[for (tr : Transition in sm.transitions)]
+    ;; Transition: [tr.sourceState.stateName/] -> [tr.targetState.stateName/]
+    (when (and (= *pc-[sm.name/]* [if (tr.sourceState.stateName = sm.initialState.stateName)]+[sm.name/]-[sm.initialState.stateName/]+[else]+[sm.name/]-[tr.sourceState.stateName/]+[/if])
+               [if (tr.booleanExpression.oclIsKindOf(BooleanConstant))][if (tr.booleanExpression.oclAsType(BooleanConstant).aBooleanValue)]t[else]nil[/if][elseif (tr.booleanExpression.oclIsKindOf(BooleanVariableReference))]*[tr.booleanExpression.oclAsType(BooleanVariableReference).theVariable.variableID/]*[elseif (tr.booleanExpression.oclIsKindOf(EqualExpression))](= [if (tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclIsKindOf(IntegerVariableReference))]*[tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/]*[elseif (tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclIsKindOf(PredefinedIntegerConstant))]+[tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/]+[/if] [if (tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclIsKindOf(IntegerVariableReference))]*[tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/]*[elseif (tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclIsKindOf(PredefinedIntegerConstant))]+[tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/]+[/if])[elseif (tr.booleanExpression.oclIsKindOf(NotExpression))][if (tr.booleanExpression.oclAsType(NotExpression).theExpression.oclIsKindOf(EqualExpression))](not (= *[tr.booleanExpression.oclAsType(NotExpression).theExpression.oclAsType(EqualExpression).leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/]* *[tr.booleanExpression.oclAsType(NotExpression).theExpression.oclAsType(EqualExpression).rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/]*))[elseif (tr.booleanExpression.oclAsType(NotExpression).theExpression.oclIsKindOf(BooleanVariableReference))](not *[tr.booleanExpression.oclAsType(NotExpression).theExpression.oclAsType(BooleanVariableReference).theVariable.variableID/]*)[/if][elseif (tr.booleanExpression.oclIsKindOf(AndExpression))](and [if (tr.booleanExpression.oclAsType(AndExpression).leftExpression.oclIsKindOf(BooleanVariableReference))]*[tr.booleanExpression.oclAsType(AndExpression).leftExpression.oclAsType(BooleanVariableReference).theVariable.variableID/]*[else]t[/if] [if (tr.booleanExpression.oclAsType(AndExpression).rightExpression.oclIsKindOf(BooleanVariableReference))]*[tr.booleanExpression.oclAsType(AndExpression).rightExpression.oclAsType(BooleanVariableReference).theVariable.variableID/]*[else]t[/if])[elseif (tr.booleanExpression.oclIsKindOf(OrExpression))](or [if (tr.booleanExpression.oclAsType(OrExpression).leftExpression.oclIsKindOf(BooleanVariableReference))]*[tr.booleanExpression.oclAsType(OrExpression).leftExpression.oclAsType(BooleanVariableReference).theVariable.variableID/]*[else]nil[/if] [if (tr.booleanExpression.oclAsType(OrExpression).rightExpression.oclIsKindOf(BooleanVariableReference))]*[tr.booleanExpression.oclAsType(OrExpression).rightExpression.oclAsType(BooleanVariableReference).theVariable.variableID/]*[else]nil[/if])[elseif (tr.booleanExpression.oclIsKindOf(LessThanExpression))](< [if (tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclIsKindOf(IntegerVariableReference))]*[tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/]*[/if] [if (tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclIsKindOf(IntegerVariableReference))]*[tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/]*[/if])[else]t[/if])
+      (setf *pc-[sm.name/]* [if (tr.targetState.stateName = sm.initialState.stateName)]+[sm.name/]-[sm.initialState.stateName/]+[else]+[sm.name/]-[tr.targetState.stateName/]+[/if])
+      (on-entry-[sm.name/]-[if (tr.targetState.stateName = sm.initialState.stateName)][sm.initialState.stateName/][else][tr.targetState.stateName/][/if])
+      (format t "  ['['/][sm.name/][']'/] ~A -> ~A~%" (aref *[sm.name/]-state-names* old-pc) (aref *[sm.name/]-state-names* *pc-[sm.name/]*))
+      (return-from step-[sm.name/]))
+[/for]
+    ;; Default: no transition taken
+    ))
+[/for]
+
+;;; ========================================================================
+;;; Main: round-robin scheduler
+;;; ========================================================================
+(defun run-scheduler ()
+  (let ((turn 0))
+    (format t "LLFSM Arrangement: [arr.arrangementName/]~%")
+    (format t "Running ~D scheduler steps~%~%" +max-steps+)
+    (dotimes (i +max-steps+)
+      (format t "Step ~D (turn=~D):~%" i turn)
+      (case turn
+[for (sm : StateMachine in arr.stateMachine)]
+[let machineIdx : Integer = arr.stateMachine->indexOf(sm)]
+        ([machineIdx/] (step-[sm.name/]))
+[/let]
+[/for]
+        )
+      (setf turn (mod (1+ turn) +num-machines+)))
+    (format t "~%Simulation complete.~%")))
+
+(run-scheduler)
+[/file]
+[/template]

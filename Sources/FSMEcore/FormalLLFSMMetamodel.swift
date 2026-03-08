@@ -1,29 +1,20 @@
 import ECore
-import Foundation
 
-/// LLFSM formal metamodel metadata.
+/// Compatibility wrapper for the executable LLFSM metamodel.
 ///
-/// `FormalLLFSMMetamodel` loads the bundled formal metamodel used by the ATL
-/// transformation tests and later formal-model tooling. It keeps the loaded
-/// package available for direct classifier lookup.
+/// `FormalLLFSMMetamodel` now forwards to ``ExecutableLLFSMMetamodel`` so the
+/// executable typed model remains available through the older entry point while
+/// the rest of `FSMEcore` transitions to the explicit executable naming.
+@available(*, deprecated, renamed: "ExecutableLLFSMMetamodel")
 public struct FormalLLFSMMetamodel: Sendable {
-    /// Loaded package for the LLFSM formal metamodel.
-    ///
-    /// This package contains the adapted formal classifiers used for ATL
-    /// structural-to-formal and formal-to-structural transformations.
+    /// Loaded package for the executable LLFSM metamodel.
     public let package: EPackage
 
-    /// Load the bundled formal metamodel.
+    /// Load the executable LLFSM metamodel.
     ///
-    /// - Throws: Throw an error if the bundled `.ecore` resource cannot be found or parsed.
+    /// - Throws: Throw an error if the bundled executable metamodel cannot be
+    ///   found or parsed.
     public init() async throws {
-        guard let url = Bundle.module.url(
-            forResource: "LLFSMFormal",
-            withExtension: "ecore",
-            subdirectory: "Resources"
-        ) else {
-            throw LLFSMMetamodelError.resourceNotFound
-        }
-        package = try await EPackage(url: url)
+        package = try await ExecutableLLFSMMetamodel().package
     }
 }

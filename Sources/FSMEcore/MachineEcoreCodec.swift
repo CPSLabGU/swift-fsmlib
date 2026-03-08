@@ -215,12 +215,17 @@ public struct MachineEcoreCodec {
         let language: any LanguageBinding = languageBinding(for: languageName)
 
         // Decode LLFSM
-        guard let llfsmID = await resource.eGet(objectId: machineObj.id, feature: "llfsm") as? EUUID else {
+        guard let llfsmID = referenceID(
+            from: await resource.eGet(objectId: machineObj.id, feature: "llfsm")
+        ) else {
             throw LLFSMMetamodelError.missingFeature("llfsm")
         }
 
         // Decode states
-        guard let stateIDs = await resource.eGet(objectId: llfsmID, feature: "states") as? [EUUID] else {
+        let stateIDs = referenceIDs(
+            from: await resource.eGet(objectId: llfsmID, feature: "states")
+        )
+        guard !stateIDs.isEmpty else {
             throw LLFSMMetamodelError.missingFeature("states")
         }
         var eobjectToStateID = [EUUID: StateID]()
@@ -233,13 +238,15 @@ public struct MachineEcoreCodec {
         }
 
         // Decode transitions
-        let transIDs = await resource.eGet(objectId: llfsmID, feature: "transitions") as? [EUUID] ?? []
+        let transIDs = referenceIDs(
+            from: await resource.eGet(objectId: llfsmID, feature: "transitions")
+        )
         var eobjectToTransID = [EUUID: TransitionID]()
         var transitionArray = [Transition]()
         for eID in transIDs {
             let label = await stringValue(ofFeature: "label", for: eID, in: resource)
-            let srcEID = await resource.eGet(objectId: eID, feature: "source") as? EUUID
-            let tgtEID = await resource.eGet(objectId: eID, feature: "target") as? EUUID
+            let srcEID = referenceID(from: await resource.eGet(objectId: eID, feature: "source"))
+            let tgtEID = referenceID(from: await resource.eGet(objectId: eID, feature: "target"))
             let sourceID = srcEID.flatMap { eobjectToStateID[$0] } ?? StateID(uuid: UUID_NULL)
             let targetID = tgtEID.flatMap { eobjectToStateID[$0] } ?? StateID(uuid: UUID_NULL)
             let transition = Transition(label: label, source: sourceID, target: targetID)
@@ -248,13 +255,13 @@ public struct MachineEcoreCodec {
         }
 
         // Decode suspend state
-        let suspendEID = await resource.eGet(objectId: llfsmID, feature: "suspendState") as? EUUID
+        let suspendEID = referenceID(from: await resource.eGet(objectId: llfsmID, feature: "suspendState"))
         let suspendStateID = suspendEID.flatMap { eobjectToStateID[$0] }
 
         let llfsm = LLFSM(states: stateArray, transitions: transitionArray, suspendState: suspendStateID)
 
         // Decode machine boilerplate
-        let bpID = await resource.eGet(objectId: machineObj.id, feature: "boilerplate") as? EUUID
+        let bpID = referenceID(from: await resource.eGet(objectId: machineObj.id, feature: "boilerplate"))
         let boilerplate: any Boilerplate
         if let bpID = bpID {
             boilerplate = await decodeBoilerplate(bpID, from: resource, language: language)
@@ -264,11 +271,15 @@ public struct MachineEcoreCodec {
 
         // Decode state boilerplate entries
         var stateBoilerplate = [StateID: any Boilerplate]()
-        let sbpEntryIDs = await resource.eGet(objectId: machineObj.id, feature: "stateBoilerplates") as? [EUUID] ?? []
+        let sbpEntryIDs = referenceIDs(
+            from: await resource.eGet(objectId: machineObj.id, feature: "stateBoilerplates")
+        )
         for entryID in sbpEntryIDs {
-            guard let stateEID = await resource.eGet(objectId: entryID, feature: "state") as? EUUID,
+            guard let stateEID = referenceID(from: await resource.eGet(objectId: entryID, feature: "state")),
                   let stateID = eobjectToStateID[stateEID],
-                  let entryBpID = await resource.eGet(objectId: entryID, feature: "boilerplate") as? EUUID else { continue }
+                  let entryBpID = referenceID(
+                      from: await resource.eGet(objectId: entryID, feature: "boilerplate")
+                  ) else { continue }
 
             // Reconstruct state boilerplate from boilerplate sections + activities
             let bpSections = await decodeBoilerplateSections(entryBpID, from: resource)
@@ -276,7 +287,7 @@ public struct MachineEcoreCodec {
 
             // Also get activities from the state object
             var allSections = bpSections
-            if let activitiesID = await resource.eGet(objectId: stateEID, feature: "activities") as? EUUID {
+            if let activitiesID = referenceID(from: await resource.eGet(objectId: stateEID, feature: "activities")) {
                 let onEntry = await resource.eGet(objectId: activitiesID, feature: "onEntry") as? String ?? ""
                 let onExit = await resource.eGet(objectId: activitiesID, feature: "onExit") as? String ?? ""
                 let internalCode = await resource.eGet(objectId: activitiesID, feature: "internal") as? String ?? ""
@@ -293,21 +304,25 @@ public struct MachineEcoreCodec {
 
         // Decode state layouts
         var stateLayouts = StateLayouts()
-        let slEntryIDs = await resource.eGet(objectId: machineObj.id, feature: "stateLayouts") as? [EUUID] ?? []
+        let slEntryIDs = referenceIDs(
+            from: await resource.eGet(objectId: machineObj.id, feature: "stateLayouts")
+        )
         for entryID in slEntryIDs {
-            guard let stateEID = await resource.eGet(objectId: entryID, feature: "state") as? EUUID,
+            guard let stateEID = referenceID(from: await resource.eGet(objectId: entryID, feature: "state")),
                   let stateID = eobjectToStateID[stateEID],
-                  let layoutID = await resource.eGet(objectId: entryID, feature: "layout") as? EUUID else { continue }
+                  let layoutID = referenceID(from: await resource.eGet(objectId: entryID, feature: "layout")) else { continue }
             stateLayouts[stateID] = await decodeStateLayout(layoutID, from: resource)
         }
 
         // Decode transition layouts
         var transitionLayouts = TransitionLayouts()
-        let tlEntryIDs = await resource.eGet(objectId: machineObj.id, feature: "transitionLayouts") as? [EUUID] ?? []
+        let tlEntryIDs = referenceIDs(
+            from: await resource.eGet(objectId: machineObj.id, feature: "transitionLayouts")
+        )
         for entryID in tlEntryIDs {
-            guard let transEID = await resource.eGet(objectId: entryID, feature: "transition") as? EUUID,
+            guard let transEID = referenceID(from: await resource.eGet(objectId: entryID, feature: "transition")),
                   let transID = eobjectToTransID[transEID],
-                  let layoutID = await resource.eGet(objectId: entryID, feature: "layout") as? EUUID else { continue }
+                  let layoutID = referenceID(from: await resource.eGet(objectId: entryID, feature: "layout")) else { continue }
             transitionLayouts[transID] = await decodeTransitionLayout(layoutID, from: resource)
         }
 
@@ -493,7 +508,7 @@ public struct MachineEcoreCodec {
     ///   - resource: Resource containing the encoded object.
     /// - Returns: Decoded transition layout value.
     private func decodeTransitionLayout(_ layoutID: EUUID, from resource: Resource) async -> TransitionLayout {
-        let pointIDs = await resource.eGet(objectId: layoutID, feature: "points") as? [EUUID] ?? []
+        let pointIDs = referenceIDs(from: await resource.eGet(objectId: layoutID, feature: "points"))
         var points = [Point2D]()
         for pID in pointIDs {
             let x = await resource.eGet(objectId: pID, feature: "x") as? Double ?? 0
@@ -527,6 +542,63 @@ public struct MachineEcoreCodec {
             return String(double)
         default:
             return ""
+        }
+    }
+
+    /// Normalise a single reference value into an object identifier.
+    ///
+    /// Structural resources produced by ATL may keep single-valued references
+    /// as direct `DynamicEObject` values instead of stored UUIDs. This helper
+    /// accepts either representation so decode logic can treat parsed XMI and
+    /// in-memory transformed models uniformly.
+    ///
+    /// - Parameter value: Stored reference value to normalise.
+    /// - Returns: Identifier of the referenced object, or `nil` if unavailable.
+    private func referenceID(from value: Any?) -> EUUID? {
+        switch value {
+        case let id as EUUID:
+            return id
+        case let object as DynamicEObject:
+            return object.id
+        case let objects as [DynamicEObject]:
+            return objects.first?.id
+        case let ids as [EUUID]:
+            return ids.first
+        case let values as [Any]:
+            for candidate in values {
+                if let reference = referenceID(from: candidate) {
+                    return reference
+                }
+            }
+            return nil
+        default:
+            return nil
+        }
+    }
+
+    /// Normalise a many-valued reference into object identifiers.
+    ///
+    /// Structural resources can represent many-valued references either as
+    /// UUID arrays or as arrays of direct `DynamicEObject` values. This helper
+    /// preserves ordering while converting those cases into IDs for the decode
+    /// path.
+    ///
+    /// - Parameter value: Stored reference value to normalise.
+    /// - Returns: Ordered identifiers for the referenced objects.
+    private func referenceIDs(from value: Any?) -> [EUUID] {
+        switch value {
+        case let ids as [EUUID]:
+            return ids
+        case let id as EUUID:
+            return [id]
+        case let objects as [DynamicEObject]:
+            return objects.map(\.id)
+        case let object as DynamicEObject:
+            return [object.id]
+        case let values as [Any]:
+            return values.compactMap { referenceID(from: $0) }
+        default:
+            return []
         }
     }
 }

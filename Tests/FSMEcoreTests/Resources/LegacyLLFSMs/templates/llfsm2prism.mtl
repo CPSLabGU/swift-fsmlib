@@ -1,0 +1,127 @@
+[module llfsm2prism('http://www.example.org/newGITmetamodelwithtypes')]
+
+[template main(arr : Arrangement)]
+[file (arr.arrangementName + '.pm', false)]
+// PRISM model generated from LLFSM arrangement [arr.arrangementName/]
+// Model type: mdp (Markov Decision Process)
+
+mdp
+
+[if (not arr.integerConstantDefinitions.oclIsUndefined() and arr.integerConstantDefinitions.definitionsIntegerConstants->notEmpty())]
+// Global Constants
+[for (c : GlobalIntegerConstantDefinition in arr.integerConstantDefinitions.definitionsIntegerConstants)]
+const int [c.Identifier/] = [if (c.oclIsKindOf(GlobalIntegerConstantMetaModelDefinition))][c.oclAsType(GlobalIntegerConstantMetaModelDefinition).anIntegerValue/][elseif (c.oclIsKindOf(GlobalIntegerParameterDefinition))][c.oclAsType(GlobalIntegerParameterDefinition).anIntegerValue/][else]0[/if];
+[/for]
+
+[/if]
+// Global Variables
+[if (not arr.booleanSensorVariables.oclIsUndefined() and arr.booleanSensorVariables.variables->notEmpty())]
+// Boolean Sensor Variables
+[for (v : BooleanVariable in arr.booleanSensorVariables.variables)]
+global [v.variableID/] : bool init false;
+[/for]
+
+[/if]
+[if (not arr.whiteboardVariables.oclIsUndefined() and arr.whiteboardVariables.variables->notEmpty())]
+// Whiteboard Variables
+[for (v : IntegerVariable in arr.whiteboardVariables.variables)]
+global [v.variableID/] : ['['/][if (v.theLowerBound.oclIsKindOf(IntegerConstant))][v.theLowerBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if]..[if (v.theUpperBound.oclIsKindOf(IntegerConstant))][v.theUpperBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if][']'/] init [if (v.theLowerBound.oclIsKindOf(IntegerConstant))][v.theLowerBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if];
+[/for]
+
+[/if]
+[if (not arr.sensorVariables.oclIsUndefined() and arr.sensorVariables.variables->notEmpty())]
+// Sensor Variables
+[for (v : IntegerVariable in arr.sensorVariables.variables)]
+global [v.variableID/] : ['['/][if (v.theLowerBound.oclIsKindOf(IntegerConstant))][v.theLowerBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if]..[if (v.theUpperBound.oclIsKindOf(IntegerConstant))][v.theUpperBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if][']'/];
+[/for]
+
+[/if]
+[if (not arr.booleanWhiteboardVariables.oclIsUndefined() and arr.booleanWhiteboardVariables.variables->notEmpty())]
+// Boolean Whiteboard Variables
+[for (v : BooleanVariable in arr.booleanWhiteboardVariables.variables)]
+global [v.variableID/] : bool init false;
+[/for]
+
+[/if]
+[if (not arr.effectorVariables.oclIsUndefined() and arr.effectorVariables.variables->notEmpty())]
+// Effector Variables
+[for (v : IntegerVariable in arr.effectorVariables.variables)]
+global [v.variableID/] : ['['/][if (v.theLowerBound.oclIsKindOf(IntegerConstant))][v.theLowerBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if]..[if (v.theUpperBound.oclIsKindOf(IntegerConstant))][v.theUpperBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if][']'/];
+[/for]
+
+[/if]
+[if (not arr.booleanEffectorVariables.oclIsUndefined() and arr.booleanEffectorVariables.variables->notEmpty())]
+// Boolean Effector Variables
+[for (v : BooleanVariable in arr.booleanEffectorVariables.variables)]
+global [v.variableID/] : bool init false;
+[/for]
+
+[/if]
+
+// Scheduler Variables
+global turn : ['['/]0..[arr.stateMachine->size() - 1/][']'/] init 0;
+
+// ============================================================================
+// Scheduler Module
+// ============================================================================
+
+module SCHEDULER
+    scheduler_turn : bool init true;
+
+    ['['/][']'/] scheduler_turn ->
+        (turn' = (turn + 1) % [arr.stateMachine->size()/]) &
+        (scheduler_turn' = false);
+
+    ['['/][']'/] !scheduler_turn ->
+        (scheduler_turn' = true);
+endmodule
+
+[for (sm : StateMachine in arr.stateMachine)]
+[let machineIdx : Integer = arr.stateMachine->indexOf(sm)]
+
+// ============================================================================
+// State Machine: [sm.name/] (ID: [machineIdx/])
+// ============================================================================
+
+module [sm.name/]
+    [sm.name/]_pc : ['['/]0..[sm.states->size() + 1/][']'/] init 0;
+    [if (not sm.localVariables.oclIsUndefined() and sm.localVariables.variables->notEmpty())]
+    // Local variables
+    [for (v : IntegerVariable in sm.localVariables.variables)]
+    [sm.name/]_[v.variableID/] : ['['/][if (v.theLowerBound.oclIsKindOf(IntegerConstant))][v.theLowerBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if]..[if (v.theUpperBound.oclIsKindOf(IntegerConstant))][v.theUpperBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if][']'/] init [if (v.theLowerBound.oclIsKindOf(IntegerConstant))][v.theLowerBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if];
+    [/for]
+    [/if]
+    [if (not sm.booleanLocalVariables.oclIsUndefined() and sm.booleanLocalVariables.variables->notEmpty())]
+    [for (v : BooleanVariable in sm.booleanLocalVariables.variables)]
+    [sm.name/]_[v.variableID/] : bool init false;
+    [/for]
+    [/if]
+
+    // Initial transition: pseudo-initial to initial state
+    ['['/][']'/] [sm.name/]_pc=0 & turn=[machineIdx/] & !scheduler_turn ->
+        ([sm.name/]_pc'=1);
+
+[for (tr : Transition in sm.transitions)]
+    // Transition: [tr.sourceState.stateName/] -> [tr.targetState.stateName/]
+    ['['/][']'/] [sm.name/]_pc=[if (tr.sourceState.stateName = sm.initialState.stateName)]1[else][sm.states->indexOf(tr.sourceState) + 2/][/if] & turn=[machineIdx/] & !scheduler_turn & ([if (tr.booleanExpression.oclIsKindOf(BooleanConstant))][if (tr.booleanExpression.oclAsType(BooleanConstant).aBooleanValue)]true[else]false[/if][elseif (tr.booleanExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][elseif (tr.booleanExpression.oclIsKindOf(EqualExpression))]([if (tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclIsKindOf(IntegerVariableReference))][tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][elseif (tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclIsKindOf(PredefinedIntegerConstant))][tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][/if]=[if (tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclIsKindOf(IntegerVariableReference))][tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][elseif (tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclIsKindOf(PredefinedIntegerConstant))][tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][/if])[elseif (tr.booleanExpression.oclIsKindOf(NotExpression))][if (tr.booleanExpression.oclAsType(NotExpression).theExpression.oclIsKindOf(EqualExpression))]!([tr.booleanExpression.oclAsType(NotExpression).theExpression.oclAsType(EqualExpression).leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/]=[tr.booleanExpression.oclAsType(NotExpression).theExpression.oclAsType(EqualExpression).rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/])[elseif (tr.booleanExpression.oclAsType(NotExpression).theExpression.oclIsKindOf(BooleanVariableReference))]![tr.booleanExpression.oclAsType(NotExpression).theExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][/if][elseif (tr.booleanExpression.oclIsKindOf(AndExpression))]([if (tr.booleanExpression.oclAsType(AndExpression).leftExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(AndExpression).leftExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][else]true[/if] & [if (tr.booleanExpression.oclAsType(AndExpression).rightExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(AndExpression).rightExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][else]true[/if])[elseif (tr.booleanExpression.oclIsKindOf(OrExpression))]([if (tr.booleanExpression.oclAsType(OrExpression).leftExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(OrExpression).leftExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][else]false[/if] | [if (tr.booleanExpression.oclAsType(OrExpression).rightExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(OrExpression).rightExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][else]false[/if])[elseif (tr.booleanExpression.oclIsKindOf(LessThanExpression))]([if (tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclIsKindOf(IntegerVariableReference))][tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if]<[if (tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclIsKindOf(IntegerVariableReference))][tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if])[else]true[/if]) ->
+        ([sm.name/]_pc'=[if (tr.targetState.stateName = sm.initialState.stateName)]1[else][sm.states->indexOf(tr.targetState) + 2/][/if]);
+
+[/for]
+endmodule
+
+[/let]
+[/for]
+
+// ============================================================================
+// Labels for state properties
+// ============================================================================
+[for (sm : StateMachine in arr.stateMachine)]
+label "At_[sm.name/]_[sm.initialState.stateName/]" = [sm.name/]_pc=1;
+[for (s : State in sm.states)]
+[let stateIdx : Integer = sm.states->indexOf(s) + 2]
+label "At_[sm.name/]_[s.stateName/]" = [sm.name/]_pc=[stateIdx/];
+[/let]
+[/for]
+[/for]
+[/file]
+[/template]

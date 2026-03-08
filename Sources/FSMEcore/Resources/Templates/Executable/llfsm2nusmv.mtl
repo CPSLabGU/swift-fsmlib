@@ -1,0 +1,219 @@
+[module llfsm2nusmv('http://www.example.org/newGITmetamodelwithtypes')]
+
+[template main(arr : Arrangement)]
+[file (arr.arrangementName + '.smv', false)]
+--
+--- (c) 2021-2025 Miguel Carrillo Barajas & Vlad Estivill-Castro
+--
+[if (not arr.integerConstantDefinitions.oclIsUndefined() and arr.integerConstantDefinitions.definitionsIntegerConstants->notEmpty())]
+MODULE g_c
+-- This module models global constants in arrangement of LLFSMs-- (See:-- Carrillo, M. Estivill-Castro, V. Rosenblueth, D. A. 'Verification and Simulation of Time-Domain Properties for Models of Behaviour'--  S. Hammoudi et al. (Eds.): MODELSWARD 2020, CCIS 1361, pp. 1-25, 2021--    https://doi.org/10.1007/978-3-030-67445-8_10)
+[for (c : GlobalIntegerConstantDefinition in arr.integerConstantDefinitions.definitionsIntegerConstants)]
+DEFINE [c.Identifier/] := [if (c.oclIsKindOf(GlobalIntegerConstantMetaModelDefinition))][c.oclAsType(GlobalIntegerConstantMetaModelDefinition).anIntegerValue/][elseif (c.oclIsKindOf(GlobalIntegerParameterDefinition))][c.oclAsType(GlobalIntegerParameterDefinition).anIntegerValue/][else]0[/if];
+[/for]
+-- End g_c -------------------------------------------------------------
+
+[/if]
+MODULE Sensor (g_c)
+-- This module models sensor variables of an arrangement of LLFSMs-- (See:-- Carrillo, M. Estivill-Castro, V. Rosenblueth, D. A. 'Verification and Simulation of Time-Domain Properties for Models of Behaviour'--  S. Hammoudi et al. (Eds.): MODELSWARD 2020, CCIS 1361, pp. 1-25, 2021--    https://doi.org/10.1007/978-3-030-67445-8_10)-- Intuitively, for all sensor variable Si, Si has a non-deterministic value.-- Input: (NO INPUTS)
+-- Sensor variables:
+VAR
+[if (not arr.booleanSensorVariables.oclIsUndefined() and arr.booleanSensorVariables.variables->notEmpty())]
+[for (v : BooleanVariable in arr.booleanSensorVariables.variables)]
+	[v.variableID/]:boolean;
+[/for]
+[/if]
+
+
+TRANS
+-- For all sensor variable Si, Si has a non-deterministic value:
+	TRUE; -- No constraint on transitions.
+
+-- End Sensor -------------------------------------------------------------
+
+[if (not arr.whiteboardVariables.oclIsUndefined() and arr.whiteboardVariables.variables->notEmpty())]
+MODULE Whiteboard (turn [for (v : IntegerVariable in arr.whiteboardVariables.variables)],turnsOf[v.variableID/][/for],g_c)
+-- Parameters:    (turn, turnsOfW1, turnsOfW2, ...), where each Wi is the name of a whiteboard variable.
+-- This module models Whiteboard variables of an arrangement of LLFSMs-- (See:-- Carrillo, M. Estivill-Castro, V. Rosenblueth, D. A. 'Verification and Simulation of Time-Domain Properties for Models of Behaviour'--  S. Hammoudi et al. (Eds.): MODELSWARD 2020, CCIS 1361, pp. 1-25, 2021--    https://doi.org/10.1007/978-3-030-67445-8_10)-- Intuitively, for all Whiteboard variable Wi:
+-- 	this module keeps the value of Wi when the current turn is not one of the turns where Wi can be modified.
+-- Input:
+-- 	turn: 	Current turn
+-- 	turnsOfWi: 	Set of turns where variable named Wi is modified (for each whiteboard variable named Wi).
+
+-- Whiteboard variables:
+VAR
+[for (v : IntegerVariable in arr.whiteboardVariables.variables)]
+	[v.variableID/]:[if (v.theLowerBound.oclIsKindOf(IntegerConstant))][if (v.theLowerBound.oclAsType(IntegerConstant).anIntegerValue <> null)][v.theLowerBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if][else]0[/if]..[if (v.theUpperBound.oclIsKindOf(IntegerConstant))][if (v.theUpperBound.oclAsType(IntegerConstant).anIntegerValue <> null)][v.theUpperBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if][else]0[/if];
+[/for]
+
+
+
+TRANS
+[for (v : IntegerVariable in arr.whiteboardVariables.variables)]
+	(! (turn in turnsOf[v.variableID/])
+	-> next([v.variableID/]) = [v.variableID/])
+[/for]
+
+
+-- End Whiteboard -------------------------------------------------------------
+
+[/if]
+[for (sm : StateMachine in arr.stateMachine)]
+[let machineIdx : Integer = arr.stateMachine->indexOf(sm)]
+MODULE [sm.name/](executing_[if (not arr.booleanSensorVariables.oclIsUndefined() and arr.booleanSensorVariables.variables->notEmpty())][for (v : BooleanVariable in arr.booleanSensorVariables.variables)][if (sm.transitions->exists(tr | tr.booleanExpression.oclIsKindOf(BooleanVariableReference) and tr.booleanExpression.oclAsType(BooleanVariableReference).theVariable.variableID = v.variableID))], [v.variableID/][/if][/for][/if][if (not arr.whiteboardVariables.oclIsUndefined() and arr.whiteboardVariables.variables->notEmpty())][for (v : IntegerVariable in arr.whiteboardVariables.variables)], [v.variableID/][/for][/if][if (not arr.integerConstantDefinitions.oclIsUndefined() and arr.integerConstantDefinitions.definitionsIntegerConstants->notEmpty())],g_c[/if]) -- Parameters
+
+-- [sm.name/] is a NuSMV module modelling a LLFSM for IMP,
+-- a logic-labelled finite-state machine['['/]2[']'/] for IMP language ['['/]3[']'/].
+-- mcb & vec
+
+-- Variable Program Counter (states) for [sm.name/]:
+-- State_Names= ['['/]"dInit[sm.name/]", "[sm.initialState.stateName/]"[for (s : State in sm.states)], "[s.stateName/]"[/for][']'/]
+VAR
+pc_[sm.name/] : 0..[sm.states->size() + 1/];
+
+VAR
+-- Local variables for  module [sm.name/]:
+[if (not sm.localVariables.oclIsUndefined() and sm.localVariables.variables->notEmpty())]
+[for (v : IntegerVariable in sm.localVariables.variables)]
+[v.variableID/] : [if (v.theLowerBound.oclIsKindOf(IntegerConstant))][if (v.theLowerBound.oclAsType(IntegerConstant).anIntegerValue <> null)][v.theLowerBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if][else]0[/if].. [if (v.theUpperBound.oclIsKindOf(IntegerConstant))][if (v.theUpperBound.oclAsType(IntegerConstant).anIntegerValue <> null)][v.theUpperBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if][else]0[/if];
+[/for]
+[/if]
+
+-- Initial state constraints for LLFSM [sm.name/]:
+-- Initial state of LLFSM [sm.name/] (pc_):
+INIT
+(pc_[sm.name/] = 0)
+
+-- Define declarations of LLFSM [sm.name/]:
+DEFINE -- Definitions for easy formula about reaching a state:
+	At_PSEUDO_INITIAL := (pc_[sm.name/]=0);
+	At_[sm.initialState.stateName/] := (pc_[sm.name/]=1);
+[for (s : State in sm.states)]
+	At_[s.stateName/] := (pc_[sm.name/]=[sm.states->indexOf(s) + 2/]);
+[/for]
+DEFINE
+condT[machineIdx/]0 :=
+	((  (pc_[sm.name/]= 0)) & TRUE);
+[for (tr : Transition in sm.transitions)]
+[let transIdx : Integer = sm.transitions->indexOf(tr) + 1]
+condT[machineIdx/][transIdx/]:=
+	(( (pc_[sm.name/]= [if (tr.sourceState.stateName = sm.initialState.stateName)]1[else][sm.states->indexOf(tr.sourceState) + 2/][/if])) & [if (tr.booleanExpression.oclIsKindOf(BooleanConstant))][if (tr.booleanExpression.oclAsType(BooleanConstant).aBooleanValue)]TRUE[else]FALSE[/if][elseif (tr.booleanExpression.oclIsKindOf(BooleanVariableReference))]([tr.booleanExpression.oclAsType(BooleanVariableReference).theVariable.variableID/])[elseif (tr.booleanExpression.oclIsKindOf(EqualExpression))]([if (tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclIsKindOf(PredefinedIntegerConstant))]g_c.[tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][elseif (tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclIsKindOf(IntegerVariableReference))][tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if] = ([if (tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclIsKindOf(PredefinedIntegerConstant))]g_c.[tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][elseif (tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclIsKindOf(IntegerVariableReference))][tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if]))[elseif (tr.booleanExpression.oclIsKindOf(NotExpression))][if (tr.booleanExpression.oclAsType(NotExpression).theExpression.oclIsKindOf(EqualExpression))](! (([tr.booleanExpression.oclAsType(NotExpression).theExpression.oclAsType(EqualExpression).leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/]) = ([tr.booleanExpression.oclAsType(NotExpression).theExpression.oclAsType(EqualExpression).rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/])))[elseif (tr.booleanExpression.oclAsType(NotExpression).theExpression.oclIsKindOf(BooleanVariableReference))](! [tr.booleanExpression.oclAsType(NotExpression).theExpression.oclAsType(BooleanVariableReference).theVariable.variableID/])[/if][elseif (tr.booleanExpression.oclIsKindOf(AndExpression))]([if (tr.booleanExpression.oclAsType(AndExpression).leftExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(AndExpression).leftExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][/if] & [if (tr.booleanExpression.oclAsType(AndExpression).rightExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(AndExpression).rightExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][/if])[elseif (tr.booleanExpression.oclIsKindOf(OrExpression))]([if (tr.booleanExpression.oclAsType(OrExpression).leftExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(OrExpression).leftExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][/if] | [if (tr.booleanExpression.oclAsType(OrExpression).rightExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(OrExpression).rightExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][/if])[elseif (tr.booleanExpression.oclIsKindOf(LessThanExpression))]([if (tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclIsKindOf(IntegerVariableReference))][tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if] < [if (tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclIsKindOf(IntegerVariableReference))][tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if])[else]TRUE[/if]);
+[/let]
+[/for]
+condDefault[machineIdx/] :=
+	((!condT[machineIdx/]0)[for (tr : Transition in sm.transitions)][let transIdx : Integer = sm.transitions->indexOf(tr) + 1] & (!condT[machineIdx/][transIdx/])[/let][/for]);
+
+-- Transition constraints of LLFSM  [sm.name/]:
+-- Tran([sm.name/]) = ['['/](0, 1, 1) [for (tr : Transition in sm.transitions)]([if (tr.sourceState.stateName = sm.initialState.stateName)]1[else][sm.states->indexOf(tr.sourceState) + 2/][/if], 1, [if (tr.targetState.stateName = sm.initialState.stateName)]1[else][sm.states->indexOf(tr.targetState) + 2/][/if])[/for][']'/]
+-- State_Names= ['['/]"dInit[sm.name/]", "[sm.initialState.stateName/]"[for (s : State in sm.states)], "[s.stateName/]"[/for][']'/]
+TRANS
+ (!executing_ -> -- If this module is not executing, then keep the values of local variables
+		 -- NOTE: The w_b module and the Effector module preserve values of any variables in LHS of such classes
+		((next(pc_[sm.name/])=pc_[sm.name/])[if (not sm.localVariables.oclIsUndefined() and sm.localVariables.variables->notEmpty())][for (v : IntegerVariable in sm.localVariables.variables)]& (next([v.variableID/])=[v.variableID/])[/for][/if]) 	) -- NOT executing
+	& (executing_ -> -- If this module is executing, use the defined conditions to perform transitions orderly:
+	( (TRUE &  -- Ncond
+	condT[machineIdx/]0 &  -- Pcond
+		(next(pc_[sm.name/]) = 1)[if (not sm.localVariables.oclIsUndefined() and sm.localVariables.variables->notEmpty())][for (v : IntegerVariable in sm.localVariables.variables)][if (not sm.initialState.onEntry.oclIsUndefined() and sm.initialState.onEntry.statements->notEmpty() and sm.initialState.onEntry.statements->exists(stmt | stmt.oclIsKindOf(AssignmentIntegerLHS) and stmt.oclAsType(AssignmentIntegerLHS).variable.variableID = v.variableID))][for (stmt : Statement in sm.initialState.onEntry.statements)][if (stmt.oclIsKindOf(AssignmentIntegerLHS) and stmt.oclAsType(AssignmentIntegerLHS).variable.variableID = v.variableID)][let asgn : AssignmentIntegerLHS = stmt.oclAsType(AssignmentIntegerLHS)] & (next([v.variableID/])=[if (asgn.anArithmeticExpression.oclIsKindOf(IntegerConstant))][asgn.anArithmeticExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (asgn.anArithmeticExpression.oclIsKindOf(PredefinedIntegerConstant))]g_c.[asgn.anArithmeticExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][elseif (asgn.anArithmeticExpression.oclIsKindOf(IntegerVariableReference))][asgn.anArithmeticExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if])[/let][/if][/for][else] & (next([v.variableID/])=[v.variableID/])[/if][/for][/if][if (not arr.whiteboardVariables.oclIsUndefined() and arr.whiteboardVariables.variables->notEmpty())][for (v : IntegerVariable in arr.whiteboardVariables.variables)][if (not sm.initialState.onEntry.oclIsUndefined() and sm.initialState.onEntry.statements->notEmpty() and sm.initialState.onEntry.statements->exists(stmt | stmt.oclIsKindOf(AssignmentIntegerLHS) and stmt.oclAsType(AssignmentIntegerLHS).variable.variableID = v.variableID))][for (stmt : Statement in sm.initialState.onEntry.statements)][if (stmt.oclIsKindOf(AssignmentIntegerLHS) and stmt.oclAsType(AssignmentIntegerLHS).variable.variableID = v.variableID)][let asgn : AssignmentIntegerLHS = stmt.oclAsType(AssignmentIntegerLHS)] & (next([v.variableID/])=[if (asgn.anArithmeticExpression.oclIsKindOf(IntegerConstant))][asgn.anArithmeticExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (asgn.anArithmeticExpression.oclIsKindOf(PredefinedIntegerConstant))]g_c.[asgn.anArithmeticExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][elseif (asgn.anArithmeticExpression.oclIsKindOf(IntegerVariableReference))][asgn.anArithmeticExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if])[/let][/if][/for][else] & (next([v.variableID/])=[v.variableID/])[/if][/for][/if]
+		) -- Next
+[for (tr : Transition in sm.transitions)]
+[let transIdx : Integer = sm.transitions->indexOf(tr) + 1]
+	|
+	((!condT[machineIdx/]0)[for (earlier : Transition in sm.transitions)][let earlierIdx : Integer = sm.transitions->indexOf(earlier) + 1][if (earlierIdx < transIdx)] & (!condT[machineIdx/][earlierIdx/])[/if][/let][/for] &   -- Ncond
+	condT[machineIdx/][transIdx/] & -- Pcond
+		(next(pc_[sm.name/]) = [if (tr.targetState.stateName = sm.initialState.stateName)]1[else][sm.states->indexOf(tr.targetState) + 2/][/if]) [if (not sm.localVariables.oclIsUndefined() and sm.localVariables.variables->notEmpty())][for (v : IntegerVariable in sm.localVariables.variables)][if (not tr.targetState.onEntry.oclIsUndefined() and tr.targetState.onEntry.statements->notEmpty() and tr.targetState.onEntry.statements->exists(stmt | stmt.oclIsKindOf(AssignmentIntegerLHS) and stmt.oclAsType(AssignmentIntegerLHS).variable.variableID = v.variableID))][for (stmt : Statement in tr.targetState.onEntry.statements)][if (stmt.oclIsKindOf(AssignmentIntegerLHS) and stmt.oclAsType(AssignmentIntegerLHS).variable.variableID = v.variableID)][let asgn : AssignmentIntegerLHS = stmt.oclAsType(AssignmentIntegerLHS)] & (next([v.variableID/])=[if (asgn.anArithmeticExpression.oclIsKindOf(IntegerConstant))][asgn.anArithmeticExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (asgn.anArithmeticExpression.oclIsKindOf(PredefinedIntegerConstant))]g_c.[asgn.anArithmeticExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][elseif (asgn.anArithmeticExpression.oclIsKindOf(IntegerVariableReference))][asgn.anArithmeticExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if])[/let][/if][/for][else] & (next([v.variableID/])=[v.variableID/])[/if][/for][/if][if (not arr.whiteboardVariables.oclIsUndefined() and arr.whiteboardVariables.variables->notEmpty())][for (v : IntegerVariable in arr.whiteboardVariables.variables)][if (not tr.targetState.onEntry.oclIsUndefined() and tr.targetState.onEntry.statements->notEmpty() and tr.targetState.onEntry.statements->exists(stmt | stmt.oclIsKindOf(AssignmentIntegerLHS) and stmt.oclAsType(AssignmentIntegerLHS).variable.variableID = v.variableID))][for (stmt : Statement in tr.targetState.onEntry.statements)][if (stmt.oclIsKindOf(AssignmentIntegerLHS) and stmt.oclAsType(AssignmentIntegerLHS).variable.variableID = v.variableID)][let asgn : AssignmentIntegerLHS = stmt.oclAsType(AssignmentIntegerLHS)] & (next([v.variableID/])=[if (asgn.anArithmeticExpression.oclIsKindOf(IntegerConstant))][asgn.anArithmeticExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (asgn.anArithmeticExpression.oclIsKindOf(PredefinedIntegerConstant))]g_c.[asgn.anArithmeticExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][elseif (asgn.anArithmeticExpression.oclIsKindOf(IntegerVariableReference))][asgn.anArithmeticExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if])[/let][/if][/for][else] & (next([v.variableID/])=[v.variableID/])[/if][/for][/if]
+		)  -- Next
+[/let]
+[/for]
+	|
+	(condDefault[machineIdx/] &  -- Ncond
+	TRUE &  -- Pcond
+	(next(pc_[sm.name/]) = pc_[sm.name/]) [if (not sm.localVariables.oclIsUndefined() and sm.localVariables.variables->notEmpty())][for (v : IntegerVariable in sm.localVariables.variables)] & (next([v.variableID/])=[v.variableID/])[/for][/if][if (not arr.whiteboardVariables.oclIsUndefined() and arr.whiteboardVariables.variables->notEmpty())][for (v : IntegerVariable in arr.whiteboardVariables.variables)] & (next([v.variableID/])=[v.variableID/])[/for][/if]	)  -- Next
+	)  -- Consequent executing
+)  -- closing executing
+
+-- End [sm.name/] -------------------------------------------------------------
+
+[/let]
+[/for]
+MODULE RoundRobinScheduler()-- This module models a round robin scheduler of an arrangement of LLFSMs-- (See:-- Carrillo, M. Estivill-Castro, V. Rosenblueth, D. A. 'Verification and Simulation of Time-Domain Properties for Models of Behaviour'--  S. Hammoudi et al. (Eds.): MODELSWARD 2020, CCIS 1361, pp. 1-25, 2021--    https://doi.org/10.1007/978-3-030-67445-8_10)-- Input: (NO INPUTS)
+
+-- Output: turn
+
+--
+-- Variable to record the execution turn:
+VAR
+	turn : 0..[arr.stateMachine->size() - 1/];
+
+DEFINE
+[for (sm : StateMachine in arr.stateMachine)]
+[let machineIdx : Integer = arr.stateMachine->indexOf(sm)]
+	executing_[machineIdx/]:= (turn=[machineIdx/]);
+[/let]
+[/for]
+[for (sm : StateMachine in arr.stateMachine)]
+[let machineIdx : Integer = arr.stateMachine->indexOf(sm)]
+	executing_[sm.name/]:= (turn=[machineIdx/]);
+[/let]
+[/for]
+-- Initial states for RoundRobinScheduler module (turn and whiteboard variables):
+INIT
+	(TRUE & TRUE)
+
+-- Transitions for RoundRobinScheduler module:
+TRANS
+[for (sm : StateMachine in arr.stateMachine)]
+[let machineIdx : Integer = arr.stateMachine->indexOf(sm)]
+[if (machineIdx > 0)]
+	|
+[/if]
+	((turn=[machineIdx/]) & -- cond
+		next(turn=[if (arr.stateMachine->indexOf(sm) + 1 = arr.stateMachine->size())]0[else][machineIdx + 1/][/if]) ) -- next
+[/let]
+[/for]
+
+-- End RoundRobinScheduler -------------------------------------------------------------
+
+MODULE main
+-- Text of this NuSMV module was automatically generated by Java EMF model converter implemented  in:
+--       Netbeans project JavaLLFSMsTransformation
+-- The input model is in the configuration file but see arrangement name below
+-- The output is a modular NuSMV model is [arr.arrangementName/].smv
+-- This is the main module of NuSMV file modelling an arrangement of LLFSMs:[arr.arrangementName/]
+-- Exported to a NuSMV file an arrangement of logic-labelled finite-state machines (LLFSMs)['['/]2[']'/]
+-- for the IMP language ['['/]3[']'/].
+-- Control of the arrangement is exported to the Main module of the NuSMV file.
+-- Each LLFSM of the arrangement is exported to a NuSMV module.
+-- ['['/]2[']'/] Estivill-Castro V, Hexel R, Lusty C. High performance relaying of C++11 objects across processes and logic-labeled finite-state machines. International Conference on Simulation, Modeling, and Programming for Autonomous Robots, pp. 182-194. Springer, 2014
+-- ['['/]3[']'/] Winskel G. The formal semantics of programming languages: an introduction. MIT press, 1993.
+
+--
+-- Instance for global constants, we always have one
+-- Instance for scheduler, we always have one
+VAR
+[if (not arr.integerConstantDefinitions.oclIsUndefined() and arr.integerConstantDefinitions.definitionsIntegerConstants->notEmpty())]
+g_c:g_c();
+[/if]
+sch:RoundRobinScheduler();
+--
+[if (arr.booleanSensorVariables.variables->notEmpty() or (not arr.sensorVariables.oclIsUndefined() and arr.sensorVariables.variables->notEmpty()))]
+-- Instance for sensor variables: they are always read only
+Sensor:Sensor([if (not arr.integerConstantDefinitions.oclIsUndefined() and arr.integerConstantDefinitions.definitionsIntegerConstants->notEmpty())]g_c[/if]);
+[/if]
+[if (not arr.whiteboardVariables.oclIsUndefined() and arr.whiteboardVariables.variables->notEmpty())]
+w_b: Whiteboard(sch.turn
+[for (v : IntegerVariable in arr.whiteboardVariables.variables)]
+	-- turnsOf[v.variableID/]
+, {[for (sm : StateMachine in arr.stateMachine) separator(',')][let machineIdx : Integer = arr.stateMachine->indexOf(sm)][machineIdx/][/let][/for]}[/for],[if (not arr.integerConstantDefinitions.oclIsUndefined() and arr.integerConstantDefinitions.definitionsIntegerConstants->notEmpty())]g_c[/if]);
+[/if]
+
+[for (sm : StateMachine in arr.stateMachine)]
+[let machineIdx : Integer = arr.stateMachine->indexOf(sm)]
+[sm.name/] : [sm.name/](sch.executing_[machineIdx/][if (not arr.booleanSensorVariables.oclIsUndefined() and arr.booleanSensorVariables.variables->notEmpty())][for (v : BooleanVariable in arr.booleanSensorVariables.variables)][if (sm.transitions->exists(tr | tr.booleanExpression.oclIsKindOf(BooleanVariableReference) and tr.booleanExpression.oclAsType(BooleanVariableReference).theVariable.variableID = v.variableID))], Sensor.[v.variableID/][/if][/for][/if][if (not arr.whiteboardVariables.oclIsUndefined() and arr.whiteboardVariables.variables->notEmpty())][for (v : IntegerVariable in arr.whiteboardVariables.variables)], w_b.[v.variableID/][/for][/if][if (not arr.integerConstantDefinitions.oclIsUndefined() and arr.integerConstantDefinitions.definitionsIntegerConstants->notEmpty())],g_c[/if]);
+[/let]
+
+[/for]
+--
+-- End  -------------------------------------------------------------
+
+[/file]
+[/template]

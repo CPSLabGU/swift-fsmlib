@@ -1,0 +1,527 @@
+
+--
+--- (c) 2021-2025 Miguel Carrillo Barajas & Vlad Estivill-Castro
+--
+
+MODULE g_c
+-- This module models global constants in arrangement of LLFSMs-- (See:-- Carrillo, M. Estivill-Castro, V. Rosenblueth, D. A. 'Verification and Simulation of Time-Domain Properties for Models of Behaviour'--  S. Hammoudi et al. (Eds.): MODELSWARD 2020, CCIS 1361, pp. 1-25, 2021--    https://doi.org/10.1007/978-3-030-67445-8_10)
+
+DEFINE NotAThread := 0;
+
+DEFINE GlobalWCET := 0;
+
+-- End g_c -------------------------------------------------------------
+
+
+MODULE Sensor (g_c)
+-- This module models sensor variables of an arrangement of LLFSMs-- (See:-- Carrillo, M. Estivill-Castro, V. Rosenblueth, D. A. 'Verification and Simulation of Time-Domain Properties for Models of Behaviour'--  S. Hammoudi et al. (Eds.): MODELSWARD 2020, CCIS 1361, pp. 1-25, 2021--    https://doi.org/10.1007/978-3-030-67445-8_10)-- Intuitively, for all sensor variable Si, Si has a non-deterministic value.-- Input: (NO INPUTS)
+-- Sensor variables:
+VAR
+
+
+
+TRANS
+-- For all sensor variable Si, Si has a non-deterministic value:
+	TRUE; -- No constraint on transitions.
+
+-- End Sensor -------------------------------------------------------------
+
+
+MODULE Whiteboard (turn ,turnsOfSharedX,g_c)
+-- Parameters:    (turn, turnsOfW1, turnsOfW2, ...), where each Wi is the name of a whiteboard variable.
+-- This module models Whiteboard variables of an arrangement of LLFSMs-- (See:-- Carrillo, M. Estivill-Castro, V. Rosenblueth, D. A. 'Verification and Simulation of Time-Domain Properties for Models of Behaviour'--  S. Hammoudi et al. (Eds.): MODELSWARD 2020, CCIS 1361, pp. 1-25, 2021--    https://doi.org/10.1007/978-3-030-67445-8_10)-- Intuitively, for all Whiteboard variable Wi:
+-- 	this module keeps the value of Wi when the current turn is not one of the turns where Wi can be modified.
+-- Input:
+-- 	turn: 	Current turn
+-- 	turnsOfWi: 	Set of turns where variable named Wi is modified (for each whiteboard variable named Wi).
+
+-- Whiteboard variables:
+VAR
+
+	SharedX:0..2;
+
+
+
+
+TRANS
+
+	(! (turn in turnsOfSharedX)
+	-> next(SharedX) = SharedX)
+
+
+
+-- End Whiteboard -------------------------------------------------------------
+
+
+
+
+MODULE Starter(executing_, SharedX,g_c) -- Parameters
+
+-- Starter is a NuSMV module modelling a LLFSM for IMP,
+-- a logic-labelled finite-state machine[2] for IMP language [3].
+-- mcb & vec
+
+-- Variable Program Counter (states) for Starter:
+-- State_Names= ["dInitStarter", "INITIAL"]
+VAR
+pc_Starter : 0..1;
+
+VAR
+-- Local variables for  module Starter:
+
+
+-- Initial state constraints for LLFSM Starter:
+-- Initial state of LLFSM Starter (pc_):
+INIT
+(pc_Starter = 0)
+
+-- Define declarations of LLFSM Starter:
+DEFINE -- Definitions for easy formula about reaching a state:
+	At_PSEUDO_INITIAL := (pc_Starter=0);
+	At_INITIAL := (pc_Starter=1);
+
+DEFINE
+condT00 :=
+	((  (pc_Starter= 0)) & TRUE);
+
+condDefault0 :=
+	((!condT00));
+
+-- Transition constraints of LLFSM  Starter:
+-- Tran(Starter) = [(0, 1, 1) ]
+-- State_Names= ["dInitStarter", "INITIAL"]
+TRANS
+ (!executing_ -> -- If this module is not executing, then keep the values of local variables
+		 -- NOTE: The w_b module and the Effector module preserve values of any variables in LHS of such classes
+		((next(pc_Starter)=pc_Starter)) 	) -- NOT executing
+	& (executing_ -> -- If this module is executing, use the defined conditions to perform transitions orderly:
+	( (TRUE &  -- Ncond
+	condT00 &  -- Pcond
+		(next(pc_Starter) = 1) & (next(SharedX)=g_c.NotAThread)
+		) -- Next
+
+	|
+	(condDefault0 &  -- Ncond
+	TRUE &  -- Pcond
+	(next(pc_Starter) = pc_Starter)  & (next(SharedX)=SharedX)	)  -- Next
+	)  -- Consequent executing
+)  -- closing executing
+
+-- End Starter -------------------------------------------------------------
+
+
+
+
+MODULE Thread1(executing_, SharedX,g_c) -- Parameters
+
+-- Thread1 is a NuSMV module modelling a LLFSM for IMP,
+-- a logic-labelled finite-state machine[2] for IMP language [3].
+-- mcb & vec
+
+-- Variable Program Counter (states) for Thread1:
+-- State_Names= ["dInitThread1", "T1NonCriticalSection", "T1WAIT", "T1ASSIGN", "T1CriticalSection", "T1LetGo"]
+VAR
+pc_Thread1 : 0..5;
+
+VAR
+-- Local variables for  module Thread1:
+
+
+IamThreadT1 : 0.. 1;
+
+
+
+-- Initial state constraints for LLFSM Thread1:
+-- Initial state of LLFSM Thread1 (pc_):
+INIT
+(pc_Thread1 = 0)
+
+-- Define declarations of LLFSM Thread1:
+DEFINE -- Definitions for easy formula about reaching a state:
+	At_PSEUDO_INITIAL := (pc_Thread1=0);
+	At_T1NonCriticalSection := (pc_Thread1=1);
+
+	At_T1WAIT := (pc_Thread1=2);
+
+	At_T1ASSIGN := (pc_Thread1=3);
+
+	At_T1CriticalSection := (pc_Thread1=4);
+
+	At_T1LetGo := (pc_Thread1=5);
+
+DEFINE
+condT10 :=
+	((  (pc_Thread1= 0)) & TRUE);
+
+
+condT11:=
+	(( (pc_Thread1= 1)) & TRUE);
+
+
+
+condT12:=
+	(( (pc_Thread1= 2)) & (g_c.NotAThread = (SharedX)));
+
+
+
+condT13:=
+	(( (pc_Thread1= 3)) & (! ((IamThreadT1) = (SharedX))));
+
+
+
+condT14:=
+	(( (pc_Thread1= 3)) & TRUE);
+
+
+
+condT15:=
+	(( (pc_Thread1= 4)) & TRUE);
+
+
+
+condT16:=
+	(( (pc_Thread1= 5)) & TRUE);
+
+
+condDefault1 :=
+	((!condT10) & (!condT11) & (!condT12) & (!condT13) & (!condT14) & (!condT15) & (!condT16));
+
+-- Transition constraints of LLFSM  Thread1:
+-- Tran(Thread1) = [(0, 1, 1) (1, 1, 2)(2, 1, 3)(3, 1, 2)(3, 1, 4)(4, 1, 5)(5, 1, 1)]
+-- State_Names= ["dInitThread1", "T1NonCriticalSection", "T1WAIT", "T1ASSIGN", "T1CriticalSection", "T1LetGo"]
+TRANS
+ (!executing_ -> -- If this module is not executing, then keep the values of local variables
+		 -- NOTE: The w_b module and the Effector module preserve values of any variables in LHS of such classes
+		((next(pc_Thread1)=pc_Thread1)& (next(IamThreadT1)=IamThreadT1)) 	) -- NOT executing
+	& (executing_ -> -- If this module is executing, use the defined conditions to perform transitions orderly:
+	( (TRUE &  -- Ncond
+	condT10 &  -- Pcond
+		(next(pc_Thread1) = 1) & (next(IamThreadT1)=1) & (next(SharedX)=SharedX)
+		) -- Next
+
+
+	|
+	((!condT10) &   -- Ncond
+	condT11 & -- Pcond
+		(next(pc_Thread1) = 2)  & (next(IamThreadT1)=IamThreadT1) & (next(SharedX)=SharedX)
+		)  -- Next
+
+
+
+	|
+	((!condT10) & (!condT11) &   -- Ncond
+	condT12 & -- Pcond
+		(next(pc_Thread1) = 3)  & (next(IamThreadT1)=IamThreadT1) & (next(SharedX)=IamThreadT1)
+		)  -- Next
+
+
+
+	|
+	((!condT10) & (!condT11) & (!condT12) &   -- Ncond
+	condT13 & -- Pcond
+		(next(pc_Thread1) = 2)  & (next(IamThreadT1)=IamThreadT1) & (next(SharedX)=SharedX)
+		)  -- Next
+
+
+
+	|
+	((!condT10) & (!condT11) & (!condT12) & (!condT13) &   -- Ncond
+	condT14 & -- Pcond
+		(next(pc_Thread1) = 4)  & (next(IamThreadT1)=IamThreadT1) & (next(SharedX)=SharedX)
+		)  -- Next
+
+
+
+	|
+	((!condT10) & (!condT11) & (!condT12) & (!condT13) & (!condT14) &   -- Ncond
+	condT15 & -- Pcond
+		(next(pc_Thread1) = 5)  & (next(IamThreadT1)=IamThreadT1) & (next(SharedX)=g_c.NotAThread)
+		)  -- Next
+
+
+
+	|
+	((!condT10) & (!condT11) & (!condT12) & (!condT13) & (!condT14) & (!condT15) &   -- Ncond
+	condT16 & -- Pcond
+		(next(pc_Thread1) = 1)  & (next(IamThreadT1)=1) & (next(SharedX)=SharedX)
+		)  -- Next
+
+
+	|
+	(condDefault1 &  -- Ncond
+	TRUE &  -- Pcond
+	(next(pc_Thread1) = pc_Thread1)  & (next(IamThreadT1)=IamThreadT1) & (next(SharedX)=SharedX)	)  -- Next
+	)  -- Consequent executing
+)  -- closing executing
+
+-- End Thread1 -------------------------------------------------------------
+
+
+
+
+MODULE Thread2(executing_, SharedX,g_c) -- Parameters
+
+-- Thread2 is a NuSMV module modelling a LLFSM for IMP,
+-- a logic-labelled finite-state machine[2] for IMP language [3].
+-- mcb & vec
+
+-- Variable Program Counter (states) for Thread2:
+-- State_Names= ["dInitThread2", "T2NonCriticalSection", "T2WAIT", "T2ASSIGN", "T2CriticalSection", "T2LetGo"]
+VAR
+pc_Thread2 : 0..5;
+
+VAR
+-- Local variables for  module Thread2:
+
+
+IamThreadT2 : 0.. 2;
+
+
+
+-- Initial state constraints for LLFSM Thread2:
+-- Initial state of LLFSM Thread2 (pc_):
+INIT
+(pc_Thread2 = 0)
+
+-- Define declarations of LLFSM Thread2:
+DEFINE -- Definitions for easy formula about reaching a state:
+	At_PSEUDO_INITIAL := (pc_Thread2=0);
+	At_T2NonCriticalSection := (pc_Thread2=1);
+
+	At_T2WAIT := (pc_Thread2=2);
+
+	At_T2ASSIGN := (pc_Thread2=3);
+
+	At_T2CriticalSection := (pc_Thread2=4);
+
+	At_T2LetGo := (pc_Thread2=5);
+
+DEFINE
+condT20 :=
+	((  (pc_Thread2= 0)) & TRUE);
+
+
+condT21:=
+	(( (pc_Thread2= 1)) & TRUE);
+
+
+
+condT22:=
+	(( (pc_Thread2= 2)) & (g_c.NotAThread = (SharedX)));
+
+
+
+condT23:=
+	(( (pc_Thread2= 3)) & (! ((IamThreadT2) = (SharedX))));
+
+
+
+condT24:=
+	(( (pc_Thread2= 3)) & TRUE);
+
+
+
+condT25:=
+	(( (pc_Thread2= 4)) & TRUE);
+
+
+
+condT26:=
+	(( (pc_Thread2= 5)) & TRUE);
+
+
+condDefault2 :=
+	((!condT20) & (!condT21) & (!condT22) & (!condT23) & (!condT24) & (!condT25) & (!condT26));
+
+-- Transition constraints of LLFSM  Thread2:
+-- Tran(Thread2) = [(0, 1, 1) (1, 1, 2)(2, 1, 3)(3, 1, 2)(3, 1, 4)(4, 1, 5)(5, 1, 1)]
+-- State_Names= ["dInitThread2", "T2NonCriticalSection", "T2WAIT", "T2ASSIGN", "T2CriticalSection", "T2LetGo"]
+TRANS
+ (!executing_ -> -- If this module is not executing, then keep the values of local variables
+		 -- NOTE: The w_b module and the Effector module preserve values of any variables in LHS of such classes
+		((next(pc_Thread2)=pc_Thread2)& (next(IamThreadT2)=IamThreadT2)) 	) -- NOT executing
+	& (executing_ -> -- If this module is executing, use the defined conditions to perform transitions orderly:
+	( (TRUE &  -- Ncond
+	condT20 &  -- Pcond
+		(next(pc_Thread2) = 1) & (next(IamThreadT2)=2) & (next(SharedX)=SharedX)
+		) -- Next
+
+
+	|
+	((!condT20) &   -- Ncond
+	condT21 & -- Pcond
+		(next(pc_Thread2) = 2)  & (next(IamThreadT2)=IamThreadT2) & (next(SharedX)=SharedX)
+		)  -- Next
+
+
+
+	|
+	((!condT20) & (!condT21) &   -- Ncond
+	condT22 & -- Pcond
+		(next(pc_Thread2) = 3)  & (next(IamThreadT2)=IamThreadT2) & (next(SharedX)=IamThreadT2)
+		)  -- Next
+
+
+
+	|
+	((!condT20) & (!condT21) & (!condT22) &   -- Ncond
+	condT23 & -- Pcond
+		(next(pc_Thread2) = 2)  & (next(IamThreadT2)=IamThreadT2) & (next(SharedX)=SharedX)
+		)  -- Next
+
+
+
+	|
+	((!condT20) & (!condT21) & (!condT22) & (!condT23) &   -- Ncond
+	condT24 & -- Pcond
+		(next(pc_Thread2) = 4)  & (next(IamThreadT2)=IamThreadT2) & (next(SharedX)=SharedX)
+		)  -- Next
+
+
+
+	|
+	((!condT20) & (!condT21) & (!condT22) & (!condT23) & (!condT24) &   -- Ncond
+	condT25 & -- Pcond
+		(next(pc_Thread2) = 5)  & (next(IamThreadT2)=IamThreadT2) & (next(SharedX)=g_c.NotAThread)
+		)  -- Next
+
+
+
+	|
+	((!condT20) & (!condT21) & (!condT22) & (!condT23) & (!condT24) & (!condT25) &   -- Ncond
+	condT26 & -- Pcond
+		(next(pc_Thread2) = 1)  & (next(IamThreadT2)=2) & (next(SharedX)=SharedX)
+		)  -- Next
+
+
+	|
+	(condDefault2 &  -- Ncond
+	TRUE &  -- Pcond
+	(next(pc_Thread2) = pc_Thread2)  & (next(IamThreadT2)=IamThreadT2) & (next(SharedX)=SharedX)	)  -- Next
+	)  -- Consequent executing
+)  -- closing executing
+
+-- End Thread2 -------------------------------------------------------------
+
+
+
+MODULE RoundRobinScheduler()-- This module models a round robin scheduler of an arrangement of LLFSMs-- (See:-- Carrillo, M. Estivill-Castro, V. Rosenblueth, D. A. 'Verification and Simulation of Time-Domain Properties for Models of Behaviour'--  S. Hammoudi et al. (Eds.): MODELSWARD 2020, CCIS 1361, pp. 1-25, 2021--    https://doi.org/10.1007/978-3-030-67445-8_10)-- Input: (NO INPUTS)
+
+-- Output: turn
+
+--
+-- Variable to record the execution turn:
+VAR
+	turn : 0..2;
+
+DEFINE
+
+
+	executing_0:= (turn=0);
+
+
+
+	executing_1:= (turn=1);
+
+
+
+	executing_2:= (turn=2);
+
+
+
+
+	executing_Starter:= (turn=0);
+
+
+
+	executing_Thread1:= (turn=1);
+
+
+
+	executing_Thread2:= (turn=2);
+
+
+-- Initial states for RoundRobinScheduler module (turn and whiteboard variables):
+INIT
+	(TRUE & TRUE)
+
+-- Transitions for RoundRobinScheduler module:
+TRANS
+
+
+
+	((turn=0) & -- cond
+		next(turn=1) ) -- next
+
+
+
+
+	|
+
+	((turn=1) & -- cond
+		next(turn=2) ) -- next
+
+
+
+
+	|
+
+	((turn=2) & -- cond
+		next(turn=0) ) -- next
+
+
+
+-- End RoundRobinScheduler -------------------------------------------------------------
+
+MODULE main
+-- Text of this NuSMV module was automatically generated by Java EMF model converter implemented  in:
+--       Netbeans project JavaLLFSMsTransformation
+-- The input model is in the configuration file but see arrangement name below
+-- The output is a modular NuSMV model is FischerConcurrencyAlgorithm.smv
+-- This is the main module of NuSMV file modelling an arrangement of LLFSMs:FischerConcurrencyAlgorithm
+-- Exported to a NuSMV file an arrangement of logic-labelled finite-state machines (LLFSMs)[2]
+-- for the IMP language [3].
+-- Control of the arrangement is exported to the Main module of the NuSMV file.
+-- Each LLFSM of the arrangement is exported to a NuSMV module.
+-- [2] Estivill-Castro V, Hexel R, Lusty C. High performance relaying of C++11 objects across processes and logic-labeled finite-state machines. International Conference on Simulation, Modeling, and Programming for Autonomous Robots, pp. 182-194. Springer, 2014
+-- [3] Winskel G. The formal semantics of programming languages: an introduction. MIT press, 1993.
+
+--
+-- Instance for global constants, we always have one
+-- Instance for scheduler, we always have one
+VAR
+
+g_c:g_c();
+
+sch:RoundRobinScheduler();
+--
+
+-- Instance for sensor variables: they are always read only
+Sensor:Sensor(g_c);
+
+
+w_b: Whiteboard(sch.turn
+
+	-- turnsOfSharedX
+, {0,1,2},g_c);
+
+
+
+
+Starter : Starter(sch.executing_0, w_b.SharedX,g_c);
+
+
+
+
+Thread1 : Thread1(sch.executing_1, w_b.SharedX,g_c);
+
+
+
+
+Thread2 : Thread2(sch.executing_2, w_b.SharedX,g_c);
+
+
+
+--
+-- End  -------------------------------------------------------------
+

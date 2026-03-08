@@ -1,0 +1,170 @@
+[module llfsm2uppaal('http://www.example.org/newGITmetamodelwithtypes')]
+
+[template main(arr : Arrangement)]
+[file (arr.arrangementName + '.xml', false)]<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
+<nta>
+  <declaration>
+[if (not arr.integerConstantDefinitions.oclIsUndefined() and arr.integerConstantDefinitions.definitionsIntegerConstants->notEmpty())]
+// Global Constants
+[for (c : GlobalIntegerConstantDefinition in arr.integerConstantDefinitions.definitionsIntegerConstants)]
+const int [c.Identifier/] = [if (c.oclIsKindOf(GlobalIntegerConstantMetaModelDefinition))][c.oclAsType(GlobalIntegerConstantMetaModelDefinition).anIntegerValue/][elseif (c.oclIsKindOf(GlobalIntegerParameterDefinition))][c.oclAsType(GlobalIntegerParameterDefinition).anIntegerValue/][else]0[/if];
+[/for]
+
+[/if]
+// Scheduler variables
+int['['/]-1,[arr.stateMachine->size() - 1/][']'/] turn = -1;
+bool scheduler_turn;
+
+[if (not arr.booleanSensorVariables.oclIsUndefined() and arr.booleanSensorVariables.variables->notEmpty())]
+// Boolean Sensor Variables (represented as int['['/]0,1[']'/])
+[for (v : BooleanVariable in arr.booleanSensorVariables.variables)]
+int['['/]0,1[']'/] [v.variableID/];
+[/for]
+
+[/if]
+[if (not arr.whiteboardVariables.oclIsUndefined() and arr.whiteboardVariables.variables->notEmpty())]
+// Whiteboard Variables
+[for (v : IntegerVariable in arr.whiteboardVariables.variables)]
+int['['/][if (v.theLowerBound.oclIsKindOf(IntegerConstant))][v.theLowerBound.oclAsType(IntegerConstant).anIntegerValue - 1/][else]-1[/if],[if (v.theUpperBound.oclIsKindOf(IntegerConstant))][v.theUpperBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if][']'/] [v.variableID/];
+[/for]
+
+[/if]
+[if (not arr.sensorVariables.oclIsUndefined() and arr.sensorVariables.variables->notEmpty())]
+// Sensor Variables
+[for (v : IntegerVariable in arr.sensorVariables.variables)]
+int['['/][if (v.theLowerBound.oclIsKindOf(IntegerConstant))][v.theLowerBound.oclAsType(IntegerConstant).anIntegerValue - 1/][else]-1[/if],[if (v.theUpperBound.oclIsKindOf(IntegerConstant))][v.theUpperBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if][']'/] [v.variableID/];
+[/for]
+
+[/if]
+[if (not arr.booleanWhiteboardVariables.oclIsUndefined() and arr.booleanWhiteboardVariables.variables->notEmpty())]
+// Boolean Whiteboard Variables
+[for (v : BooleanVariable in arr.booleanWhiteboardVariables.variables)]
+int['['/]0,1[']'/] [v.variableID/];
+[/for]
+
+[/if]
+[if (not arr.effectorVariables.oclIsUndefined() and arr.effectorVariables.variables->notEmpty())]
+// Effector Variables
+[for (v : IntegerVariable in arr.effectorVariables.variables)]
+int['['/][if (v.theLowerBound.oclIsKindOf(IntegerConstant))][v.theLowerBound.oclAsType(IntegerConstant).anIntegerValue - 1/][else]-1[/if],[if (v.theUpperBound.oclIsKindOf(IntegerConstant))][v.theUpperBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if][']'/] [v.variableID/];
+[/for]
+
+[/if]
+[if (not arr.booleanEffectorVariables.oclIsUndefined() and arr.booleanEffectorVariables.variables->notEmpty())]
+// Boolean Effector Variables
+[for (v : BooleanVariable in arr.booleanEffectorVariables.variables)]
+int['['/]0,1[']'/] [v.variableID/];
+[/for]
+
+[/if]
+  </declaration>
+
+  <!-- Scheduler Template -->
+  <template>
+    <name>Scheduler</name>
+    <declaration>// Scheduler local declarations</declaration>
+    <location id="id0" x="0" y="0">
+      <name>pseudo_init_Scheduler</name>
+    </location>
+    <location id="id1" x="200" y="0">
+      <name>turn_updated</name>
+    </location>
+    <init ref="id0"/>
+    <transition>
+      <source ref="id0"/>
+      <target ref="id1"/>
+      <label kind="assignment">turn := 0,
+scheduler_turn := false</label>
+    </transition>
+    <transition>
+      <source ref="id1"/>
+      <target ref="id1"/>
+      <label kind="select">[if (not arr.booleanSensorVariables.oclIsUndefined() and arr.booleanSensorVariables.variables->notEmpty())][for (v : BooleanVariable in arr.booleanSensorVariables.variables) separator(',
+')]Sensor_[v.variableID/] : int['['/]0,1[']'/][/for][/if]</label>
+      <label kind="guard">scheduler_turn</label>
+      <label kind="assignment">[if (not arr.booleanSensorVariables.oclIsUndefined() and arr.booleanSensorVariables.variables->notEmpty())][for (v : BooleanVariable in arr.booleanSensorVariables.variables) separator(',
+')][v.variableID/] := Sensor_[v.variableID/][/for],
+[/if]turn := (turn + 1) % [arr.stateMachine->size()/],
+scheduler_turn := false</label>
+    </transition>
+  </template>
+
+[for (sm : StateMachine in arr.stateMachine)]
+[let machineIdx : Integer = arr.stateMachine->indexOf(sm)]
+[let baseLocationId : Integer = (machineIdx * 1000) + 100]
+  <!-- State Machine Template: [sm.name/] -->
+  <template>
+    <name>[sm.name/]</name>
+    <declaration>
+[if (not sm.localVariables.oclIsUndefined() and sm.localVariables.variables->notEmpty())]
+// Local variables
+[for (v : IntegerVariable in sm.localVariables.variables)]
+int['['/][if (v.theLowerBound.oclIsKindOf(IntegerConstant))][v.theLowerBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if],[if (v.theUpperBound.oclIsKindOf(IntegerConstant))][v.theUpperBound.oclAsType(IntegerConstant).anIntegerValue/][else]0[/if][']'/] [v.variableID/];
+[/for]
+[/if]
+[if (not sm.booleanLocalVariables.oclIsUndefined() and sm.booleanLocalVariables.variables->notEmpty())]
+[for (v : BooleanVariable in sm.booleanLocalVariables.variables)]
+int['['/]0,1[']'/] [v.variableID/];
+[/for]
+[/if]
+    </declaration>
+    <!-- Pseudo-initial location -->
+    <location id="id[baseLocationId/]" x="0" y="0">
+      <name>pseudo_init_[sm.name/]</name>
+    </location>
+    <!-- Initial state location -->
+    <location id="id[baseLocationId + 1/]" x="200" y="0">
+      <name>[sm.initialState.stateName/]</name>
+    </location>
+[for (s : State in sm.states)]
+[let stateIdx : Integer = sm.states->indexOf(s) + 1]
+    <!-- State: [s.stateName/] -->
+    <location id="id[baseLocationId + stateIdx + 1/]" x="[200 + (stateIdx * 100)/]" y="0">
+      <name>[s.stateName/]</name>
+    </location>
+[/let]
+[/for]
+    <init ref="id[baseLocationId/]"/>
+    <!-- Transition from pseudo-initial to initial state -->
+    <transition>
+      <source ref="id[baseLocationId/]"/>
+      <target ref="id[baseLocationId + 1/]"/>
+      <label kind="guard">turn == [machineIdx/] &amp;&amp; !scheduler_turn</label>
+      <label kind="assignment">scheduler_turn := true[if (not sm.initialState.onEntry.oclIsUndefined() and sm.initialState.onEntry.statements->notEmpty())][for (stmt : Statement in sm.initialState.onEntry.statements)][if (stmt.oclIsKindOf(AssignmentIntegerLHS))][let asgn : AssignmentIntegerLHS = stmt.oclAsType(AssignmentIntegerLHS)],
+[asgn.variable.variableID/] := [if (asgn.anArithmeticExpression.oclIsKindOf(IntegerConstant))][asgn.anArithmeticExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (asgn.anArithmeticExpression.oclIsKindOf(IntegerVariableReference))][asgn.anArithmeticExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][elseif (asgn.anArithmeticExpression.oclIsKindOf(PredefinedIntegerConstant))][asgn.anArithmeticExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][else]0[/if][/let][elseif (stmt.oclIsKindOf(AssignmentBooleanLHS))][let asgn : AssignmentBooleanLHS = stmt.oclAsType(AssignmentBooleanLHS)],
+[asgn.variable.variableID/] := [if (asgn.aBooleanExpression.oclIsKindOf(BooleanConstant))][if (asgn.aBooleanExpression.oclAsType(BooleanConstant).aBooleanValue)]1[else]0[/if][elseif (asgn.aBooleanExpression.oclIsKindOf(BooleanVariableReference))][asgn.aBooleanExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][else]0[/if][/let][/if][/for][/if]</label>
+    </transition>
+[for (tr : Transition in sm.transitions)]
+    <!-- Transition: [tr.sourceState.stateName/] -> [tr.targetState.stateName/] -->
+    <transition>
+[if (tr.sourceState.stateName = sm.initialState.stateName)]
+      <source ref="id[baseLocationId + 1/]"/>
+[else]
+      <source ref="id[baseLocationId + sm.states->indexOf(tr.sourceState) + 2/]"/>
+[/if]
+[if (tr.targetState.stateName = sm.initialState.stateName)]
+      <target ref="id[baseLocationId + 1/]"/>
+[else]
+      <target ref="id[baseLocationId + sm.states->indexOf(tr.targetState) + 2/]"/>
+[/if]
+      <label kind="guard">turn == [machineIdx/] &amp;&amp; !scheduler_turn &amp;&amp; ([if (tr.booleanExpression.oclIsKindOf(BooleanConstant))][if (tr.booleanExpression.oclAsType(BooleanConstant).aBooleanValue)]true[else]false[/if][elseif (tr.booleanExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(BooleanVariableReference).theVariable.variableID/] == 1[elseif (tr.booleanExpression.oclIsKindOf(EqualExpression))]([if (tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclIsKindOf(IntegerVariableReference))][tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][elseif (tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclIsKindOf(PredefinedIntegerConstant))][tr.booleanExpression.oclAsType(EqualExpression).leftExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][/if] == [if (tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclIsKindOf(IntegerVariableReference))][tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][elseif (tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclIsKindOf(PredefinedIntegerConstant))][tr.booleanExpression.oclAsType(EqualExpression).rightExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][/if])[elseif (tr.booleanExpression.oclIsKindOf(NotExpression))][if (tr.booleanExpression.oclAsType(NotExpression).theExpression.oclIsKindOf(EqualExpression))]!([tr.booleanExpression.oclAsType(NotExpression).theExpression.oclAsType(EqualExpression).leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/] == [tr.booleanExpression.oclAsType(NotExpression).theExpression.oclAsType(EqualExpression).rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/])[elseif (tr.booleanExpression.oclAsType(NotExpression).theExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(NotExpression).theExpression.oclAsType(BooleanVariableReference).theVariable.variableID/] == 0[/if][elseif (tr.booleanExpression.oclIsKindOf(AndExpression))]([if (tr.booleanExpression.oclAsType(AndExpression).leftExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(AndExpression).leftExpression.oclAsType(BooleanVariableReference).theVariable.variableID/] == 1[else]true[/if] &amp;&amp; [if (tr.booleanExpression.oclAsType(AndExpression).rightExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(AndExpression).rightExpression.oclAsType(BooleanVariableReference).theVariable.variableID/] == 1[else]true[/if])[elseif (tr.booleanExpression.oclIsKindOf(OrExpression))]([if (tr.booleanExpression.oclAsType(OrExpression).leftExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(OrExpression).leftExpression.oclAsType(BooleanVariableReference).theVariable.variableID/] == 1[else]false[/if] || [if (tr.booleanExpression.oclAsType(OrExpression).rightExpression.oclIsKindOf(BooleanVariableReference))][tr.booleanExpression.oclAsType(OrExpression).rightExpression.oclAsType(BooleanVariableReference).theVariable.variableID/] == 1[else]false[/if])[elseif (tr.booleanExpression.oclIsKindOf(LessThanExpression))]([if (tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclIsKindOf(IntegerVariableReference))][tr.booleanExpression.oclAsType(LessThanExpression).leftExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if] &lt; [if (tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclIsKindOf(IntegerConstant))][tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclIsKindOf(IntegerVariableReference))][tr.booleanExpression.oclAsType(LessThanExpression).rightExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][/if])[else]true[/if])</label>
+      <label kind="assignment">scheduler_turn := true[if (not tr.targetState.onEntry.oclIsUndefined() and tr.targetState.onEntry.statements->notEmpty())][for (stmt : Statement in tr.targetState.onEntry.statements)][if (stmt.oclIsKindOf(AssignmentIntegerLHS))][let asgn : AssignmentIntegerLHS = stmt.oclAsType(AssignmentIntegerLHS)],
+[asgn.variable.variableID/] := [if (asgn.anArithmeticExpression.oclIsKindOf(IntegerConstant))][asgn.anArithmeticExpression.oclAsType(IntegerConstant).anIntegerValue/][elseif (asgn.anArithmeticExpression.oclIsKindOf(IntegerVariableReference))][asgn.anArithmeticExpression.oclAsType(IntegerVariableReference).theVariable.variableID/][elseif (asgn.anArithmeticExpression.oclIsKindOf(PredefinedIntegerConstant))][asgn.anArithmeticExpression.oclAsType(PredefinedIntegerConstant).listedIntegerConstant.Identifier/][else]0[/if][/let][elseif (stmt.oclIsKindOf(AssignmentBooleanLHS))][let asgn : AssignmentBooleanLHS = stmt.oclAsType(AssignmentBooleanLHS)],
+[asgn.variable.variableID/] := [if (asgn.aBooleanExpression.oclIsKindOf(BooleanConstant))][if (asgn.aBooleanExpression.oclAsType(BooleanConstant).aBooleanValue)]1[else]0[/if][elseif (asgn.aBooleanExpression.oclIsKindOf(BooleanVariableReference))][asgn.aBooleanExpression.oclAsType(BooleanVariableReference).theVariable.variableID/][else]0[/if][/let][/if][/for][/if]</label>
+    </transition>
+[/for]
+  </template>
+
+[/let]
+[/let]
+[/for]
+
+  <!-- System declaration -->
+  <system>
+// System instantiation
+system Scheduler[for (sm : StateMachine in arr.stateMachine)], [sm.name/][/for];
+  </system>
+</nta>
+[/file]
+[/template]

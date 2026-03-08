@@ -1,0 +1,65 @@
+
+digraph PingPongTikiTakaForC {
+	rankdir=TB;
+	bgcolor="white";
+
+	label=<
+<table border="0" cellborder="1" cellspacing="1">
+<tr><td align="left">Arrangement: PingPongTikiTakaForC</td></tr>
+<tr><td align="left">Machines: PingPong</td></tr>
+
+
+
+
+
+
+</table>
+	>;
+
+
+	subgraph cluster_PingPong {
+		label="PingPong";
+		bgcolor="white";
+		fontname="Arial";
+		rankdir="TB";
+
+		// Pseudo-initial state
+		dInitPingPong [shape=record, label="dInitPingPong(0)"];
+
+		// Initial state
+
+		START_PING_PONG [shape=record, label="START_PING_PONG(1)"];
+
+
+		// Regular states
+
+
+		PING [shape=record, label="PING(1)"];
+
+
+
+		PONG [shape=record, label="PONG(2)"];
+
+
+
+		// Transition from pseudo-initial to initial state
+		dInitPingPong -> START_PING_PONG [label="1:[true]"];
+
+		// Transitions
+
+
+		START_PING_PONG -> PING [label="1:[true]"];
+
+
+
+		PING -> PONG [label="2:[true]"];
+
+
+
+		PONG -> PING [label="3:[true]"];
+
+
+	}
+
+
+}

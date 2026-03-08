@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
+<nta>
+  <declaration>
+
+// Scheduler variables
+int[-1,0] turn = -1;
+bool scheduler_turn;
+
+
+
+
+
+
+
+  </declaration>
+
+  <!-- Scheduler Template -->
+  <template>
+    <name>Scheduler</name>
+    <declaration>// Scheduler local declarations</declaration>
+    <location id="id0" x="0" y="0">
+      <name>pseudo_init_Scheduler</name>
+    </location>
+    <location id="id1" x="200" y="0">
+      <name>turn_updated</name>
+    </location>
+    <init ref="id0"/>
+    <transition>
+      <source ref="id0"/>
+      <target ref="id1"/>
+      <label kind="assignment">turn := 0,
+scheduler_turn := false</label>
+    </transition>
+    <transition>
+      <source ref="id1"/>
+      <target ref="id1"/>
+      <label kind="select"></label>
+      <label kind="guard">scheduler_turn</label>
+      <label kind="assignment">turn := (turn + 1) % 1,
+scheduler_turn := false</label>
+    </transition>
+  </template>
+
+
+
+
+  <!-- State Machine Template: PingPong -->
+  <template>
+    <name>PingPong</name>
+    <declaration>
+
+
+    </declaration>
+    <!-- Pseudo-initial location -->
+    <location id="id100" x="0" y="0">
+      <name>pseudo_init_PingPong</name>
+    </location>
+    <!-- Initial state location -->
+    <location id="id101" x="200" y="0">
+      <name>START_PING_PONG</name>
+    </location>
+
+
+    <!-- State: PING -->
+    <location id="id102" x="300" y="0">
+      <name>PING</name>
+    </location>
+
+
+
+    <!-- State: PONG -->
+    <location id="id103" x="400" y="0">
+      <name>PONG</name>
+    </location>
+
+
+    <init ref="id100"/>
+    <!-- Transition from pseudo-initial to initial state -->
+    <transition>
+      <source ref="id100"/>
+      <target ref="id101"/>
+      <label kind="guard">turn == 0 &amp;&amp; !scheduler_turn</label>
+      <label kind="assignment">scheduler_turn := true</label>
+    </transition>
+
+    <!-- Transition: START_PING_PONG -> PING -->
+    <transition>
+
+      <source ref="id101"/>
+
+
+      <target ref="id102"/>
+
+      <label kind="guard">turn == 0 &amp;&amp; !scheduler_turn &amp;&amp; (true)</label>
+      <label kind="assignment">scheduler_turn := true</label>
+    </transition>
+
+    <!-- Transition: PING -> PONG -->
+    <transition>
+
+      <source ref="id102"/>
+
+
+      <target ref="id103"/>
+
+      <label kind="guard">turn == 0 &amp;&amp; !scheduler_turn &amp;&amp; (true)</label>
+      <label kind="assignment">scheduler_turn := true</label>
+    </transition>
+
+    <!-- Transition: PONG -> PING -->
+    <transition>
+
+      <source ref="id103"/>
+
+
+      <target ref="id102"/>
+
+      <label kind="guard">turn == 0 &amp;&amp; !scheduler_turn &amp;&amp; (true)</label>
+      <label kind="assignment">scheduler_turn := true</label>
+    </transition>
+
+  </template>
+
+
+
+
+
+  <!-- System declaration -->
+  <system>
+// System instantiation
+system Scheduler, PingPong;
+  </system>
+</nta>
