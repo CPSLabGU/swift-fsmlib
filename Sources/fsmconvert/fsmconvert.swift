@@ -273,19 +273,18 @@ struct FSMConvert: AsyncParsableCommand {
         return Arrangement(namedInstances: instances)
     }
 
-    /// Attempt to load a single XMI input as either a machine or an arrangement.
+    /// Load a single XMI input as either a machine or an arrangement.
+    ///
+    /// A document that contains an arrangement is read as an arrangement,
+    /// including the machines of its instances; any other document is read
+    /// as a single machine.
     ///
     /// - Parameter inputURL: The XMI document to read.
     /// - Returns: The decoded machine or arrangement.
     /// - Throws: An error if the document contains neither.
     private func loadSingleXMIInput(from inputURL: URL) async throws -> MetamodelInput {
-        let roundTrip = XMIRoundTrip(metamodel: try await LLFSMMetamodel())
-        do {
-            let decoded = try await roundTrip.readMachine(from: inputURL)
-            return .machine(name: decoded.name, decoded.machine)
-        } catch {
-            return .arrangement(try await roundTrip.readArrangement(from: inputURL))
-        }
+        let resource = try await loadResourceFromXMI(inputURL)
+        return try await decodeMetamodelResource(resource, preferArrangement: true)
     }
 
     /// Load the command-line inputs as a structural metamodel resource.
@@ -317,14 +316,15 @@ struct FSMConvert: AsyncParsableCommand {
         return try await encode(machine: storage.machine, name: fileStem(for: inputURL))
     }
 
-    /// Parse an XMI document into a structural resource.
+    /// Parse an XMI document against the structural metamodel.
     ///
     /// - Parameter inputURL: The XMI document to parse.
     /// - Returns: The parsed resource.
     /// - Throws: An error if the document cannot be parsed.
     private func loadResourceFromXMI(_ inputURL: URL) async throws -> Resource {
-        let parser = XMIParser()
-        return try await parser.parse(inputURL)
+        let roundTrip = XMIRoundTrip(metamodel: try await LLFSMMetamodel())
+        var diagnostics = ConversionDiagnostics()
+        return try await roundTrip.loadResource(from: inputURL, diagnostics: &diagnostics)
     }
 
     /// Encode a machine into a new in-memory structural resource.

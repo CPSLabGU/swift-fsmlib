@@ -547,10 +547,10 @@ public struct MachineEcoreCodec {
 
     /// Normalise a single reference value into an object identifier.
     ///
-    /// Structural resources produced by ATL may keep single-valued references
+    /// Structural resources built in memory may keep single-valued references
     /// as direct `DynamicEObject` values instead of stored UUIDs. This helper
     /// accepts either representation so decode logic can treat parsed XMI and
-    /// in-memory transformed models uniformly.
+    /// in-memory models uniformly.
     ///
     /// - Parameter value: Stored reference value to normalise.
     /// - Returns: Identifier of the referenced object, or `nil` if unavailable.

@@ -1,4 +1,5 @@
 import XCTest
+import ECore
 @testable import FSMEcore
 
 final class LLFSMMetamodelTests: XCTestCase {
@@ -29,5 +30,16 @@ final class LLFSMMetamodelTests: XCTestCase {
         XCTAssertEqual(metamodel.transitionLayoutClass.getEReference(name: "points")?.upperBound, -1)
         XCTAssertEqual(metamodel.point2DClass.getEAttribute(name: "x")?.name, "x")
         XCTAssertEqual(metamodel.point2DClass.getEAttribute(name: "y")?.name, "y")
+    }
+
+    func testRegisterMakesMetamodelAvailableToResourceSet() async throws {
+        let metamodel = try await LLFSMMetamodel()
+        let resourceSet = ResourceSet()
+
+        await metamodel.register(in: resourceSet)
+
+        let registered = await resourceSet.getMetamodel(uri: metamodel.package.nsURI)
+        XCTAssertEqual(registered?.name, metamodel.package.name)
+        XCTAssertNotNil(registered?.getEClass(metamodel.machineClass.name))
     }
 }

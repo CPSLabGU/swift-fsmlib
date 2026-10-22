@@ -170,7 +170,7 @@ public struct StructuralTemplateGenerator {
             throw StructuralTemplateGeneratorError.missingTemplate(name)
         }
 
-        let parser = MTLParser(enableDebugging: false)
+        let parser = MTLParser(searchPaths: [templateURL.deletingLastPathComponent()])
         let module = try await parser.parse(templateURL)
         let strategy = MTLInMemoryStrategy()
         let generator = MTLGenerator(module: module, generationStrategy: strategy)

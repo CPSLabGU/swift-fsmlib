@@ -136,6 +136,18 @@ public struct LLFSMMetamodel: Sendable {
         transitionLayoutClass = transitionLayout
         point2DClass = point2D
     }
+
+    /// Register the structural metamodel with a resource set.
+    ///
+    /// Registration makes the structural classifiers available to parsers
+    /// and serialisers that use the resource set, so that XMI documents are
+    /// read with the declared types of their features rather than with
+    /// classes inferred from the document.
+    ///
+    /// - Parameter resourceSet: Resource set that should know the structural metamodel.
+    public func register(in resourceSet: ResourceSet) async {
+        await resourceSet.registerMetamodel(package, uri: package.nsURI)
+    }
 }
 
 /// Errors raised while loading the LLFSM metamodel.
