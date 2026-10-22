@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kernel:Arrangement xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:kernel="http://cpslabgu.github.io/llfsm/kernel" name="TurnTakingRelay">
+  <types xsi:type="kernel:EnumerationType" name="Side">
+    <literals>left</literals>
+    <literals>right</literals>
+  </types>
+  <types xsi:type="kernel:IntegerType" name="Count" upper="9"/>
+  <variables name="turn" type="kernel:EnumerationType #//@types.0">
+    <initialValue xsi:type="kernel:EnumerationLiteral" type="#//@types.0" literal="left"/>
+  </variables>
+  <machines name="Relay" initial="#//@machines.0/@states.0">
+    <variables name="me" type="kernel:EnumerationType #//@types.0"/>
+    <variables name="passes" type="kernel:IntegerType #//@types.1"/>
+    <states name="Waiting">
+      <transitions target="#//@machines.0/@states.1">
+        <label xsi:type="kernel:BinaryExpression" operation="equal">
+          <left xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+          <right xsi:type="kernel:VariableReference" variable="#//@machines.0/@variables.0"/>
+        </label>
+      </transitions>
+    </states>
+    <states name="Holding">
+      <actions xsi:type="kernel:Print" text="holding">
+        <values xsi:type="kernel:VariableReference" variable="#//@machines.0/@variables.0"/>
+        <values xsi:type="kernel:VariableReference" variable="#//@machines.0/@variables.1"/>
+      </actions>
+      <transitions target="#//@machines.0/@states.2">
+        <label xsi:type="kernel:BinaryExpression" operation="lessThan">
+          <left xsi:type="kernel:VariableReference" variable="#//@machines.0/@variables.1"/>
+          <right xsi:type="kernel:IntegerLiteral" value="9"/>
+        </label>
+      </transitions>
+    </states>
+    <states name="Passing" passThrough="true">
+      <actions xsi:type="kernel:Assignment">
+        <target variable="#//@variables.0"/>
+        <value xsi:type="kernel:ConditionalExpression">
+          <condition xsi:type="kernel:BinaryExpression" operation="equal">
+            <left xsi:type="kernel:VariableReference" variable="#//@machines.0/@variables.0"/>
+            <right xsi:type="kernel:EnumerationLiteral" type="#//@types.0" literal="left"/>
+          </condition>
+          <whenTrue xsi:type="kernel:EnumerationLiteral" type="#//@types.0" literal="right"/>
+          <whenFalse xsi:type="kernel:EnumerationLiteral" type="#//@types.0" literal="left"/>
+        </value>
+      </actions>
+      <actions xsi:type="kernel:Assignment">
+        <target variable="#//@machines.0/@variables.1"/>
+        <value xsi:type="kernel:BinaryExpression" operation="addition">
+          <left xsi:type="kernel:VariableReference" variable="#//@machines.0/@variables.1"/>
+          <right xsi:type="kernel:IntegerLiteral" value="1"/>
+        </value>
+      </actions>
+      <transitions target="#//@machines.0/@states.0">
+        <label xsi:type="kernel:BooleanLiteral" value="true"/>
+      </transitions>
+    </states>
+  </machines>
+  <instances name="leftHand" machine="#//@machines.0">
+    <bindings variable="#//@machines.0/@variables.0">
+      <value xsi:type="kernel:EnumerationLiteral" type="#//@types.0" literal="left"/>
+    </bindings>
+  </instances>
+  <instances name="rightHand" machine="#//@machines.0">
+    <bindings variable="#//@machines.0/@variables.0">
+      <value xsi:type="kernel:EnumerationLiteral" type="#//@types.0" literal="right"/>
+    </bindings>
+  </instances>
+</kernel:Arrangement>

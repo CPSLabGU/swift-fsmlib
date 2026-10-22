@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kernel:Arrangement xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:kernel="http://cpslabgu.github.io/llfsm/kernel" name="OpaqueSampler" language="c">
+  <types xsi:type="kernel:BooleanType" name="Bool"/>
+  <types xsi:type="kernel:OpaqueType" name="Reading" text="struct reading"/>
+  <variables name="latest" type="kernel:OpaqueType #//@types.1"/>
+  <hostDeclarations language="c" includes="#include &lt;stdio.h>" declarations=""/>
+  <machines name="Sampler" initial="#//@machines.0/@states.0">
+    <states name="Wait">
+      <transitions target="#//@machines.0/@states.1">
+        <label xsi:type="kernel:OpaqueExpression" text="sensor_ready()" type="kernel:BooleanType #//@types.0"/>
+      </transitions>
+    </states>
+    <states name="Sample">
+      <actions xsi:type="kernel:OpaqueStatement" text="read_sensor(&amp;latest);"/>
+      <actions xsi:type="kernel:Print" text="sample">
+        <values xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+      </actions>
+      <transitions target="#//@machines.0/@states.0">
+        <label xsi:type="kernel:BooleanLiteral" value="true"/>
+      </transitions>
+    </states>
+  </machines>
+  <instances name="probe" machine="#//@machines.0"/>
+</kernel:Arrangement>
