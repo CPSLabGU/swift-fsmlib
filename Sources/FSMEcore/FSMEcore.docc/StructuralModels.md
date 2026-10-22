@@ -39,6 +39,6 @@ try await generator.generateSCXML(
 )
 ```
 
-## Future Levels
+## Further Levels
 
-Further metamodel levels are planned: a `sectioned` level for machines with language-neutral code sections, and a `kernel` level for a minimal formal kernel metamodel.
+The `sectioned` and `kernel` metamodels describe machines with typed, language-neutral expressions and statements. See <doc:MetamodelLevels> for how the three levels relate.

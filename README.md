@@ -5,14 +5,14 @@
 The package is split into three main surfaces:
 
 - `FSM` contains the native machine, arrangement, serialisation, and code-generation APIs.
-- `FSMEcore` adds the structural Ecore metamodel, XMI round-tripping, and MTL model-to-text generation.
+- `FSMEcore` adds the structural, sectioned and kernel Ecore metamodels, kernel model validation, XMI round-tripping, and MTL model-to-text generation.
 - `fsmconvert` wraps both modules in a command-line interface for native format conversion, arrangement assembly, XMI import and export, and template-driven generation.
 
 ## Background
 
 The native Swift types remain the production reference implementation. They define the file formats that `swift-fsmlib` reads and writes today, and they act as the regression oracle for metamodel-backed workflows.
 
-The metamodel layer adds a structural view of the same domain. The structural metamodel mirrors the current Swift runtime shape and is the fidelity model for `.machine`, `.arrangement`, `.scxml`, and structural XMI round-trips. Further levels are planned: a `sectioned` level for machines with language-neutral code sections, and a `kernel` level for a minimal formal kernel metamodel.
+The metamodel layer adds a structural view of the same domain. The structural metamodel mirrors the current Swift runtime shape and is the fidelity model for `.machine`, `.arrangement`, `.scxml`, and structural XMI round-trips. Two further levels describe machines with typed, language-neutral expressions and statements: the `sectioned` level is the traditional view with entry, exit, internal, suspend and resume sections, and the `kernel` level is the sectionless core with one action per state, ordered Boolean labels and pass-through states, into which sectioned models are encoded.
 
 ## Overview
 
@@ -23,13 +23,14 @@ The library supports:
 - Native `.machine`, `.arrangement`, and `.scxml` serialisation and parsing.
 - C, Objective-C++, Swift, and SCXML-oriented generation paths.
 - Structural metamodel workflows built on Ecore and MTL.
+- Sectioned and kernel metamodels with validation of kernel models under strict and relaxed profiles.
 - Layout and geometry support for editor-facing round-trips.
 
 ## Package Layout
 
 ```text
 Sources/FSM/          Native LLFSM and arrangement APIs.
-Sources/FSMEcore/     Structural metamodel support.
+Sources/FSMEcore/     Structural, sectioned and kernel metamodel support.
 Sources/fsmconvert/   Command-line interface and DocC for the tool.
 Tests/                Unit and end-to-end regression coverage.
 examples/             Sample machines, SCXML files, and arrangements.
@@ -133,6 +134,29 @@ try await generator.generateSCXML(
     to: URL(fileURLWithPath: "Example.scxml")
 )
 ```
+
+### Kernel and Sectioned Metamodels
+
+Load the sectioned and kernel metamodels, read a kernel model and validate it:
+
+```swift
+import ECore
+import FSMEcore
+import Foundation
+
+let metamodels = try await LLFSMMetamodels()
+let resourceSet = ResourceSet()
+await metamodels.register(in: resourceSet)
+let resource = try await XMIParser(resourceSet: resourceSet)
+    .parse(URL(fileURLWithPath: "Example.xmi"))
+
+let validator = KernelValidator(metamodel: metamodels.kernel, profile: .strict)
+for diagnostic in await validator.validate(resource) {
+    print(diagnostic)
+}
+```
+
+Kernel documents use the namespace `http://cpslabgu.github.io/llfsm/kernel` and sectioned documents `http://cpslabgu.github.io/llfsm/sectioned`; a sectioned document contains kernel statements and expressions under the kernel namespace. The strict profile admits only typed kernel nodes; the relaxed profile also admits opaque host-language expressions, statements, types and host declarations. Each diagnostic names its rule (`STRUCT`, `W1` to `W9`, `W7?` or `STRICT`), its severity, the path of the offending object and a message. The `MetamodelLevels` and `SectionedSemantics` articles in the `FSMEcore` documentation describe the levels, the rules and the execution semantics.
 
 ## Command-Line Usage
 

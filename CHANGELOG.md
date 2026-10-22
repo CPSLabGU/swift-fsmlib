@@ -8,11 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Removed
 
-- **Executable and Formal Metamodel Levels**: Removed the executable and formal LLFSM metamodels together with `ExecutableLLFSMMetamodel`, `ExecutableMachineCodec`, `ExecutableArrangementCodec`, `ExecutableXMIRoundTrip`, `ExecutableTemplateGenerator`, `FormalLLFSMMetamodel`, `LLFSMATLTransformer` and their error types, the bundled `llfsm2*` MTL templates, the bundled ATL transforms and the executable artefact tutorial. `FSMEcore` now provides the structural level only; a `sectioned` level and a `kernel` level are planned.
+- **Executable and Formal Metamodel Levels**: Removed the executable and formal LLFSM metamodels together with `ExecutableLLFSMMetamodel`, `ExecutableMachineCodec`, `ExecutableArrangementCodec`, `ExecutableXMIRoundTrip`, `ExecutableTemplateGenerator`, `FormalLLFSMMetamodel`, `LLFSMATLTransformer` and their error types, the bundled `llfsm2*` MTL templates, the bundled ATL transforms and the executable artefact tutorial. The structural level remains; the sectioned and kernel levels described under Added take the place of the removed levels.
 
 - **fsmconvert ATL Options**: Removed the `--atl` and `--metamodel-path` options. The value `--metamodel executable` is deprecated: it maps to the planned `sectioned` level, prints a deprecation warning and exits with an error, as does `--metamodel sectioned`, because that level is not yet available in this release.
 
 ### Added
+
+- **Kernel and Sectioned Metamodels**: The bundled `LLFSM.ecore` document defines the root package `llfsm` with the sectionless `kernel` subpackage (`http://cpslabgu.github.io/llfsm/kernel`) and the traditional `sectioned` subpackage (`http://cpslabgu.github.io/llfsm/sectioned`), which reuses the kernel's types, variables, functions, expressions and statements. `KernelMetamodel` and `SectionedMetamodel` provide typed handles for every class and enumeration, `LLFSMMetamodels` holds both levels, and `register(in:)` makes the root package and both subpackages known to a `ResourceSet`. `KernelUnaryOperation`, `KernelBinaryOperation`, `SectionedTimeUnit` and `SectionedControlOperation` name the enumeration literals.
+
+- **Kernel Validation**: `KernelValidator` checks kernel models under the `strict` or `relaxed` `ValidationProfile` against the structural rules and rules W1 to W9, and reports `KernelDiagnostic` values with the rule code, severity, object path and message.
+
+- **Origin Records**: Kernel states and transitions have an optional `origin` that records the sectioned element they encode. `OriginAnnotations`, `OriginRecord` and `OriginRole` read and write these records and convert them to and from annotation details with the source `http://cpslabgu.github.io/llfsm/origin`.
+
+- **Metamodel Documentation**: The `MetamodelLevels` article describes the structural, sectioned and kernel levels, the validation profiles and the well-formedness rules, and the `SectionedSemantics` article specifies the execution order of sectioned machines and their encoding into the kernel.
 
 - **XMI Conversion Diagnostics**: `XMIRoundTrip` gains `readMachine(from:diagnostics:)`, `readArrangement(from:diagnostics:)`, `write(machine:name:to:diagnostics:)` and `write(arrangement:to:diagnostics:)`, which collect the `ConversionDiagnostics` reported by the XMI parser and serialiser, and `loadResource(from:diagnostics:)`, which returns the parsed structural object graph. The existing methods are unchanged.
 
