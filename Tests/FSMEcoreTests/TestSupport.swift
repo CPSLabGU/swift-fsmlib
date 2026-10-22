@@ -29,77 +29,6 @@ enum FSMEcoreTestSupport {
         return directory.standardizedFileURL.resolvingSymlinksInPath()
     }
 
-    static func legacyModelURL(
-        named name: String,
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) throws -> URL {
-        try resourceURL(
-            named: name,
-            withExtension: "xmi",
-            subdirectory: "Resources/LegacyLLFSMs/models",
-            file: file,
-            line: line
-        )
-    }
-
-    static func legacyExpectedURL(
-        named name: String,
-        withExtension fileExtension: String,
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) throws -> URL {
-        try resourceURL(
-            named: name,
-            withExtension: fileExtension,
-            subdirectory: "Resources/LegacyLLFSMs/expected",
-            file: file,
-            line: line
-        )
-    }
-
-    static func bundledExecutableTemplateURL(
-        named name: String,
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) throws -> URL {
-        let url = repositoryRoot(from: file)
-            .appendingPathComponent("Sources/FSMEcore/Resources/Templates/Executable", isDirectory: true)
-            .appendingPathComponent(name)
-            .appendingPathExtension("mtl")
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            XCTFail("Missing resource \(name).mtl in Sources/FSMEcore/Resources/Templates/Executable", file: file, line: line)
-            throw NSError(domain: "FSMEcoreTests", code: 2)
-        }
-        return url
-    }
-
-    static func bundledTransformURL(
-        named name: String,
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) throws -> URL {
-        let url = repositoryRoot(from: file)
-            .appendingPathComponent("Sources/FSMEcore/Resources/Transforms", isDirectory: true)
-            .appendingPathComponent(name)
-            .appendingPathExtension("atl")
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            XCTFail("Missing resource \(name).atl in Sources/FSMEcore/Resources/Transforms", file: file, line: line)
-            throw NSError(domain: "FSMEcoreTests", code: 2)
-        }
-        return url
-    }
-
-    static func loadExecutableResource(
-        from url: URL,
-        metamodel: ExecutableLLFSMMetamodel
-    ) async throws -> Resource {
-        let resourceSet = ResourceSet()
-        await resourceSet.registerMetamodel(metamodel.package, uri: metamodel.package.nsURI)
-        let parser = XMIParser(resourceSet: resourceSet)
-        return try await parser.parse(url)
-    }
-
     static func findObject(
         named className: String,
         in resource: Resource
@@ -317,31 +246,5 @@ enum FSMEcoreTestSupport {
             return String(rawPath.dropFirst())
         }
         return rawPath
-    }
-
-    private static func resourceURL(
-        named name: String,
-        withExtension fileExtension: String,
-        subdirectory: String,
-        file: StaticString,
-        line: UInt
-    ) throws -> URL {
-        guard let url = Bundle.module.url(
-            forResource: name,
-            withExtension: fileExtension,
-            subdirectory: subdirectory
-        ) else {
-            XCTFail("Missing resource \(name).\(fileExtension) in \(subdirectory)", file: file, line: line)
-            throw NSError(domain: "FSMEcoreTests", code: 2)
-        }
-        return url
-    }
-
-    private static func repositoryRoot(from file: StaticString) -> URL {
-        let testsURL = URL(fileURLWithPath: "\(file)")
-        return testsURL
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
     }
 }

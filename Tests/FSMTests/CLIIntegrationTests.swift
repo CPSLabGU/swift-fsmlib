@@ -128,57 +128,6 @@ final class CLIIntegrationTests: XCTestCase {
         assertMachinesEquivalent(original, roundTripped, includeSuspendState: false)
     }
 
-    func testExecutableMachineRoundTripViaXMI() throws {
-        let sourceMachineURL = try copyTrafficLightMachine(named: "TrafficLight.machine")
-        let xmiURL = tempDirectoryURL.appendingPathComponent("TrafficLightExecutable.xmi")
-        let roundTripURL = tempDirectoryURL.appendingPathComponent("TrafficLightExecutableRoundTrip.machine")
-
-        try runCLI(arguments: [
-            sourceMachineURL.path,
-            "--metamodel", "executable",
-            "--format", "xmi",
-            "--output", xmiURL.path,
-        ])
-        try runCLI(arguments: [
-            xmiURL.path,
-            "--metamodel", "executable",
-            "--output", roundTripURL.path,
-        ])
-
-        let original = try Machine(from: sourceMachineURL)
-        let roundTripped = try Machine(from: roundTripURL)
-        assertMachinesEquivalent(original, roundTripped, includeSuspendState: false)
-    }
-
-    func testStructuralToExecutableATLBridgeViaCLI() throws {
-        let sourceMachineURL = try copyTrafficLightMachine(named: "TrafficLight.machine")
-        let structuralXMIURL = tempDirectoryURL.appendingPathComponent("TrafficLightStructural.xmi")
-        let executableXMIURL = tempDirectoryURL.appendingPathComponent("TrafficLightExecutable.xmi")
-        let roundTripURL = tempDirectoryURL.appendingPathComponent("TrafficLightFromExecutable.machine")
-
-        try runCLI(arguments: [
-            sourceMachineURL.path,
-            "--metamodel", "structural",
-            "--format", "xmi",
-            "--output", structuralXMIURL.path,
-        ])
-        try runCLI(arguments: [
-            structuralXMIURL.path,
-            "--metamodel", "structural",
-            "--atl", "structural2executable",
-            "--output", executableXMIURL.path,
-        ])
-        try runCLI(arguments: [
-            executableXMIURL.path,
-            "--metamodel", "executable",
-            "--output", roundTripURL.path,
-        ])
-
-        let original = try Machine(from: sourceMachineURL)
-        let roundTripped = try Machine(from: roundTripURL)
-        assertMachinesEquivalent(original, roundTripped, includeSuspendState: false)
-    }
-
     func testMetamodelArrangementRoundTripViaXMI() async throws {
         let firstMachineURL = try copyTrafficLightMachine(named: "TrafficLightOne.machine")
         let secondMachineURL = try copyTrafficLightMachine(named: "TrafficLightTwo.machine")
@@ -231,30 +180,6 @@ final class CLIIntegrationTests: XCTestCase {
         )
     }
 
-    func testExecutableArrangementRoundTripViaXMI() async throws {
-        let firstMachineURL = try copyTrafficLightMachine(named: "TrafficLightOne.machine")
-        let secondMachineURL = try copyTrafficLightMachine(named: "TrafficLightTwo.machine")
-        let arrangementXMIURL = tempDirectoryURL.appendingPathComponent("TrafficLightsExecutable.xmi")
-
-        try runCLI(arguments: [
-            firstMachineURL.path,
-            secondMachineURL.path,
-            "--arrangement",
-            "--metamodel", "executable",
-            "--format", "xmi",
-            "--output", arrangementXMIURL.path,
-        ])
-
-        let metamodel = try await ExecutableLLFSMMetamodel()
-        let roundTrip = ExecutableXMIRoundTrip(metamodel: metamodel)
-        let arrangement = try await roundTrip.readArrangement(from: arrangementXMIURL)
-        XCTAssertEqual(arrangement.namedInstances.count, 2)
-        XCTAssertEqual(
-            Set(arrangement.namedInstances.map(\.name)),
-            ["TrafficLightOne", "TrafficLightTwo"]
-        )
-    }
-
     func testStructuralTemplateGenerationViaCLIProducesSCXML() throws {
         let sourceMachineURL = try copyTrafficLightMachine(named: "TrafficLight.machine")
         let renderedURL = tempDirectoryURL.appendingPathComponent("TrafficLight.scxml")
@@ -276,24 +201,54 @@ final class CLIIntegrationTests: XCTestCase {
         assertMachinesEquivalent(renderedMachine, expectedMachine, includeSuspendState: false)
     }
 
-    func testExecutableLegacyTransformProducesExpectedDOT() throws {
-        let outputDirectory = tempDirectoryURL.appendingPathComponent("dot-output", isDirectory: true)
-        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+    func testDeprecatedExecutableLevelReportsUnavailableSectionedLevel() throws {
+        let sourceMachineURL = try copyTrafficLightMachine(named: "TrafficLight.machine")
+        let xmiURL = tempDirectoryURL.appendingPathComponent("TrafficLight.xmi")
 
-        try runCLI(arguments: [
-            try legacyModelURL(named: "PingPongTikiTakaForC").path,
+        let result = try runCLIExpectingFailure(arguments: [
+            sourceMachineURL.path,
             "--metamodel", "executable",
-            "--transform", "llfsm2dot",
-            "--output", outputDirectory.path,
+            "--format", "xmi",
+            "--output", xmiURL.path,
         ])
 
-        let generatedURL = outputDirectory.appendingPathComponent("PingPongTikiTakaForC.dot")
-        let expectedURL = try legacyExpectedURL(named: "PingPongTikiTakaForC", withExtension: "dot")
+        XCTAssertNotEqual(result.status, 0)
+        XCTAssertTrue(result.standardError.contains("deprecated"), result.standardError)
+        XCTAssertTrue(result.standardError.contains("sectioned"), result.standardError)
+        XCTAssertTrue(result.standardError.contains("not yet available"), result.standardError)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: xmiURL.path))
+    }
 
-        XCTAssertEqual(
-            normaliseLineEndings(try String(contentsOf: generatedURL, encoding: .utf8)),
-            normaliseLineEndings(try String(contentsOf: expectedURL, encoding: .utf8))
-        )
+    func testSectionedLevelIsNotYetAvailable() throws {
+        let sourceMachineURL = try copyTrafficLightMachine(named: "TrafficLight.machine")
+        let xmiURL = tempDirectoryURL.appendingPathComponent("TrafficLight.xmi")
+
+        let result = try runCLIExpectingFailure(arguments: [
+            sourceMachineURL.path,
+            "--metamodel", "sectioned",
+            "--format", "xmi",
+            "--output", xmiURL.path,
+        ])
+
+        XCTAssertNotEqual(result.status, 0)
+        XCTAssertFalse(result.standardError.contains("deprecated"), result.standardError)
+        XCTAssertTrue(result.standardError.contains("not yet available"), result.standardError)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: xmiURL.path))
+    }
+
+    func testTransformRequiresStructuralMetamodel() throws {
+        let sourceMachineURL = try copyTrafficLightMachine(named: "TrafficLight.machine")
+        let renderedURL = tempDirectoryURL.appendingPathComponent("TrafficLight.scxml")
+
+        let result = try runCLIExpectingFailure(arguments: [
+            sourceMachineURL.path,
+            "--transform", "structural2scxml",
+            "--output", renderedURL.path,
+        ])
+
+        XCTAssertNotEqual(result.status, 0)
+        XCTAssertTrue(result.standardError.contains("--metamodel structural"), result.standardError)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: renderedURL.path))
     }
 
     private func runCLI(arguments: [String]) throws {
@@ -317,6 +272,25 @@ final class CLIIntegrationTests: XCTestCase {
         }
     }
 
+    private func runCLIExpectingFailure(arguments: [String]) throws -> (status: Int32, standardError: String) {
+        let process = Process()
+        process.currentDirectoryURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        process.executableURL = URL(fileURLWithPath: CLIExecutable.binaryPath)
+        process.arguments = arguments
+
+        let stdout = Pipe()
+        let stderr = Pipe()
+        process.standardOutput = stdout
+        process.standardError = stderr
+
+        try process.run()
+        let errorData = stderr.fileHandleForReading.readDataToEndOfFile()
+        _ = stdout.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+
+        return (process.terminationStatus, String(data: errorData, encoding: .utf8) ?? "")
+    }
+
     private func copyTrafficLightMachine(named name: String) throws -> URL {
         guard let resourceURL = Bundle.module.url(
             forResource: "TrafficLight",
@@ -330,41 +304,6 @@ final class CLIIntegrationTests: XCTestCase {
         let destinationURL = tempDirectoryURL.appendingPathComponent(name, isDirectory: true)
         try FileManager.default.copyItem(at: resourceURL, to: destinationURL)
         return destinationURL
-    }
-
-    private func legacyModelURL(named name: String) throws -> URL {
-        let url = repositoryRoot()
-            .appendingPathComponent("Tests/FSMEcoreTests/Resources/LegacyLLFSMs/models", isDirectory: true)
-            .appendingPathComponent(name)
-            .appendingPathExtension("xmi")
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            XCTFail("Missing legacy executable model \(name).xmi")
-            throw NSError(domain: "CLIIntegrationTests", code: 2)
-        }
-        return url
-    }
-
-    private func legacyExpectedURL(named name: String, withExtension fileExtension: String) throws -> URL {
-        let url = repositoryRoot()
-            .appendingPathComponent("Tests/FSMEcoreTests/Resources/LegacyLLFSMs/expected", isDirectory: true)
-            .appendingPathComponent(name)
-            .appendingPathExtension(fileExtension)
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            XCTFail("Missing legacy expected output \(name).\(fileExtension)")
-            throw NSError(domain: "CLIIntegrationTests", code: 3)
-        }
-        return url
-    }
-
-    private func repositoryRoot(file: StaticString = #filePath) -> URL {
-        URL(fileURLWithPath: "\(file)")
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-    }
-
-    private func normaliseLineEndings(_ source: String) -> String {
-        source.replacingOccurrences(of: "\r\n", with: "\n")
     }
 
     private func assertMachinesEquivalent(

@@ -72,26 +72,17 @@ struct FSMConvert: AsyncParsableCommand {
     /// Use metamodel-backed XMI conversion paths.
     ///
     /// This option selects the model level used for metamodel-backed import,
-    /// export, ATL, and MTL operations.
+    /// export, and MTL template operations.
     @Option(name: .long, help: "Use metamodel-backed conversion at the selected model level.")
     var metamodel: MetamodelLevel?
 
     /// The MTL template to apply after metamodel loading.
     ///
-    /// This option is reserved for template-driven generation from metamodel
-    /// models. Current support is limited to the built-in structural pipeline.
-    @Option(name: .long, help: "Apply an MTL template after metamodel loading.")
+    /// This option selects one of the bundled structural templates
+    /// (`structural2machine`, `structural2scxml`, `structural2cmake`, or
+    /// `structural2layout`) and requires `--metamodel structural`.
+    @Option(name: .long, help: "Apply a bundled structural MTL template after metamodel loading.")
     var transform: String?
-
-    /// The ATL transformation to apply after metamodel loading.
-    ///
-    /// This option is reserved for metamodel-to-metamodel transformations.
-    @Option(name: .long, help: "Apply an ATL transformation after metamodel loading.")
-    var atl: String?
-
-    /// Additional search paths for ATL `@path` metamodel resolution.
-    @Option(name: .long, help: "Metamodel search path for ATL `@path` resolution.")
-    var metamodelPath: [String] = []
 
     /// The input machines to read.
     ///
@@ -113,10 +104,8 @@ struct FSMConvert: AsyncParsableCommand {
             return
         }
 
-        if transform != nil || atl != nil || !metamodelPath.isEmpty {
-            throw ValidationError(
-                "`--transform`, `--atl`, and `--metamodel-path` require `--metamodel structural|executable`"
-            )
+        if transform != nil {
+            throw ValidationError("`--transform` requires `--metamodel structural`")
         }
 
         let fileManager = FileManager.default
@@ -198,81 +187,44 @@ struct FSMConvert: AsyncParsableCommand {
 
     /// Run the command through the metamodel-backed XMI pipeline.
     ///
-    /// This path uses `FSMEcore` for structural and executable model handling
-    /// while preserving the existing Swift readers and writers as the native
-    /// format boundary.
+    /// This path uses `FSMEcore` for structural model handling while
+    /// preserving the existing Swift readers and writers as the native format
+    /// boundary.
+    ///
+    /// - Parameter level: The metamodel level selected on the command line.
+    /// - Throws: ``FSMConvertError/metamodelLevelUnavailable(_:)`` if the
+    ///   selected level is not available in this release, or any error raised
+    ///   while reading, converting, or writing models.
     @MainActor
     private mutating func runWithMetamodel(level: MetamodelLevel) async throws {
+        guard level.isAvailable else {
+            throw FSMConvertError.metamodelLevelUnavailable(level)
+        }
         let outputURL = URL(fileURLWithPath: output)
         let xmiRequested = format.lowercased() == "xmi" || outputURL.pathExtension.lowercased() == "xmi"
 
-        if transform != nil || atl != nil {
-            try await runMetamodelPipeline(level: level, outputURL: outputURL, xmiRequested: xmiRequested)
-            return
-        }
-
-        let input = try await loadMetamodelInput(level: level)
-        if xmiRequested {
-            try await writeXMI(input, level: level, to: outputURL)
-            return
-        }
-
-        try writeNative(input, outputURL: outputURL)
-    }
-
-    @MainActor
-    private mutating func runMetamodelPipeline(
-        level: MetamodelLevel,
-        outputURL: URL,
-        xmiRequested: Bool
-    ) async throws {
-        var currentLevel = level
-        var currentResource = try await loadMetamodelResource(
-            level: level,
-            arrangementName: defaultArrangementName(for: outputURL)
-        )
-
-        if let atl {
-            let transformer = LLFSMATLTransformer()
-            let atlURL = try resolveATLURL(atl, using: transformer)
-            currentResource = try await transformer.transform(
-                atlURL: atlURL,
-                sourceResource: currentResource,
-                searchPaths: metamodelPath
-            )
-            currentLevel = await inferredMetamodelLevel(
-                afterApplying: atlURL,
-                to: currentResource,
-                default: level
-            )
-        }
-
         if let transform {
-            try await applyTemplate(
-                named: transform,
-                level: currentLevel,
-                resource: currentResource,
-                outputURL: outputURL
-            )
+            let resource = try await loadMetamodelResource(arrangementName: defaultArrangementName(for: outputURL))
+            try await applyStructuralTemplate(named: transform, resource: resource, outputURL: outputURL)
             return
         }
 
+        let input = try await loadMetamodelInput()
         if xmiRequested {
-            try await writeResource(currentResource, level: currentLevel, to: outputURL)
+            try await writeXMI(input, to: outputURL)
             return
         }
 
-        let input = try await decodeMetamodelResource(
-            currentResource,
-            level: currentLevel,
-            preferArrangement: arrangement || inputMachines.count > 1
-        )
         try writeNative(input, outputURL: outputURL)
     }
 
-    private func loadMetamodelInput(level: MetamodelLevel) async throws -> MetamodelInput {
+    /// Load the command-line inputs as a machine or an arrangement.
+    ///
+    /// - Returns: The decoded metamodel input.
+    /// - Throws: An error if an input cannot be found, read, or decoded.
+    private func loadMetamodelInput() async throws -> MetamodelInput {
         if arrangement || inputMachines.count > 1 {
-            return .arrangement(try await loadArrangement(level: level))
+            return .arrangement(try await loadArrangement())
         }
 
         guard inputMachines.count == 1 else {
@@ -281,7 +233,7 @@ struct FSMConvert: AsyncParsableCommand {
 
         let inputURL = try resolvedInputURL(inputMachines[0])
         if inputURL.pathExtension.lowercased() == "xmi" {
-            return try await loadSingleXMIInput(level: level, from: inputURL)
+            return try await loadSingleXMIInput(from: inputURL)
         }
 
         let storage = try MachineStorageFactory.read(from: inputURL)
@@ -289,18 +241,15 @@ struct FSMConvert: AsyncParsableCommand {
     }
 
     /// Load an arrangement either from XMI or by composing machine inputs.
-    private func loadArrangement(level: MetamodelLevel) async throws -> Arrangement {
+    ///
+    /// - Returns: The arrangement read from XMI or composed from the inputs.
+    /// - Throws: An error if an input cannot be found, read, or decoded.
+    private func loadArrangement() async throws -> Arrangement {
         if inputMachines.count == 1 {
             let inputURL = try resolvedInputURL(inputMachines[0])
             if inputURL.pathExtension.lowercased() == "xmi" {
-                switch level {
-                case .structural:
-                    let roundTrip = XMIRoundTrip(metamodel: try await LLFSMMetamodel())
-                    return try await roundTrip.readArrangement(from: inputURL)
-                case .executable:
-                    let roundTrip = ExecutableXMIRoundTrip(metamodel: try await ExecutableLLFSMMetamodel())
-                    return try await roundTrip.readArrangement(from: inputURL)
-                }
+                let roundTrip = XMIRoundTrip(metamodel: try await LLFSMMetamodel())
+                return try await roundTrip.readArrangement(from: inputURL)
             }
         }
 
@@ -325,43 +274,34 @@ struct FSMConvert: AsyncParsableCommand {
     }
 
     /// Attempt to load a single XMI input as either a machine or an arrangement.
-    private func loadSingleXMIInput(level: MetamodelLevel, from inputURL: URL) async throws -> MetamodelInput {
-        switch level {
-        case .structural:
-            let roundTrip = XMIRoundTrip(metamodel: try await LLFSMMetamodel())
-            do {
-                let decoded = try await roundTrip.readMachine(from: inputURL)
-                return .machine(name: decoded.name, decoded.machine)
-            } catch {
-                return .arrangement(try await roundTrip.readArrangement(from: inputURL))
-            }
-        case .executable:
-            let roundTrip = ExecutableXMIRoundTrip(metamodel: try await ExecutableLLFSMMetamodel())
-            do {
-                let decoded = try await roundTrip.readMachine(from: inputURL)
-                return .machine(name: decoded.name, decoded.machine)
-            } catch {
-                return .arrangement(try await roundTrip.readArrangement(from: inputURL))
-            }
+    ///
+    /// - Parameter inputURL: The XMI document to read.
+    /// - Returns: The decoded machine or arrangement.
+    /// - Throws: An error if the document contains neither.
+    private func loadSingleXMIInput(from inputURL: URL) async throws -> MetamodelInput {
+        let roundTrip = XMIRoundTrip(metamodel: try await LLFSMMetamodel())
+        do {
+            let decoded = try await roundTrip.readMachine(from: inputURL)
+            return .machine(name: decoded.name, decoded.machine)
+        } catch {
+            return .arrangement(try await roundTrip.readArrangement(from: inputURL))
         }
     }
 
-    private func loadMetamodelResource(
-        level: MetamodelLevel,
-        arrangementName: String
-    ) async throws -> Resource {
+    /// Load the command-line inputs as a structural metamodel resource.
+    ///
+    /// - Parameter arrangementName: The name to use for composed arrangements.
+    /// - Returns: A resource containing the structural object graph.
+    /// - Throws: An error if an input cannot be found, read, or encoded.
+    private func loadMetamodelResource(arrangementName: String) async throws -> Resource {
         if arrangement || inputMachines.count > 1 {
             if inputMachines.count == 1 {
                 let inputURL = try resolvedInputURL(inputMachines[0])
                 if inputURL.pathExtension.lowercased() == "xmi" {
-                    return try await loadResourceFromXMI(inputURL, level: level)
+                    return try await loadResourceFromXMI(inputURL)
                 }
             }
-            return try await encode(
-                arrangement: try await loadArrangement(level: level),
-                name: arrangementName,
-                level: level
-            )
+            return try await encode(arrangement: try await loadArrangement(), name: arrangementName)
         }
 
         guard inputMachines.count == 1 else {
@@ -370,182 +310,113 @@ struct FSMConvert: AsyncParsableCommand {
 
         let inputURL = try resolvedInputURL(inputMachines[0])
         if inputURL.pathExtension.lowercased() == "xmi" {
-            if level == .structural, atl != nil {
-                return try await encode(
-                    input: try await loadSingleXMIInput(level: level, from: inputURL),
-                    fallbackName: fileStem(for: inputURL),
-                    arrangementName: arrangementName
-                )
-            }
-            return try await loadResourceFromXMI(inputURL, level: level)
+            return try await loadResourceFromXMI(inputURL)
         }
 
         let storage = try MachineStorageFactory.read(from: inputURL)
-        return try await encode(machine: storage.machine, name: fileStem(for: inputURL), level: level)
+        return try await encode(machine: storage.machine, name: fileStem(for: inputURL))
     }
 
-    private func loadResourceFromXMI(_ inputURL: URL, level: MetamodelLevel) async throws -> Resource {
-        switch level {
-        case .structural:
-            let parser = XMIParser()
-            return try await parser.parse(inputURL)
-        case .executable:
-            let roundTrip = ExecutableXMIRoundTrip(metamodel: try await ExecutableLLFSMMetamodel())
-            return try await roundTrip.loadResource(from: inputURL)
-        }
+    /// Parse an XMI document into a structural resource.
+    ///
+    /// - Parameter inputURL: The XMI document to parse.
+    /// - Returns: The parsed resource.
+    /// - Throws: An error if the document cannot be parsed.
+    private func loadResourceFromXMI(_ inputURL: URL) async throws -> Resource {
+        let parser = XMIParser()
+        return try await parser.parse(inputURL)
     }
 
-    private func encode(machine: Machine, name: String, level: MetamodelLevel) async throws -> Resource {
+    /// Encode a machine into a new in-memory structural resource.
+    ///
+    /// - Parameters:
+    ///   - machine: The machine to encode.
+    ///   - name: The machine name to record.
+    /// - Returns: The resource containing the encoded machine.
+    /// - Throws: An error if the structural metamodel cannot be loaded.
+    private func encode(machine: Machine, name: String) async throws -> Resource {
         let resource = Resource(uri: "memory:/\(name).xmi")
-        switch level {
-        case .structural:
-            let codec = MachineEcoreCodec(metamodel: try await LLFSMMetamodel())
-            _ = await codec.encode(machine, name: name, into: resource)
-        case .executable:
-            let codec = ExecutableMachineCodec(metamodel: try await ExecutableLLFSMMetamodel())
-            _ = await codec.encode(machine, name: name, arrangementName: name, into: resource)
-        }
+        let codec = MachineEcoreCodec(metamodel: try await LLFSMMetamodel())
+        _ = await codec.encode(machine, name: name, into: resource)
         return resource
     }
 
-    private func encode(arrangement: Arrangement, name: String, level: MetamodelLevel) async throws -> Resource {
+    /// Encode an arrangement into a new in-memory structural resource.
+    ///
+    /// - Parameters:
+    ///   - arrangement: The arrangement to encode.
+    ///   - name: The arrangement name used for the resource URI.
+    /// - Returns: The resource containing the encoded arrangement.
+    /// - Throws: An error if the structural metamodel cannot be loaded.
+    private func encode(arrangement: Arrangement, name: String) async throws -> Resource {
         let resource = Resource(uri: "memory:/\(name).xmi")
-        switch level {
-        case .structural:
-            let codec = ArrangementEcoreCodec(metamodel: try await LLFSMMetamodel())
-            _ = await codec.encode(arrangement, into: resource)
-        case .executable:
-            let codec = ExecutableArrangementCodec(metamodel: try await ExecutableLLFSMMetamodel())
-            _ = await codec.encode(arrangement, name: name, into: resource)
-        }
+        let codec = ArrangementEcoreCodec(metamodel: try await LLFSMMetamodel())
+        _ = await codec.encode(arrangement, into: resource)
         return resource
     }
 
-    private func encode(
-        input: MetamodelInput,
-        fallbackName: String,
-        arrangementName: String,
-        level: MetamodelLevel? = nil
-    ) async throws -> Resource {
-        let resolvedLevel = level ?? metamodel ?? .structural
+    /// Write a machine or arrangement as a structural XMI document.
+    ///
+    /// - Parameters:
+    ///   - input: The machine or arrangement to write.
+    ///   - outputURL: The destination XMI document.
+    /// - Throws: An error if encoding or writing fails.
+    private func writeXMI(_ input: MetamodelInput, to outputURL: URL) async throws {
+        let roundTrip = XMIRoundTrip(metamodel: try await LLFSMMetamodel())
         switch input {
-        case .machine(let name, let machine):
-            return try await encode(
-                machine: machine,
-                name: name.isEmpty ? fallbackName : name,
-                level: resolvedLevel
-            )
+        case .machine(_, let machine):
+            try await roundTrip.write(machine: machine, name: machineName(for: outputURL), to: outputURL)
         case .arrangement(let arrangement):
-            return try await encode(arrangement: arrangement, name: arrangementName, level: resolvedLevel)
+            try await roundTrip.write(arrangement: arrangement, to: outputURL)
         }
     }
 
-    private func writeXMI(_ input: MetamodelInput, level: MetamodelLevel, to outputURL: URL) async throws {
-        switch level {
-        case .structural:
-            let roundTrip = XMIRoundTrip(metamodel: try await LLFSMMetamodel())
-            switch input {
-            case .machine(_, let machine):
-                try await roundTrip.write(machine: machine, name: machineName(for: outputURL), to: outputURL)
-            case .arrangement(let arrangement):
-                try await roundTrip.write(arrangement: arrangement, to: outputURL)
-            }
-        case .executable:
-            let roundTrip = ExecutableXMIRoundTrip(metamodel: try await ExecutableLLFSMMetamodel())
-            switch input {
-            case .machine(_, let machine):
-                let name = machineName(for: outputURL)
-                try await roundTrip.write(machine: machine, name: name, arrangementName: name, to: outputURL)
-            case .arrangement(let arrangement):
-                try await roundTrip.write(arrangement: arrangement, name: defaultArrangementName(for: outputURL), to: outputURL)
-            }
-        }
-    }
-
-    private func writeResource(_ resource: Resource, level: MetamodelLevel, to outputURL: URL) async throws {
-        switch level {
-        case .structural:
-            let serialiser = XMISerializer()
-            let xmi = try await serialiser.serialize(resource)
-            try xmi.write(to: outputURL, atomically: true, encoding: .utf8)
-        case .executable:
-            let roundTrip = ExecutableXMIRoundTrip(metamodel: try await ExecutableLLFSMMetamodel())
-            try await roundTrip.write(resource: resource, to: outputURL)
-        }
-    }
-
+    /// Decode a structural resource into a machine or an arrangement.
+    ///
+    /// - Parameters:
+    ///   - resource: The resource to decode.
+    ///   - preferArrangement: Whether to prefer an arrangement root when present.
+    /// - Returns: The decoded machine or arrangement.
+    /// - Throws: An error if the resource contains neither.
     private func decodeMetamodelResource(
         _ resource: Resource,
-        level: MetamodelLevel,
         preferArrangement: Bool
     ) async throws -> MetamodelInput {
-        switch level {
-        case .structural:
-            let metamodel = try await LLFSMMetamodel()
-            let machineCodec = MachineEcoreCodec(metamodel: metamodel)
-            let arrangementCodec = ArrangementEcoreCodec(metamodel: metamodel)
+        let metamodel = try await LLFSMMetamodel()
+        let machineCodec = MachineEcoreCodec(metamodel: metamodel)
+        let arrangementCodec = ArrangementEcoreCodec(metamodel: metamodel)
 
-            if preferArrangement,
-               let arrangementObject = await findObject(named: metamodel.arrangementClass.name, in: resource) {
-                return .arrangement(try await arrangementCodec.decode(arrangementObject, from: resource))
-            }
-
-            if let machineObject = await findObject(named: metamodel.machineClass.name, in: resource) {
-                let decoded = try await machineCodec.decode(machineObject, from: resource)
-                return .machine(name: decoded.name, decoded.machine)
-            }
-
-            if let arrangementObject = await findObject(named: metamodel.arrangementClass.name, in: resource) {
-                return .arrangement(try await arrangementCodec.decode(arrangementObject, from: resource))
-            }
-
-            throw ValidationError("Unable to decode structural metamodel resource")
-
-        case .executable:
-            let metamodel = try await ExecutableLLFSMMetamodel()
-            let machineCodec = ExecutableMachineCodec(metamodel: metamodel)
-            let arrangementCodec = ExecutableArrangementCodec(metamodel: metamodel)
-
-            if preferArrangement,
-               let arrangementObject = await findObject(named: metamodel.arrangementClass.name, in: resource) {
-                return .arrangement(try await arrangementCodec.decode(arrangementObject, from: resource))
-            }
-
-            if let root = await findExecutableRoot(in: resource, metamodel: metamodel) {
-                let decoded = try await machineCodec.decode(root, from: resource)
-                return .machine(name: decoded.name, decoded.machine)
-            }
-
-            if let arrangementObject = await findObject(named: metamodel.arrangementClass.name, in: resource) {
-                return .arrangement(try await arrangementCodec.decode(arrangementObject, from: resource))
-            }
-
-            throw ValidationError("Unable to decode executable metamodel resource")
+        if preferArrangement,
+           let arrangementObject = await findObject(named: metamodel.arrangementClass.name, in: resource) {
+            return .arrangement(try await arrangementCodec.decode(arrangementObject, from: resource))
         }
+
+        if let machineObject = await findObject(named: metamodel.machineClass.name, in: resource) {
+            let decoded = try await machineCodec.decode(machineObject, from: resource)
+            return .machine(name: decoded.name, decoded.machine)
+        }
+
+        if let arrangementObject = await findObject(named: metamodel.arrangementClass.name, in: resource) {
+            return .arrangement(try await arrangementCodec.decode(arrangementObject, from: resource))
+        }
+
+        throw ValidationError("Unable to decode structural metamodel resource")
     }
 
-    @MainActor
-    private func applyTemplate(
-        named template: String,
-        level: MetamodelLevel,
-        resource: Resource,
-        outputURL: URL
-    ) async throws {
-        switch level {
-        case .structural:
-            try await applyStructuralTemplate(named: template, resource: resource, outputURL: outputURL)
-        case .executable:
-            try await applyExecutableTemplate(named: template, resource: resource, outputURL: outputURL)
-        }
-    }
-
+    /// Apply one of the bundled structural MTL templates.
+    ///
+    /// - Parameters:
+    ///   - template: The template name or path (only its basename is used).
+    ///   - resource: The structural resource holding the machine to render.
+    ///   - outputURL: The destination file or directory.
+    /// - Throws: An error if the template is unknown or generation fails.
     @MainActor
     private func applyStructuralTemplate(
         named template: String,
         resource: Resource,
         outputURL: URL
     ) async throws {
-        let decoded = try await decodeMetamodelResource(resource, level: .structural, preferArrangement: false)
+        let decoded = try await decodeMetamodelResource(resource, preferArrangement: false)
         guard case let .machine(name, machine) = decoded else {
             throw ValidationError("Structural templates require a single machine")
         }
@@ -584,19 +455,6 @@ struct FSMConvert: AsyncParsableCommand {
                 "Unsupported structural template '\(templateName)'. Use one of structural2machine, structural2scxml, structural2cmake, or structural2layout."
             )
         }
-    }
-
-    @MainActor
-    private func applyExecutableTemplate(
-        named template: String,
-        resource: Resource,
-        outputURL: URL
-    ) async throws {
-        let metamodel = try await ExecutableLLFSMMetamodel()
-        let generator = ExecutableTemplateGenerator(metamodel: metamodel)
-        let templateURL = try resolveExecutableTemplateURL(template, using: generator)
-        try FileManager.default.createDirectory(at: outputURL, withIntermediateDirectories: true)
-        try await generator.generate(templateURL: templateURL, resource: resource, outputDirectory: outputURL)
     }
 
     private func writeNative(_ input: MetamodelInput, outputURL: URL) throws {
@@ -641,67 +499,6 @@ struct FSMConvert: AsyncParsableCommand {
             language: outputLanguage
         )
         try wrapper.write(to: outputURL)
-    }
-
-    @MainActor
-    private func resolveATLURL(_ atl: String, using transformer: LLFSMATLTransformer) throws -> URL {
-        if FileManager.default.fileExists(atPath: atl) {
-            return URL(fileURLWithPath: atl)
-        }
-        return try transformer.bundledTransformURL(
-            named: URL(fileURLWithPath: atl).deletingPathExtension().lastPathComponent
-        )
-    }
-
-    @MainActor
-    private func resolveExecutableTemplateURL(
-        _ template: String,
-        using generator: ExecutableTemplateGenerator
-    ) throws -> URL {
-        if FileManager.default.fileExists(atPath: template) {
-            return URL(fileURLWithPath: template)
-        }
-        return try generator.bundledTemplateURL(
-            named: URL(fileURLWithPath: template).deletingPathExtension().lastPathComponent
-        )
-    }
-
-    private func inferredMetamodelLevel(
-        afterApplying atlURL: URL,
-        to resource: Resource,
-        default defaultLevel: MetamodelLevel
-    ) async -> MetamodelLevel {
-        let moduleName = atlURL.deletingPathExtension().lastPathComponent
-        switch moduleName {
-        case "structural2executable":
-            return .executable
-        case "executable2structural":
-            return .structural
-        default:
-            break
-        }
-
-        let hasExecutableMachine = await findObject(named: "StateMachine", in: resource) != nil
-        let hasInitialState = await findObject(named: "InitialState", in: resource) != nil
-        if hasExecutableMachine || hasInitialState {
-            return .executable
-        }
-        let hasStructuralMachine = await findObject(named: "Machine", in: resource) != nil
-        let hasStructuralGraph = await findObject(named: "LLFSM", in: resource) != nil
-        if hasStructuralMachine || hasStructuralGraph {
-            return .structural
-        }
-        return defaultLevel
-    }
-
-    private func findExecutableRoot(
-        in resource: Resource,
-        metamodel: ExecutableLLFSMMetamodel
-    ) async -> DynamicEObject? {
-        if let arrangement = await findObject(named: metamodel.arrangementClass.name, in: resource) {
-            return arrangement
-        }
-        return await findObject(named: metamodel.stateMachineClass.name, in: resource)
     }
 
     private func findObject(named className: String, in resource: Resource) async -> DynamicEObject? {
@@ -757,11 +554,63 @@ struct FSMConvert: AsyncParsableCommand {
     }
 }
 
-enum MetamodelLevel: String, ExpressibleByArgument {
+/// The model level used by metamodel-backed conversion.
+///
+/// Each level corresponds to a metamodel that `fsmconvert` can use for XMI
+/// import, export, and template generation. Only the structural level is
+/// available in this release; the remaining cases are accepted on the command
+/// line so that scripts receive a clear diagnostic rather than a parse error.
+enum MetamodelLevel: String, CaseIterable, ExpressibleByArgument {
     /// Structural LLFSM model that mirrors the native Swift runtime shape.
     case structural
-    /// Executable LLFSM model used by the legacy typed templates.
-    case executable
+    /// Sectioned LLFSM model with language-neutral code sections.
+    ///
+    /// This level is not yet available in this release.
+    case sectioned
+
+    /// The deprecated command-line spelling that now maps to ``sectioned``.
+    static let deprecatedExecutableArgument = "executable"
+
+    /// Whether this level can be used in the current release.
+    var isAvailable: Bool {
+        self == .structural
+    }
+
+    /// Parse a metamodel level from a command-line argument.
+    ///
+    /// The deprecated value `executable` is accepted for compatibility and
+    /// mapped to ``sectioned`` after printing a deprecation warning to the
+    /// standard error stream.
+    ///
+    /// - Parameter argument: The command-line value to parse.
+    init?(argument: String) {
+        let value = argument.lowercased()
+        if value == Self.deprecatedExecutableArgument {
+            FileHandle.standardError.write(Data(
+                "warning: '--metamodel \(Self.deprecatedExecutableArgument)' is deprecated; use '--metamodel \(Self.sectioned.rawValue)' instead\n".utf8
+            ))
+            self = .sectioned
+            return
+        }
+        guard let level = MetamodelLevel(rawValue: value) else { return nil }
+        self = level
+    }
+}
+
+/// Errors reported by `fsmconvert`.
+enum FSMConvertError: Error, CustomStringConvertible {
+    /// The selected metamodel level is not available in this release.
+    ///
+    /// - Parameter level: The level that was requested.
+    case metamodelLevelUnavailable(MetamodelLevel)
+
+    /// A human-readable description of the error.
+    var description: String {
+        switch self {
+        case .metamodelLevelUnavailable(let level):
+            return "The '\(level.rawValue)' metamodel level is not yet available in this release; use '--metamodel \(MetamodelLevel.structural.rawValue)'"
+        }
+    }
 }
 
 private enum MetamodelInput {

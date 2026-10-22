@@ -55,7 +55,7 @@ let package = Package(
         ),
         .testTarget(
             name: "FSMTests",
-            dependencies: ["FSM"],
+            dependencies: ["FSM", "FSMEcore"],
             resources: [.copy("Resources")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
