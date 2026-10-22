@@ -78,7 +78,7 @@ Despite its name, `ObjCPPBinding` handles all C++-family formats:
 ``SCXMLBinding`` reads and writes State Chart XML (`.scxml`) files.
 Unlike ``CBinding`` and ``ObjCPPBinding``, it does not generate
 compilable target-language code; instead it serialises the complete
-machine — states, transitions, layout, and boilerplate — into a single
+machine (states, transitions, layout, and boilerplate) into a single
 well-formed XML document.
 
 Key characteristics:

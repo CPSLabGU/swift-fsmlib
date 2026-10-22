@@ -6,7 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Removed
+
+- **Executable and Formal Metamodel Levels**: Removed the executable and formal LLFSM metamodels together with `ExecutableLLFSMMetamodel`, `ExecutableMachineCodec`, `ExecutableArrangementCodec`, `ExecutableXMIRoundTrip`, `ExecutableTemplateGenerator`, `FormalLLFSMMetamodel`, `LLFSMATLTransformer` and their error types, the bundled `llfsm2*` MTL templates, the bundled ATL transforms and the executable artefact tutorial. `FSMEcore` now provides the structural level only; a `sectioned` level and a `kernel` level are planned.
+
+- **fsmconvert ATL Options**: Removed the `--atl` and `--metamodel-path` options. The value `--metamodel executable` is deprecated: it maps to the planned `sectioned` level, prints a deprecation warning and exits with an error, as does `--metamodel sectioned`, because that level is not yet available in this release.
+
 ### Added
+
+- **XMI Conversion Diagnostics**: `XMIRoundTrip` gains `readMachine(from:diagnostics:)`, `readArrangement(from:diagnostics:)`, `write(machine:name:to:diagnostics:)` and `write(arrangement:to:diagnostics:)`, which collect the `ConversionDiagnostics` reported by the XMI parser and serialiser, and `loadResource(from:diagnostics:)`, which returns the parsed structural object graph. The existing methods are unchanged.
+
+- **Metamodel Registration**: `LLFSMMetamodel.register(in:)` registers the structural metamodel with a `ResourceSet`.
 
 - **Objective-C++ Language Binding Support**: Complete implementation of `ObjCPPBinding` for reading and writing FSM machines in Objective-C++ format, enabling seamless integration with Objective-C++ codebases.
 
@@ -43,12 +53,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - `sectionNames` property for enumerating boilerplate sections
   - Setter methods for programmatic boilerplate modification
 
-- **Platform Support**: Extended platform support to include:
-  - macOS 13+
-  - Mac Catalyst 16+
-  - iOS 16+
-  - tvOS 16+
-  - watchOS 9+
+- **Platform Support**: Supported platforms are:
+  - macOS 15+
+  - Mac Catalyst 18+
+  - iOS 18+
+  - tvOS 18+
+  - watchOS 11+
 
 - **Example Machines and Arrangements**:
   - `Counter.machine`: Basic counter FSM
@@ -65,6 +75,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **Structural XMI Namespace**: XMI documents written by `XMIRoundTrip` and `fsmconvert` now declare the `LLFSMStructural` package namespace (`http://cpslabgu.github.io/LLFSMStructural`, prefix `llfsm`) instead of a namespace derived from the root class name, and documents are read against the structural metamodel. Documents written by earlier releases remain readable; reading them reports their untyped classes as diagnostics.
+
+- **fsmconvert XMI Input Detection**: A single XMI input is read as an arrangement whenever the document contains an arrangement, and as a machine otherwise.
+
+- **Modelling Library Dependencies**: `swift-ecore`, `swift-mtl` and `swift-atl` are now tracked from their `main` branches instead of the 0.1 releases.
+
 - **Modernised Arrangement Structure**: Refactored arrangement file organisation and code generation for improved maintainability and clearer separation of concerns.
 
 - **Improved C Binding Transition Parsing**: Enhanced transition expression parsing in `CBinding` to handle edge cases and malformed expressions more robustly.
@@ -78,7 +94,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - **Layout Width/Height Handling**: Default to closed width/height values when expanded values are not present in layout property lists.
 
-- **Platform Requirements**: Updated minimum Swift tools version remains at 5.8, with expanded platform support for iOS/tvOS/watchOS ecosystems.
+- **Platform Requirements**: The package requires Swift tools version 6.0, with the platform minimums listed above.
 
 ### Fixed
 

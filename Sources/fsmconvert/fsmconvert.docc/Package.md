@@ -15,6 +15,11 @@ or combine them into `.arrangement` directories. It supports C and
 Objective-C++ output formats and generates the complete build system
 files (CMake) needed to compile the resulting code.
 
+With `--metamodel structural`, it can also import and export structural XMI
+(`--format xmi` or an `.xmi` output extension) and run the bundled
+`structural2machine`, `structural2scxml`, `structural2cmake`, and
+`structural2layout` templates through `--transform`.
+
 ## Topics
 
 ### Essentials

@@ -1,6 +1,6 @@
 # ``FSMEcore``
 
-`FSMEcore` bridges the native `FSM` model to structural and executable Ecore metamodels, XMI serialisation, ATL transforms, and MTL generation.
+`FSMEcore` bridges the native `FSM` model to the structural Ecore metamodel, XMI serialisation, and MTL generation.
 
 @Metadata {
   @PageKind(article)
@@ -10,14 +10,14 @@
 
 The module keeps the native Swift readers and writers as the production boundary while exposing metamodel-backed workflows for testing, analysis, and transformation. Structural models mirror the in-memory `swift-fsmlib` types so current file formats can round-trip without semantic drift.
 
-Executable models restore the legacy typed LLFSM hierarchy used by the existing text generators. That lets the package run ATL and MTL workflows against models that still decode back to the same machines and arrangements produced by the native Swift code.
+Bundled MTL templates generate machine, SCXML, CMake, and layout artefacts from structural models, and the results match those produced by the native Swift code.
 
 ## Topics
 
 ### Essentials
 
 - <doc:Background>
-- <doc:StructuralAndExecutableModels>
+- <doc:StructuralModels>
 
 ### Structural Models
 
@@ -27,25 +27,10 @@ Executable models restore the legacy typed LLFSM hierarchy used by the existing 
 - ``XMIRoundTrip``
 - ``StructuralTemplateGenerator``
 
-### Executable Models
-
-- ``ExecutableLLFSMMetamodel``
-- ``ExecutableMachineCodec``
-- ``ExecutableArrangementCodec``
-- ``ExecutableXMIRoundTrip``
-- ``ExecutableTemplateGenerator``
-
-### Transformations
-
-- ``LLFSMATLTransformer``
-- ``FormalLLFSMMetamodel``
-
 ### Errors
 
 - ``LLFSMMetamodelError``
-- ``ExecutableLLFSMMetamodelError``
 - ``StructuralTemplateGeneratorError``
-- ``ExecutableGenerationError``
 
 ### Tutorials
 

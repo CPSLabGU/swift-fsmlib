@@ -5,14 +5,14 @@
 The package is split into three main surfaces:
 
 - `FSM` contains the native machine, arrangement, serialisation, and code-generation APIs.
-- `FSMEcore` adds structural and executable Ecore metamodels, XMI round-tripping, ATL model-to-model transforms, and MTL model-to-text generation.
+- `FSMEcore` adds the structural Ecore metamodel, XMI round-tripping, and MTL model-to-text generation.
 - `fsmconvert` wraps both modules in a command-line interface for native format conversion, arrangement assembly, XMI import and export, and template-driven generation.
 
 ## Background
 
 The native Swift types remain the production reference implementation. They define the file formats that `swift-fsmlib` reads and writes today, and they act as the regression oracle for metamodel-backed workflows.
 
-The metamodel layer adds two complementary views of the same domain. The structural metamodel mirrors the current Swift runtime shape and is the fidelity model for `.machine`, `.arrangement`, `.scxml`, and structural XMI round-trips. The executable metamodel restores the typed hierarchy used by the legacy LLFSM templates so ATL and MTL workflows can generate the same outputs as the existing Swift generators.
+The metamodel layer adds a structural view of the same domain. The structural metamodel mirrors the current Swift runtime shape and is the fidelity model for `.machine`, `.arrangement`, `.scxml`, and structural XMI round-trips. Further levels are planned: a `sectioned` level for machines with language-neutral code sections, and a `kernel` level for a minimal formal kernel metamodel.
 
 ## Overview
 
@@ -22,14 +22,14 @@ The library supports:
 - Logic-labelled LLFSM execution structure with suspend and resume support.
 - Native `.machine`, `.arrangement`, and `.scxml` serialisation and parsing.
 - C, Objective-C++, Swift, and SCXML-oriented generation paths.
-- Structural and executable metamodel workflows built on Ecore, ATL, and MTL.
+- Structural metamodel workflows built on Ecore and MTL.
 - Layout and geometry support for editor-facing round-trips.
 
 ## Package Layout
 
 ```text
 Sources/FSM/          Native LLFSM and arrangement APIs.
-Sources/FSMEcore/     Structural and executable metamodel support.
+Sources/FSMEcore/     Structural metamodel support.
 Sources/fsmconvert/   Command-line interface and DocC for the tool.
 Tests/                Unit and end-to-end regression coverage.
 examples/             Sample machines, SCXML files, and arrangements.
@@ -119,21 +119,18 @@ let roundTrip = XMIRoundTrip(metamodel: metamodel)
 try await roundTrip.write(machine: machine, name: "Example", to: URL(fileURLWithPath: "Example.xmi"))
 ```
 
-Generate an executable artefact through an MTL template:
+Generate an SCXML file through a bundled MTL template (the bundled templates are `structural2machine`, `structural2scxml`, `structural2cmake`, and `structural2layout`):
 
 ```swift
 import FSM
 import FSMEcore
 import Foundation
 
-let metamodel = try await ExecutableLLFSMMetamodel()
-let generator = ExecutableTemplateGenerator(metamodel: metamodel)
-let templateURL = try generator.bundledTemplateURL(named: "llfsm2dot")
-try await generator.generate(
-    templateURL: templateURL,
-    machine: machine,
-    name: "Example",
-    outputDirectory: URL(fileURLWithPath: "Generated")
+let generator = StructuralTemplateGenerator()
+try await generator.generateSCXML(
+    for: machine,
+    named: "Example",
+    to: URL(fileURLWithPath: "Example.scxml")
 )
 ```
 
@@ -151,15 +148,16 @@ Export a machine as structural XMI:
 fsmconvert Example.machine --metamodel structural --format xmi --output Example.xmi
 ```
 
-Generate DOT from an executable model with the bundled ATL and MTL resources:
+Generate SCXML through a bundled structural template:
 
 ```bash
 fsmconvert Example.machine \
   --metamodel structural \
-  --atl structural2executable \
-  --transform llfsm2dot \
-  --output Generated
+  --transform structural2scxml \
+  --output Example.scxml
 ```
+
+The `--transform` option accepts `structural2machine`, `structural2scxml`, `structural2cmake`, and `structural2layout`, and requires `--metamodel structural`. The value `--metamodel executable` is deprecated: it maps to the planned `sectioned` level, prints a deprecation warning, and exits with an error because that level is not yet available.
 
 Create an arrangement from multiple machines:
 
