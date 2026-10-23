@@ -10,10 +10,12 @@ import EMFBase
 
 /// Diagnoses the structural information that a sectioned model cannot give back.
 ///
-/// The sectioned level keeps neither include paths nor layouts, merges the
-/// boilerplate of states into the host declarations of their machine, and
-/// keeps recognised variable declarations without their layout or comments.
-/// A structural model has no place for the shared declarations of an
+/// The sectioned level keeps no layouts. A machine whose host declarations
+/// carry no include paths gets an empty include path; several host
+/// declarations of one machine, as left by the encoding into the kernel,
+/// are merged into one boilerplate; and variables without a declaration
+/// text in the language of the machine are declared in canonical form. A
+/// structural model has no place for the shared declarations of an
 /// arrangement, for instance bindings or for machines without instances.
 struct StructuralRecoveryDiagnostics {
     /// The metamodels that type the sectioned model.
@@ -35,14 +37,18 @@ struct StructuralRecoveryDiagnostics {
                 diagnostics.record(.notRecovered(.uninstantiatedMachine, owner: name))
                 continue
             }
-            diagnostics.record(.notRecovered(.includePath, owner: name))
-            diagnostics.record(.notRecovered(.layout, owner: name))
             let hosts = index.objects(.hostDeclarations, of: machine)
-            let withIncludes = hosts.filter { $0.string(.includes) != nil }.count
-            if withIncludes > 1 || hosts.count - withIncludes > 1 {
+            let stateHosts = index.objects(.states, of: machine).flatMap { index.objects(.hostDeclarations, of: $0) }
+            if !(hosts + stateHosts).contains(where: { $0.isSet(.includePaths) }) {
+                diagnostics.record(.notRecovered(.includePath, owner: name))
+            }
+            diagnostics.record(.notRecovered(.layout, owner: name))
+            if hosts.count > 1 {
                 diagnostics.record(.notRecovered(.stateBoilerplate, owner: name))
             }
-            if !index.objects(.variables, of: machine).isEmpty {
+            let language = Self.language(of: machine, in: arrangement)
+            let keepsTexts = hosts.first?.string(.language).map { $0.isEmpty || $0 == language } ?? true
+            if index.objects(.variables, of: machine).contains(where: { !keepsTexts || !$0.isSet(.declarationText) }) {
                 diagnostics.record(.notRecovered(.declarationFormatting, owner: name))
             }
         }
@@ -54,5 +60,18 @@ struct StructuralRecoveryDiagnostics {
             diagnostics.record(.notRecovered(.instanceBindings, owner: instance.string(.name) ?? ""))
         }
         return diagnostics
+    }
+
+    /// The language in which the host text of a machine is written.
+    ///
+    /// - Parameters:
+    ///   - machine: The sectioned machine.
+    ///   - arrangement: The arrangement that holds the machine.
+    /// - Returns: The language of the machine, else of the arrangement, else the default language.
+    static func language(of machine: DynamicEObject, in arrangement: DynamicEObject) -> String {
+        for owner in [machine, arrangement] {
+            if let language = owner.string(.language), !language.isEmpty { return language }
+        }
+        return LLFSMTransformationNames.defaultLanguage
     }
 }

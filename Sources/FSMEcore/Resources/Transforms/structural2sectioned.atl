@@ -5,9 +5,10 @@
 --
 -- Every non-empty section of a state becomes one opaque statement and every
 -- transition label one opaque expression, each carrying the host-language
--- text and the language of its machine. The machine boilerplate becomes host
--- declarations: the includes and variables of the machine first, then its
--- functions, then the includes, variables and functions of each state. The
+-- text, even if it is only white space, and the language of its machine. The
+-- boilerplate of a machine becomes one host declarations element of the
+-- machine with its include path, includes, variables and functions, and the
+-- boilerplate of a state one host declarations element of the state. The
 -- first state of a machine is its initial state. A structural arrangement
 -- holds one copy of a machine per instance; the sectioned arrangement holds
 -- one machine per machine name, which all instances of that name share. A
@@ -43,7 +44,10 @@ helper context Structural!Transition def : machine : Structural!Machine =
 -- Text
 
 helper def : isPresent(text : String) : Boolean =
-    not text.oclIsUndefined() and text.trim() <> '';
+    not text.oclIsUndefined() and text <> '';
+
+helper def : presentOrUndefined(text : String) : String =
+    if thisModule.isPresent(text) then text else OclUndefined endif;
 
 -- The section of a state as one opaque statement, or no statement if it is empty.
 helper context Structural!State def : section(feature : String) : Sequence(OclAny) =
@@ -55,22 +59,17 @@ helper context Structural!State def : section(feature : String) : Sequence(OclAn
         else Sequence{} endif
     endif;
 
--- The host declarations of the includes and variables, then the functions, of a boilerplate.
+-- The host declarations of a boilerplate, or none if all of its texts are empty.
 helper def : declarations(boilerplate : Structural!Boilerplate, language : String) : Sequence(OclAny) =
     if boilerplate.oclIsUndefined() then Sequence{}
-    else
-        (if thisModule.isPresent(boilerplate.includes) or thisModule.isPresent(boilerplate.variables) then
-            Sequence{thisModule.NewHostDeclarations(language, boilerplate.includes, boilerplate.variables)}
-        else Sequence{} endif)
-        ->union(if thisModule.isPresent(boilerplate.functions) then
-            Sequence{thisModule.NewHostDeclarations(language, OclUndefined, boilerplate.functions)}
-        else Sequence{} endif)
-    endif;
+    else if thisModule.isPresent(boilerplate.includePath) or thisModule.isPresent(boilerplate.includes)
+            or thisModule.isPresent(boilerplate.variables) or thisModule.isPresent(boilerplate.functions) then
+        Sequence{thisModule.NewHostDeclarations(language, boilerplate)}
+    else Sequence{} endif endif;
 
-helper context Structural!Machine def : hostDeclarations : Sequence(OclAny) =
-    thisModule.declarations(self.boilerplate, self.language)
-        ->union(self.stateBoilerplates->collect(e | thisModule.declarations(e.boilerplate, self.language))
-            ->flatten());
+helper context Structural!State def : stateDeclarations : Sequence(OclAny) =
+    self.machine.stateBoilerplates->select(e | e.state = self)
+        ->collect(e | thisModule.declarations(e.boilerplate, self.machine.language))->flatten();
 
 -- Arrangements and instances
 
@@ -123,7 +122,7 @@ rule Machine {
         k : Sectioned!Machine (
             name <- m.name,
             language <- m.language,
-            hostDeclarations <- m.hostDeclarations,
+            hostDeclarations <- thisModule.declarations(m.boilerplate, m.language),
             states <- m.llfsm.states,
             initial <- m.llfsm.states->first(),
             suspendState <- m.llfsm.suspendState
@@ -145,7 +144,8 @@ rule State {
             internal <- s.section('internal'),
             onSuspend <- s.section('onSuspend'),
             onResume <- s.section('onResume'),
-            transitions <- s.machine.llfsm.transitions->select(t | t.source = s)
+            transitions <- s.machine.llfsm.transitions->select(t | t.source = s),
+            hostDeclarations <- s.stateDeclarations
         )
 }
 
@@ -179,11 +179,13 @@ rule NewOpaqueExpression(aText : String, aLanguage : String) {
         )
 }
 
-rule NewHostDeclarations(aLanguage : String, anIncludes : String, aDeclarations : String) {
+rule NewHostDeclarations(aLanguage : String, aBoilerplate : Structural!Boilerplate) {
     to
         k : Kernel!HostDeclarations (
             language <- aLanguage,
-            includes <- anIncludes,
-            declarations <- aDeclarations
+            includePaths <- thisModule.presentOrUndefined(aBoilerplate.includePath),
+            includes <- thisModule.presentOrUndefined(aBoilerplate.includes),
+            declarations <- thisModule.presentOrUndefined(aBoilerplate.variables),
+            functions <- thisModule.presentOrUndefined(aBoilerplate.functions)
         )
 }

@@ -98,110 +98,31 @@ enum StructuralRoundTrip {
 
     // MARK: - Expected Differences
 
-    /// The model that a round trip is expected to give back.
-    ///
-    /// Each documented loss is applied to a copy of the original: include
-    /// paths and layouts are dropped, sections and boilerplate that hold
-    /// only white space become empty, the boilerplate of the states is
-    /// merged into the machine boilerplate as host declarations are,
-    /// recognised variable declarations are written in canonical form after
-    /// the remaining declarations of the machine, the transitions are listed
-    /// state by state, and every instance of an arrangement holds a copy of
-    /// the first machine of its type.
+    /// The names of the files of a machine bundle that hold its layouts.
+    static let layoutFiles: Set<String> = ["Layout.plist", "WindowLayout.plist"]
+
+    /// A model without the layouts of its machines, as the sectioned level gives it back.
     ///
     /// - Parameter model: The original model.
-    /// - Returns: The expected model.
-    static func expected(_ model: Model) -> Model {
+    /// - Returns: A copy of the model whose machines have no state, transition or window layouts.
+    static func withoutLayouts(_ model: Model) -> Model {
         switch model {
         case .machine(let name, let machine):
-            return .machine(name, expected(machine))
+            return .machine(name, withoutLayouts(machine))
         case .arrangement(let arrangement):
-            var definitions: [Substring: Machine] = [:]
-            let instances = arrangement.namedInstances.map { instance -> Instance in
-                let definition = definitions[instance.typeName] ?? expected(instance.machine)
-                definitions[instance.typeName] = definition
-                return Instance(name: instance.name, typeFile: instance.typeFile, machine: Machine(copying: definition))
+            let instances = arrangement.namedInstances.map {
+                Instance(name: $0.name, typeFile: $0.typeFile, machine: withoutLayouts($0.machine))
             }
             return .arrangement(Arrangement(namedInstances: instances))
         }
     }
 
-    /// Whether a text holds more than white space, as the transformations decide.
-    private static func isPresent(_ text: String?) -> Bool {
-        !(text ?? "").allSatisfy(\.isWhitespace)
-    }
-
-    /// Two texts one after the other, on separate lines unless the first ends a line.
-    private static func joined(_ texts: [String]) -> String {
-        texts.reduce("") { first, second in
-            if first.isEmpty { return second }
-            if second.isEmpty || first.hasSuffix("\n") { return first + second }
-            return first + "\n" + second
-        }
-    }
-
-    /// The canonical declaration of a recognised variable in the C family.
-    private static func declaration(_ declaration: VariableDeclarationScanner.Declaration) -> String {
-        switch declaration.type {
-        case .array(let element, let size): return "\(element.name)\t\(declaration.name)[\(size)];\n"
-        default: return "\(declaration.type.name)\t\(declaration.name);\n"
-        }
-    }
-
-    /// The machine that a round trip of a structural machine is expected to give back.
-    private static func expected(_ machine: Machine) -> Machine {
-        let language = machine.language
+    /// A copy of a machine without its layouts.
+    private static func withoutLayouts(_ machine: Machine) -> Machine {
         let result = Machine(copying: machine)
         result.stateLayout = [:]
         result.transitionLayout = [:]
         result.windowLayout = nil
-        let states = machine.llfsm.states
-        var boilerplates = [language.extractSections(from: machine.boilerplate)]
-        for state in states {
-            let name = machine.llfsm.stateName(for: state) ?? ""
-            boilerplates.append(machine.stateBoilerplate[state].map {
-                language.extractStateSections(from: $0, stateName: name)
-            } ?? [:])
-        }
-        var hosts: [(includes: String?, declarations: String?)] = []
-        for sections in boilerplates {
-            if isPresent(sections[.includes]) || isPresent(sections[.variables]) {
-                hosts.append((sections[.includes], sections[.variables]))
-            }
-            if isPresent(sections[.functions]) { hosts.append((nil, sections[.functions])) }
-        }
-        let variables = boilerplates[0][.variables] ?? ""
-        let scan = VariableDeclarationScanner(language: language.name).scan(variables)
-        if !scan.declarations.isEmpty, let first = hosts.firstIndex(where: { $0.declarations == variables }) {
-            if scan.remainder.isEmpty && (hosts[first].includes ?? "").allSatisfy(\.isWhitespace) {
-                hosts.remove(at: first)
-            } else {
-                hosts[first].declarations = scan.remainder.isEmpty ? nil : scan.remainder
-            }
-        }
-        let declarations = scan.declarations.map(declaration).joined()
-        let variableHosts = hosts.filter { $0.includes != nil }
-        var machineSections: [StandardBoilerplateSection: String] = [:]
-        machineSections[.includes] = joined(hosts.map { $0.includes ?? "" })
-        if let first = variableHosts.first {
-            machineSections[.variables] = joined(
-                [first.declarations ?? "", declarations] + variableHosts.dropFirst().map { $0.declarations ?? "" })
-        } else {
-            machineSections[.variables] = declarations
-        }
-        machineSections[.functions] = joined(hosts.filter { $0.includes == nil }.map { $0.declarations ?? "" })
-        result.boilerplate = language.createBoilerplate(from: machineSections)
-        let activities: [StandardBoilerplateSection] = [.onEntry, .onExit, .internal, .onSuspend, .onResume]
-        for state in states {
-            let original = machine.stateActivities(for: state)
-            var sections: [StandardBoilerplateSection: String] = [:]
-            for activity in activities {
-                let text = original[activity] ?? ""
-                sections[activity] = isPresent(text) ? text : ""
-            }
-            result.setStateActivities(sections, for: state)
-        }
-        result.llfsm.transitions = states.flatMap { machine.llfsm.transitionsFrom($0) }
         return result
     }
 }

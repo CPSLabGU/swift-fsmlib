@@ -153,6 +153,10 @@ inline bool llfsm_parse_[t.name/](const std::string &text, [t.name/] &out)
 
 [h.declarations/]
 [/if]
+[if (not h.functions.oclIsUndefined() and h.functions <> '')]
+
+[h.functions/]
+[/if]
 [/for]
 [for (t : Type | a.types->select(x | x.oclIsKindOf(OpaqueType)))]
 

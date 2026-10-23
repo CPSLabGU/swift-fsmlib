@@ -68,6 +68,10 @@ import java.util.List;
 
 [h.declarations/]
 [/if]
+[if (not h.functions.oclIsUndefined() and h.functions <> '')]
+
+[h.functions/]
+[/if]
 [/for]
 
 public final class [a.name/] {

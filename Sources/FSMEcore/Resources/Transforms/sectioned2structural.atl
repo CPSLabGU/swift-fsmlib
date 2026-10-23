@@ -14,13 +14,17 @@
 -- written and render typed nodes through the host queries of the expression
 -- modules.
 --
--- The host declarations of a machine become its boilerplate: the includes
--- of all of them, one after the other; the declarations of those with
--- includes as the variables, with the declarations of the machine variables,
--- rendered by the native helper renderDeclarations, after the first of them;
--- and the declarations of those without includes as the functions. Every
--- state receives an empty state boilerplate. Include paths, layouts and the
--- declarations of the arrangement have no counterpart and are left out.
+-- The host declarations of a machine become its boilerplate, and those of
+-- a state the boilerplate of the state: the include paths, includes,
+-- declarations and functions of all of them, one after the other, become
+-- the include path, includes, variables and functions. The variables of a
+-- machine are declared in its variables: the native helper
+-- mergeDeclarations puts the declaration text of each variable back at its
+-- line of the declarations of the first host declarations of the machine,
+-- if their language is that of the machine; the native helper
+-- renderDeclarations writes the other variables after them in canonical
+-- form. Layouts and the declarations of the arrangement have no
+-- counterpart and are left out.
 --
 -- @nsURI Structural=http://cpslabgu.github.io/LLFSMStructural
 -- @nsURI Sectioned=http://cpslabgu.github.io/llfsm/sectioned
@@ -68,29 +72,36 @@ helper context Sectioned!Machine def : orderedStates : Sequence(Sectioned!State)
 
 -- Boilerplate
 
-helper context Kernel!HostDeclarations def : holdsVariables : Boolean = not self.includes.oclIsUndefined();
+-- The texts of host declarations, one after the other.
+helper def : hostText(hosts : Sequence(Kernel!HostDeclarations), feature : String) : String =
+    thisModule.joinedAll(hosts->collect(h | thisModule.orEmpty(h.refGetValue(feature))));
 
-helper context Sectioned!Machine def : variableHosts : Sequence(Kernel!HostDeclarations) =
-    self.hostDeclarations->select(h | h.holdsVariables);
+helper context Sectioned!Machine def : firstHost : Kernel!HostDeclarations =
+    if self.hostDeclarations->isEmpty() then OclUndefined else self.hostDeclarations->first() endif;
 
-helper context Sectioned!Machine def : functionHosts : Sequence(Kernel!HostDeclarations) =
-    self.hostDeclarations->reject(h | h.holdsVariables);
+-- Whether the declaration texts of the variables were written in the language of the machine.
+helper context Sectioned!Machine def : keepsDeclarationTexts : Boolean =
+    if self.firstHost.oclIsUndefined() then true
+    else if thisModule.isPresent(self.firstHost.language) then self.firstHost.language = self.hostLanguage
+    else true endif endif;
 
-helper context Sectioned!Machine def : includesText : String =
-    thisModule.joinedAll(self.hostDeclarations->collect(h | thisModule.orEmpty(h.includes)));
+helper context Sectioned!Machine def : placedVariables : Sequence(Kernel!Variable) =
+    if self.keepsDeclarationTexts then self.variables->select(v | thisModule.isPresent(v.declarationText))
+    else Sequence{} endif;
 
 helper context Sectioned!Machine def : declaredVariables : String =
-    thisModule.renderDeclarations(self.variables, self.hostLanguage);
+    let placed : Sequence(Kernel!Variable) = self.placedVariables in
+    thisModule.renderDeclarations(self.variables->reject(v | placed->includes(v)), self.hostLanguage);
 
 helper context Sectioned!Machine def : variablesText : String =
-    let hosts : Sequence(Kernel!HostDeclarations) = self.variableHosts in
-    if hosts->isEmpty() then self.declaredVariables
-    else thisModule.joinedAll(Sequence{thisModule.orEmpty(hosts->first().declarations), self.declaredVariables}
-        ->union(hosts->excluding(hosts->first())->collect(h | thisModule.orEmpty(h.declarations))))
+    if self.firstHost.oclIsUndefined() then
+        thisModule.joined(thisModule.mergeDeclarations(OclUndefined, self.placedVariables), self.declaredVariables)
+    else
+        thisModule.joinedAll(Sequence{
+            thisModule.mergeDeclarations(self.firstHost.declarations, self.placedVariables),
+            self.declaredVariables}
+            ->union(self.hostDeclarations->excluding(self.firstHost)->collect(h | thisModule.orEmpty(h.declarations))))
     endif;
-
-helper context Sectioned!Machine def : functionsText : String =
-    thisModule.joinedAll(self.functionHosts->collect(h | thisModule.orEmpty(h.declarations)));
 
 -- Sections and labels
 
@@ -143,7 +154,7 @@ rule NewMachine(aMachine : Sectioned!Machine) {
             language <- lang,
             llfsm <- l,
             boilerplate <- b,
-            stateBoilerplates <- copies->collect(s | thisModule.NewStateBoilerplate(s))
+            stateBoilerplates <- sources->collect(s | thisModule.NewStateBoilerplate(copies->at(sources->indexOf(s)), s))
         ),
         l : Structural!LLFSM (
             states <- copies,
@@ -154,9 +165,10 @@ rule NewMachine(aMachine : Sectioned!Machine) {
                             else copies->at(sources->indexOf(aMachine.suspendState)) endif
         ),
         b : Structural!Boilerplate (
-            includes <- aMachine.includesText,
+            includePath <- thisModule.hostText(aMachine.hostDeclarations, 'includePaths'),
+            includes <- thisModule.hostText(aMachine.hostDeclarations, 'includes'),
             variables <- aMachine.variablesText,
-            functions <- aMachine.functionsText
+            functions <- thisModule.hostText(aMachine.hostDeclarations, 'functions')
         )
     do {
         k;
@@ -194,13 +206,18 @@ rule NewTransition(aTransition : Sectioned!Transition, aSource : Structural!Stat
     }
 }
 
-rule NewStateBoilerplate(aState : Structural!State) {
+rule NewStateBoilerplate(aState : Structural!State, aSource : Sectioned!State) {
     to
         k : Structural!StateBoilerplateEntry (
             state <- aState,
             boilerplate <- b
         ),
-        b : Structural!Boilerplate
+        b : Structural!Boilerplate (
+            includePath <- thisModule.hostText(aSource.hostDeclarations, 'includePaths'),
+            includes <- thisModule.hostText(aSource.hostDeclarations, 'includes'),
+            variables <- thisModule.hostText(aSource.hostDeclarations, 'declarations'),
+            functions <- thisModule.hostText(aSource.hostDeclarations, 'functions')
+        )
     do {
         k;
     }

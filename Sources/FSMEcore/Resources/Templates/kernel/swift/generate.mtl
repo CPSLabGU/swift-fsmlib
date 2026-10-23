@@ -105,6 +105,10 @@ func llfsmParse_[t.name/](_ text: String) -> [t.name/]? {
 
 [h.declarations/]
 [/if]
+[if (not h.functions.oclIsUndefined() and h.functions <> '')]
+
+[h.functions/]
+[/if]
 [/for]
 [for (t : Type | a.types->select(x | x.oclIsKindOf(OpaqueType)))]
 

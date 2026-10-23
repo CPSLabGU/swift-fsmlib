@@ -70,7 +70,8 @@ public struct TransformationWarning: Sendable, Hashable, CustomStringConvertible
         case includePath
         /// The layout of the states and transitions of a machine and the window layout of its editor.
         case layout
-        /// The boilerplate of the states of a machine, which became host declarations of the machine.
+        /// The boilerplate of the states of a machine, which the kernel holds as host declarations of the
+        /// machine.
         case stateBoilerplate
         /// The layout and comments of the variable declarations that the typing pass recognised.
         case declarationFormatting

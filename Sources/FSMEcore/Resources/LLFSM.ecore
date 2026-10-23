@@ -199,6 +199,24 @@
           eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="false"/>
       <eStructuralFeatures xsi:type="ecore:EReference" name="initialValue" eType="#//kernel/Expression"
           containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="documentation"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="The text of the documentation comment that followed the declaration of the variable in host-language text, without the comment marker."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="declarationText"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="The line of host-language text that declared the variable, as written and without its line break. Writers of host text in the language of the host declarations that held the line prefer it to a canonical declaration."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="declarationLine"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="The zero-based index of the declaration text among the lines of the host declarations that held it, set together with the declaration text."/>
+        </eAnnotations>
+      </eStructuralFeatures>
     </eClassifiers>
 
     <!-- Functions and host declarations -->
@@ -233,7 +251,7 @@
 
     <eClassifiers xsi:type="ecore:EClass" name="HostDeclarations">
       <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
-        <details key="documentation" value="Verbatim host-language preamble for code targets: include or import directives and declarations such as prototypes, type definitions and helper functions. Verification targets ignore host declarations."/>
+        <details key="documentation" value="Verbatim host-language preamble for code targets: include or import directives, declarations such as variables, prototypes and type definitions, and functions such as helper functions. Code targets write the includes, then the declarations and functions; verification targets ignore host declarations."/>
       </eAnnotations>
       <eStructuralFeatures xsi:type="ecore:EAttribute" name="language"
           eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
@@ -241,6 +259,18 @@
           eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
       <eStructuralFeatures xsi:type="ecore:EAttribute" name="declarations"
           eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="functions"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Host-language functions, such as helper functions and methods, written after the declarations."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="includePaths"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="The directories that a build searches for included files, one per line, as written. Kernel code templates do not use them."/>
+        </eAnnotations>
+      </eStructuralFeatures>
     </eClassifiers>
 
     <!-- Types -->
@@ -507,6 +537,12 @@
           eType="#//kernel/Statement" containment="true"/>
       <eStructuralFeatures xsi:type="ecore:EReference" name="transitions" upperBound="-1"
           eType="#//sectioned/Transition" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="hostDeclarations" upperBound="-1"
+          eType="#//kernel/HostDeclarations" containment="true">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Host declarations that belong to the state, such as its state-local variables and functions. The encoding into the kernel adds them to the host declarations of the machine."/>
+        </eAnnotations>
+      </eStructuralFeatures>
     </eClassifiers>
 
     <eClassifiers xsi:type="ecore:EClass" name="Transition">

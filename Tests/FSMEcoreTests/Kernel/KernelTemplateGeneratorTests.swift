@@ -89,6 +89,26 @@ struct KernelTemplateGeneratorTests {
         #expect(files.allSatisfy { !$0.content.isEmpty })
     }
 
+    @Test("code targets write the functions of host declarations after their declarations",
+          arguments: KernelTarget.allCases.filter(\.isExecutionTarget))
+    func hostFunctions(_ target: KernelTarget) async throws {
+        let builder = try await KernelModelBuilder.make()
+        let system = builder.arrangement("Model")
+        let machine = builder.machine("Only", in: system)
+        let host = builder.hostDeclarations(in: machine, language: "", includes: "", declarations: "// declared here")
+        builder.set(host, .functions, "// functions here")
+        builder.set(host, .includePaths, "// include paths are not written")
+        let state = builder.state("Resting", in: machine)
+        builder.initial(state, of: machine)
+        builder.instance("only", of: machine, in: system)
+        let files = try await Self.generator().render(target, resource: await builder.resource())
+        let content = try #require(files.first?.content)
+        let declared = try #require(content.range(of: "// declared here"))
+        let functions = try #require(content.range(of: "// functions here"))
+        #expect(declared.upperBound <= functions.lowerBound)
+        #expect(!content.contains("// include paths are not written"))
+    }
+
     @Test("generating to a directory writes the rendered files and returns their locations")
     func generateToDirectory() async throws {
         let generator = try await Self.generator()

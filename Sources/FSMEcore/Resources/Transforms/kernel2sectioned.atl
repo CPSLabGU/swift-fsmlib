@@ -403,7 +403,10 @@ rule Variable {
             name <- v.name,
             type <- v.type,
             external <- v.external,
-            initialValue <- thisModule.restoredOf(v.initialValue)
+            initialValue <- thisModule.restoredOf(v.initialValue),
+            documentation <- v.documentation,
+            declarationText <- v.declarationText,
+            declarationLine <- if v.declarationText.oclIsUndefined() then OclUndefined else v.declarationLine endif
         )
 }
 
@@ -437,7 +440,9 @@ rule HostDeclarations {
         k : Kernel!HostDeclarations (
             language <- h.language,
             includes <- h.includes,
-            declarations <- h.declarations
+            declarations <- h.declarations,
+            functions <- h.functions,
+            includePaths <- h.includePaths
         )
 }
 

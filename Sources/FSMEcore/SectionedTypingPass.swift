@@ -84,9 +84,11 @@ extension ExpressionTyper.Scope {
 /// structural transformation produced.
 ///
 /// The pass declares the variables that ``VariableDeclarationScanner``
-/// recognises in the machine variables, removes their lines from the host
+/// recognises in the machine variables, records the line, text and comment
+/// of each declaration in its variable, removes their lines from the host
 /// declarations, and replaces every opaque label and section that
-/// ``ExpressionTyper`` types.
+/// ``ExpressionTyper`` types. Sections that hold only white space stay
+/// opaque, so that their text is kept.
 struct SectionedTypingPass {
     /// The metamodels that type the sectioned model.
     let metamodels: LLFSMMetamodels
@@ -163,10 +165,13 @@ struct SectionedTypingPass {
             return type.id
         }
         var variableIDs = machine.identifiers(.variables)
-        for declaration in scan.declarations {
+        for (declaration, placement) in zip(scan.declarations, scan.placements) {
             var variable = DynamicEObject(eClass: kernel.variableClass)
             variable.eSet(LLFSMFeature.name.rawValue, value: declaration.name)
             variable.eSet(LLFSMFeature.type.rawValue, value: await typeID(for: declaration.type))
+            variable.eSet(LLFSMFeature.documentation.rawValue, value: placement.documentation)
+            variable.eSet(LLFSMFeature.declarationText.rawValue, value: placement.text)
+            variable.eSet(LLFSMFeature.declarationLine.rawValue, value: placement.line)
             await resource.register(variable)
             variableIDs.append(variable.id)
         }
@@ -174,18 +179,9 @@ struct SectionedTypingPass {
         _ = await resource.eSet(objectId: machine.id, feature: LLFSMFeature.variables.rawValue, value: variableIDs)
         guard let host = index.objects(.hostDeclarations, of: machine)
             .first(where: { $0.string(.declarations) == text }) else { return }
-        let includes = host.string(.includes) ?? ""
-        if scan.remainder.isEmpty && includes.allSatisfy(\.isWhitespace) {
-            let remaining = machine.identifiers(.hostDeclarations).filter { $0 != host.id }
-            _ = await resource.eSet(
-                objectId: machine.id, feature: LLFSMFeature.hostDeclarations.rawValue,
-                value: remaining.isEmpty ? nil : remaining)
-            await resource.remove(id: host.id)
-        } else {
-            _ = await resource.eSet(
-                objectId: host.id, feature: LLFSMFeature.declarations.rawValue,
-                value: scan.remainder.isEmpty ? nil : scan.remainder)
-        }
+        _ = await resource.eSet(
+            objectId: host.id, feature: LLFSMFeature.declarations.rawValue,
+            value: scan.remainderLineCount == 0 ? nil : scan.remainder)
     }
 
     /// Replace the opaque sections and labels of a state that the typer types.
@@ -200,7 +196,8 @@ struct SectionedTypingPass {
             let statements = index.objects(section, of: state)
             guard statements.count == 1, let opaque = statements.first,
                   opaque.eClass.id == kernel.opaqueStatementClass.id,
-                  let typed = typer.typedStatements(from: opaque.string(.text) ?? "") else { continue }
+                  let text = opaque.string(.text), !text.allSatisfy(\.isWhitespace),
+                  let typed = typer.typedStatements(from: text) else { continue }
             var identifiers: [EUUID] = []
             for statement in typed { identifiers.append(await builder.make(statement).id) }
             _ = await resource.eSet(

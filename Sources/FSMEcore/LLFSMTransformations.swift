@@ -53,11 +53,17 @@ public struct LLFSMTransformations {
 
     /// Transform a structural machine or arrangement into the sectioned level.
     ///
-    /// Every section and label becomes an opaque node that carries its text
-    /// and the machine language; the machine boilerplate becomes host
-    /// declarations. A typing pass then declares the simple variables of
-    /// each machine (see ``VariableDeclarationScanner``) and replaces every
-    /// label and section that ``ExpressionTyper`` types.
+    /// Every non-empty section and every label becomes an opaque node that
+    /// carries its exact text, even if it holds only white space, and the
+    /// machine language. The boilerplate of a machine becomes host
+    /// declarations of the machine, with its include path, includes,
+    /// variables and functions, and the boilerplate of a state host
+    /// declarations of the state. A typing pass then declares the simple
+    /// variables of each machine (see ``VariableDeclarationScanner``),
+    /// recording the comment, text and line of each declaration in its
+    /// variable, and replaces every label and section that
+    /// ``ExpressionTyper`` types, except for sections that hold only white
+    /// space.
     ///
     /// - Parameters:
     ///   - source: The resource whose root is a structural machine or arrangement.
@@ -84,12 +90,18 @@ public struct LLFSMTransformations {
             sources: [Alias.source: source],
             targets: [Alias.target: target, Alias.kernelTarget: target],
             parameters: LLFSMTransformationNames.parameters(arrangementName: arrangementName))
-        let declarations = await StructuralDeclarations(metamodel: structural).read(source)
-        await SectionedTypingPass(metamodels: metamodels).run(on: target, variables: declarations.variables)
-        return TransformationResult(resource: target, diagnostics: declarations.diagnostics)
+        let variables = await StructuralDeclarations(metamodel: structural).variables(of: source)
+        await SectionedTypingPass(metamodels: metamodels).run(on: target, variables: variables)
+        return TransformationResult(resource: target, diagnostics: TransformationDiagnostics())
     }
 
     /// Encode a sectioned model into the kernel.
+    ///
+    /// The host declarations of the states of a machine are added to those
+    /// of the machine, which the diagnostics report as
+    /// ``TransformationWarning/StructuralInformation/stateBoilerplate``.
+    /// Opaque statements that hold only white space have no effect and are
+    /// left out, so a section that holds only such statements counts as empty.
     ///
     /// - Parameters:
     ///   - source: The resource whose root is a sectioned arrangement.
@@ -163,18 +175,26 @@ public struct LLFSMTransformations {
     /// reads back: a comparison of the state time with `after(…)`,
     /// `after_ms(…)` or `timeout(…)`, a line of output with the print call of
     /// the language, and operators with only the parentheses they need.
-    /// The host declarations of a machine become its boilerplate, and its
-    /// variables are declared again in the variables text.
+    /// The host declarations of a machine become its boilerplate and those
+    /// of a state the boilerplate of the state. The variables of a machine
+    /// are declared again in its variables: a variable with a declaration
+    /// text is written as that text at its original line, provided that the
+    /// first host declarations of the machine are in the language of the
+    /// machine; any other variable is declared in canonical form after them.
+    /// A structural model made by ``structuralToSectioned(_:arrangementName:uri:)``
+    /// therefore comes back byte for byte apart from its layouts, which
+    /// ``restoreLayouts(into:from:)`` can copy from the original.
     ///
     /// Some structural information cannot be recovered and is reported as
-    /// ``TransformationWarning/Kind/notRecovered(_:owner:)``: include paths
-    /// and layouts are not kept by the sectioned level; the boilerplate of
-    /// states was merged into the host declarations of their machine and
-    /// stays in the machine boilerplate; recognised variable declarations
-    /// are written in canonical form without their comments; and shared
-    /// declarations, instance bindings and machines without instances have
-    /// no place in structural models. Sections and labels that held only
-    /// white space come back empty.
+    /// ``TransformationWarning/Kind/notRecovered(_:owner:)``: layouts are
+    /// not kept by the sectioned level; a machine whose host declarations
+    /// carry no include paths gets an empty include path; several host
+    /// declarations of one machine, as the encoding into the kernel leaves
+    /// the boilerplate of states, are merged into the machine boilerplate;
+    /// variables without a declaration text in the language of the machine
+    /// are written in canonical form; and shared declarations, instance
+    /// bindings and machines without instances have no place in structural
+    /// models.
     ///
     /// - Parameters:
     ///   - source: The resource whose root is a sectioned arrangement.

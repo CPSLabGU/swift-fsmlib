@@ -16,7 +16,10 @@ import MTL
 /// The renderer runs the host queries of the bundled expression modules:
 /// each module that declares a `hostLanguages()` query renders the text of
 /// the languages it names. A language without such a module can only
-/// render opaque nodes, whose text is kept as written.
+/// render opaque nodes, whose text is kept as written. The renderer also
+/// puts the declaration texts of variables back at their lines of the
+/// host declarations that held them (see
+/// ``VariableDeclarationScanner/merged(remainder:placements:)``).
 @MainActor
 struct HostTextRenderer {
     /// The names of the queries that the renderer runs.
@@ -93,7 +96,9 @@ struct HostTextRenderer {
 
     /// The helpers that transformations call to render host text.
     ///
-    /// Each helper takes the node or nodes to render followed by the language.
+    /// Each rendering helper takes the node or nodes to render followed by
+    /// the language; the merging helper takes the declarations text and the
+    /// variables whose declaration texts it puts back.
     var nativeHelpers: [ATLNativeHelper] {
         let renderer = self
         func helper(_ name: String, _ query: String, _ verbatim: String, many: Bool) -> ATLNativeHelper {
@@ -110,7 +115,34 @@ struct HostTextRenderer {
                    many: true),
             helper(LLFSMTransformationNames.NativeHelper.renderDeclarations, Query.declarations,
                    Query.verbatimDeclarations, many: true),
+            ATLNativeHelper(
+                name: LLFSMTransformationNames.NativeHelper.mergeDeclarations,
+                parameterTypes: ["String", "OclAny"], returnType: "String"
+            ) { _, arguments in
+                await renderer.merge(
+                    arguments.first.flatMap { $0 as? String }, variables: arguments.count > 1 ? arguments[1] : nil)
+            },
         ]
+    }
+
+    /// Put the declaration texts of variables back at their lines of a declarations text.
+    ///
+    /// A variable without a declaration line is placed after the text.
+    ///
+    /// - Parameters:
+    ///   - text: The declarations that remained after the variables were recognised, or `nil` for none.
+    ///   - variables: The variable or sequence of variables whose declaration texts to put back.
+    /// - Returns: The declarations with the declaration texts at their lines.
+    func merge(_ text: String?, variables: (any EcoreValue)?) async -> String {
+        var placements: [VariableDeclarationScanner.Placement] = []
+        for element in Self.elements(of: variables) {
+            guard let variable = await resolved(element) as? DynamicEObject,
+                  let declaration = variable.string(.declarationText) else { continue }
+            let line = variable.isSet(.declarationLine) ? variable.int(.declarationLine) ?? Int.max : Int.max
+            placements.append(VariableDeclarationScanner.Placement(
+                line: line, text: declaration, documentation: variable.string(.documentation)))
+        }
+        return VariableDeclarationScanner.merged(remainder: text, placements: placements)
     }
 
     /// Render a node or a sequence of nodes in a language.

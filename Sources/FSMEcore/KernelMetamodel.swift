@@ -76,7 +76,8 @@ public struct KernelMetamodel: Sendable {
     /// The `Variable` class: a typed variable.
     ///
     /// Variables are shared when declared by an arrangement and local when declared by a machine;
-    /// only shared variables may be external.
+    /// only shared variables may be external. A variable recognised in host-language text keeps
+    /// the comment, the text and the line of its declaration.
     public let variableClass: EClass
 
     /// The `FunctionDeclaration` class: a function or method implemented by the host environment.
@@ -92,7 +93,8 @@ public struct KernelMetamodel: Sendable {
 
     /// The `HostDeclarations` class: verbatim host-language preamble for code targets.
     ///
-    /// Host declarations are admitted by the relaxed profile only.
+    /// Host declarations hold include paths, includes, declarations and functions, and are
+    /// admitted by the relaxed profile only.
     public let hostDeclarationsClass: EClass
 
     /// The `Type` class: the abstract superclass of all kernel types.

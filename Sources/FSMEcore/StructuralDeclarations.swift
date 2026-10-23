@@ -17,29 +17,14 @@ enum StructuralFeature: String, Sendable {
 }
 
 /// Reads the machine declarations of a structural model that the typing
-/// pass needs, and the boilerplate that no sectioned element holds.
+/// pass needs.
 struct StructuralDeclarations {
     /// The structural metamodel.
     let metamodel: LLFSMMetamodel
 
-    /// What a structural model declares.
-    struct Declarations {
-        /// The variable declarations of each machine, by machine name.
-        var variables: [String: String] = [:]
-        /// The warnings for boilerplate that is left out.
-        var diagnostics = TransformationDiagnostics()
-    }
-
     /// The feature of a boilerplate that holds its variable declarations.
-    private static let variablesFeature = feature(of: .variables)
-
-    /// The feature of a boilerplate that holds its include path.
-    private static let includePathFeature = feature(of: .includePath)
-
-    /// The name of the feature that holds a boilerplate section.
-    private static func feature(of section: StandardBoilerplateSection) -> String {
-        MachineEcoreCodec.boilerplateFeatures.first { $0.0 == section }?.1 ?? section.rawValue
-    }
+    private static let variablesFeature =
+        MachineEcoreCodec.boilerplateFeatures.first { $0.0 == .variables }?.1 ?? StandardBoilerplateSection.variables.rawValue
 
     /// Whether a class is a structural class, possibly from another load of the metamodel.
     ///
@@ -52,63 +37,27 @@ struct StructuralDeclarations {
             && Set(eClass.eAllStructuralFeatures.map(\.name)) == Set(structuralClass.eAllStructuralFeatures.map(\.name)))
     }
 
-    /// Read the declarations of the machines of a structural model.
+    /// Read the variable declarations of the machines of a structural model.
     ///
     /// Only the first machine of each name is read, as the transformation
     /// keeps one machine per name.
     ///
     /// - Parameter resource: The resource that holds the structural model.
-    /// - Returns: The variable declarations and the warnings.
-    func read(_ resource: Resource) async -> Declarations {
-        var declarations = Declarations()
+    /// - Returns: The variable declarations of each machine, by machine name.
+    func variables(of resource: Resource) async -> [String: String] {
+        var variables: [String: String] = [:]
         for case let machine as DynamicEObject in await resource.getAllObjectsIncludingContents()
         where Self.matches(machine.eClass, metamodel.machineClass) {
             guard let name = await resource.eGet(objectId: machine.id, feature: StructuralFeature.name.rawValue)
-                    as? String, declarations.variables[name] == nil else { continue }
+                    as? String, variables[name] == nil else { continue }
             let boilerplate = ModelReferences.identifier(
                 from: await resource.eGet(objectId: machine.id, feature: StructuralFeature.boilerplate.rawValue))
-            var variables = ""
+            var text = ""
             if let boilerplate {
-                variables = await resource.eGet(objectId: boilerplate, feature: Self.variablesFeature) as? String ?? ""
-                await diagnoseIncludePath(of: boilerplate, owner: name, in: resource, into: &declarations.diagnostics)
+                text = await resource.eGet(objectId: boilerplate, feature: Self.variablesFeature) as? String ?? ""
             }
-            declarations.variables[name] = variables
-            let entries = ModelReferences.identifiers(
-                from: await resource.eGet(objectId: machine.id, feature: StructuralFeature.stateBoilerplates.rawValue))
-            for entry in entries {
-                guard let stateBoilerplate = ModelReferences.identifier(
-                    from: await resource.eGet(objectId: entry, feature: StructuralFeature.boilerplate.rawValue))
-                else { continue }
-                let state = ModelReferences.identifier(
-                    from: await resource.eGet(objectId: entry, feature: StructuralFeature.state.rawValue))
-                let stateName = await state.asyncMap {
-                    await resource.eGet(objectId: $0, feature: StructuralFeature.name.rawValue) as? String
-                } ?? nil
-                await diagnoseIncludePath(
-                    of: stateBoilerplate, owner: stateName ?? name, in: resource, into: &declarations.diagnostics)
-            }
+            variables[name] = text
         }
-        return declarations
-    }
-
-    /// Record a warning if a boilerplate has an include path, which no sectioned element holds.
-    private func diagnoseIncludePath(
-        of boilerplate: EUUID,
-        owner: String,
-        in resource: Resource,
-        into diagnostics: inout TransformationDiagnostics
-    ) async {
-        let path = await resource.eGet(objectId: boilerplate, feature: Self.includePathFeature) as? String ?? ""
-        if !path.isEmpty {
-            diagnostics.record(.droppedText(section: Self.includePathFeature, owner: owner))
-        }
-    }
-}
-
-private extension Optional {
-    /// The result of an asynchronous transformation of the wrapped value.
-    func asyncMap<T>(_ transform: (Wrapped) async -> T) async -> T? {
-        guard let value = self else { return nil }
-        return await transform(value)
+        return variables
     }
 }

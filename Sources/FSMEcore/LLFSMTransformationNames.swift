@@ -134,6 +134,8 @@ enum LLFSMTransformationNames {
         static let renderStatements = "renderStatements"
         /// Renders variable declarations as host-language text: `renderDeclarations(variables, language)`.
         static let renderDeclarations = "renderDeclarations"
+        /// Puts the declaration texts of variables back at their lines: `mergeDeclarations(text, variables)`.
+        static let mergeDeclarations = "mergeDeclarations"
     }
 
     /// The values of the module parameters that carry the shared names.

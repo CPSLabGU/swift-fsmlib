@@ -26,6 +26,11 @@ struct SectionedEncodingDiagnostics {
         let objects = index.order.compactMap { index.object($0) }
         let machines = objects.filter { $0.eClass.id == sectioned.machineClass.id }
         let instances = objects.filter { $0.eClass.id == sectioned.instanceClass.id }
+        for machine in machines where index.objects(.states, of: machine).contains(where: {
+            !index.objects(.hostDeclarations, of: $0).isEmpty
+        }) {
+            diagnostics.record(.notRecovered(.stateBoilerplate, owner: machine.string(.name) ?? ""))
+        }
         var suspensible = Set<EUUID>()
         for machine in machines where machine.identifier(.suspendState) != nil {
             let name = machine.string(.name) ?? ""

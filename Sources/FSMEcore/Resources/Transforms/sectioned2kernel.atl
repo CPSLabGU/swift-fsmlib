@@ -11,7 +11,10 @@
 -- (rule E2). State-time expressions read the time elapsed since the entry of
 -- the current state, and in-state observations map onto the kernel states
 -- that encode the observed state. Every kernel state and transition created
--- here records its origin.
+-- here records its origin. Opaque statements that hold only white space have
+-- no effect and are left out, so a section of only such statements is
+-- empty. The host declarations of the states of a machine are added to
+-- those of the machine.
 --
 -- The options are those of the sectioned semantics; the names of the elements
 -- that the encoding adds and the constants of the time encoding are passed as
@@ -103,10 +106,10 @@ helper context Sectioned!Machine def : isControlled : Boolean =
 helper context Sectioned!State def : owner : Sectioned!Machine = self.refImmediateComposite();
 
 helper context Sectioned!State def : hasInternalState : Boolean =
-    not thisModule.elideEmptySections or self.internal->notEmpty();
+    not thisModule.elideEmptySections or thisModule.effective(self.internal)->notEmpty();
 
 helper context Sectioned!State def : hasExitStates : Boolean =
-    not thisModule.elideEmptySections or self.onExit->notEmpty();
+    not thisModule.elideEmptySections or thisModule.effective(self.onExit)->notEmpty();
 
 helper context Sectioned!State def : hasSelfLoop : Boolean =
     self.transitions->exists(t | t.target = self);
@@ -154,8 +157,16 @@ helper context Sectioned!State def : encodingStates : Sequence(OclAny) =
 
 -- Statements and labels
 
+-- Whether a statement is opaque text that holds only white space, which has no effect.
+helper def : isBlank(statement : OclAny) : Boolean =
+    if statement.oclIsKindOf(Kernel!OpaqueStatement) then statement.text.trim() = '' else false endif;
+
+-- The statements of a section that have an effect.
+helper def : effective(statements : Sequence(OclAny)) : Sequence(OclAny) =
+    statements->reject(s | thisModule.isBlank(s));
+
 helper def : copies(statements : Sequence(OclAny)) : Sequence(OclAny) =
-    statements->collect(s | s.copy())->select(s | not s.oclIsUndefined());
+    thisModule.effective(statements)->collect(s | s.copy())->select(s | not s.oclIsUndefined());
 
 helper def : copyOf(element : OclAny) : OclAny =
     if element.oclIsUndefined() then OclUndefined else element.copy() endif;
@@ -307,7 +318,7 @@ rule Machine {
                 ->union(if m.usesTime then Sequence{thisModule.EnteredAtVariable(m)} else Sequence{} endif)
                 ->union(if m.suspends then Sequence{thisModule.ResumeVariable(m)} else Sequence{} endif),
             functions <- m.functions,
-            hostDeclarations <- m.hostDeclarations,
+            hostDeclarations <- m.hostDeclarations->union(m.states->collect(s | s.hostDeclarations)->flatten()),
             states <- m.states->collect(s | s.kernelStates)->flatten(),
             initial <- m.initial
         )
@@ -538,7 +549,10 @@ rule Variable {
             name <- v.name,
             type <- v.type,
             external <- v.external,
-            initialValue <- thisModule.copyOf(v.initialValue)
+            initialValue <- thisModule.copyOf(v.initialValue),
+            documentation <- v.documentation,
+            declarationText <- v.declarationText,
+            declarationLine <- if v.declarationText.oclIsUndefined() then OclUndefined else v.declarationLine endif
         )
 }
 
@@ -572,7 +586,9 @@ rule HostDeclarations {
         k : Kernel!HostDeclarations (
             language <- h.language,
             includes <- h.includes,
-            declarations <- h.declarations
+            declarations <- h.declarations,
+            functions <- h.functions,
+            includePaths <- h.includePaths
         )
 }
 

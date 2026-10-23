@@ -59,7 +59,7 @@ public struct SectionedMetamodel: Sendable {
     /// The sectioned `State` class: a sectioned state.
     ///
     /// A sectioned state has entry, exit, internal, suspend and resume sections of kernel
-    /// statements.
+    /// statements, and may hold kernel host declarations of its own.
     public let stateClass: EClass
 
     /// The sectioned `Transition` class: a labelled transition between sectioned states.

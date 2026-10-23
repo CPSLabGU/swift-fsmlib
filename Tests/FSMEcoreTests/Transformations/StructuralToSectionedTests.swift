@@ -71,9 +71,9 @@ struct StructuralToSectionedTests {
                     let text = activities[section] ?? ""
                     let statements = index.objects(feature, of: state)
                     let place = "\(machineObject.string(.name) ?? "").\(state.string(.name) ?? "").\(feature.rawValue)"
-                    if text.allSatisfy(\.isWhitespace) {
+                    if text.isEmpty {
                         #expect(statements.isEmpty, "\(place)")
-                    } else if let typed = typer.typedStatements(from: text) {
+                    } else if !text.allSatisfy(\.isWhitespace), let typed = typer.typedStatements(from: text) {
                         #expect(statements.count == typed.count, "\(place)")
                         #expect(!statements.contains { $0.eClass.id == kernel.opaqueStatementClass.id }, "\(place)")
                     } else {
@@ -102,7 +102,7 @@ struct StructuralToSectionedTests {
         }
     }
 
-    /// Check that the machine boilerplate is kept as host declarations and declared variables.
+    /// Check that the machine and state boilerplate is kept as host declarations and declared variables.
     private func expectDeclarations(
         of machine: Machine,
         in machineObject: DynamicEObject,
@@ -115,33 +115,37 @@ struct StructuralToSectionedTests {
         let scan = VariableDeclarationScanner(language: language.name).scan(variables)
         let declared = index.objects(.variables, of: machineObject)
         #expect(declared.map { $0.string(.name) ?? "" } == scan.declarations.map(\.name))
-        for (variable, declaration) in zip(declared, scan.declarations) {
+        for (variable, (declaration, placement)) in zip(declared, zip(scan.declarations, scan.placements)) {
             #expect(index.target(.type, of: variable)?.string(.name) == declaration.type.name)
+            #expect(variable.string(.declarationText) == placement.text)
+            #expect(variable.int(.declarationLine) == placement.line)
+            #expect(variable.string(.documentation) == placement.documentation)
         }
-        let hosts = index.objects(.hostDeclarations, of: machineObject)
-        var expected: [(includes: String?, declarations: String?)] = []
-        func present(_ text: String?) -> Bool { !(text ?? "").allSatisfy(\.isWhitespace) }
-        func append(_ sections: [StandardBoilerplateSection: String], scanned: Bool) {
-            let includes = sections[.includes]
-            var declarations = sections[.variables]
-            if present(includes) || present(declarations) {
-                if scanned { declarations = scan.remainder.isEmpty ? nil : scan.remainder }
-                if present(includes) || declarations != nil || !scanned {
-                    expected.append((includes, declarations))
-                }
+        func present(_ text: String?) -> String? { (text ?? "").isEmpty ? nil : text }
+        func expectHosts(_ hosts: [DynamicEObject], of sections: [StandardBoilerplateSection: String]?,
+                         declarations: String?, place: String) {
+            let texts: [StandardBoilerplateSection] = [.includePath, .includes, .variables, .functions]
+            guard let sections, texts.contains(where: { present(sections[$0]) != nil }) else {
+                #expect(hosts.isEmpty, "\(place)")
+                return
             }
-            if present(sections[.functions]) { expected.append((nil, sections[.functions])) }
+            #expect(hosts.count == 1, "\(place)")
+            let host = hosts.first
+            #expect(host?.string(.language) == language.name, "\(place)")
+            #expect(host?.string(.includePaths) == present(sections[.includePath]), "\(place)")
+            #expect(host?.string(.includes) == present(sections[.includes]), "\(place)")
+            #expect(host?.string(.declarations) == declarations, "\(place)")
+            #expect(host?.string(.functions) == present(sections[.functions]), "\(place)")
         }
-        append(boilerplate, scanned: !scan.declarations.isEmpty)
-        for stateID in machine.llfsm.states {
-            guard let stateBoilerplate = machine.stateBoilerplate[stateID] else { continue }
-            append(language.extractSections(from: stateBoilerplate), scanned: false)
-        }
-        #expect(hosts.count == expected.count)
-        for (host, entry) in zip(hosts, expected) {
-            #expect(host.string(.includes) == entry.includes)
-            #expect(host.string(.declarations) == entry.declarations)
-            #expect(host.string(.language) == language.name)
+        let remainder = scan.declarations.isEmpty ? present(variables)
+            : (scan.remainderLineCount == 0 ? nil : scan.remainder)
+        let name = machineObject.string(.name) ?? ""
+        expectHosts(index.objects(.hostDeclarations, of: machineObject), of: boilerplate,
+                    declarations: remainder, place: name)
+        for (stateID, state) in zip(machine.llfsm.states, index.objects(.states, of: machineObject)) {
+            let sections = machine.stateBoilerplate[stateID].map { language.extractSections(from: $0) }
+            expectHosts(index.objects(.hostDeclarations, of: state), of: sections,
+                        declarations: present(sections?[.variables]), place: "\(name).\(state.string(.name) ?? "")")
         }
     }
 
@@ -160,7 +164,7 @@ struct StructuralToSectionedTests {
         #expect(time.eClass.id == transformations.metamodels.sectioned.stateTimeExpressionClass.id)
         #expect(time.string(.unit) == SectionedTimeUnit.seconds.rawValue)
         #expect(index.target(.right, of: label)?.int(.value) == 60)
-        #expect(result.diagnostics.warnings.map(\.kind) == [.droppedText(section: "includePath", owner: "TrafficLight")])
+        #expect(result.diagnostics.isEmpty)
     }
 
     @Test("the counters declare their integer variable, type their plain print and share machines")

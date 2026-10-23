@@ -24,55 +24,71 @@ struct SectionedToStructuralTests {
     }
 
     /// Run an example through the sectioned level and back.
-    private func roundTrip(_ example: ParityExample) async throws -> (
+    ///
+    /// - Parameters:
+    ///   - example: The example to run.
+    ///   - restoresLayouts: Whether the layouts of the original are laid over the result.
+    /// - Returns: The original model and the result of the transformation back.
+    private func roundTrip(_ example: ParityExample, restoresLayouts: Bool = false) async throws -> (
         original: StructuralRoundTrip.Model, result: TransformationResult
     ) {
         let original = try StructuralRoundTrip.model(of: example)
         let transformations = try await TransformationTestSupport.transformations()
         let source = try await StructuralRoundTrip.xmiResource(of: original)
         let sectioned = try await transformations.structuralToSectioned(source, arrangementName: example.name)
-        return (original, try await transformations.sectionedToStructural(sectioned.resource))
+        let result = try await transformations.sectionedToStructural(sectioned.resource)
+        if restoresLayouts {
+            await transformations.restoreLayouts(into: result.resource, from: source)
+        }
+        return (original, result)
     }
 
-    @Test("every bundle comes back byte for byte, apart from the documented losses", arguments: examples)
-    func bundleRoundTrip(_ example: ParityExample) async throws {
-        let (original, result) = try await roundTrip(example)
+    /// The files of the original bundle of an example and of its round trip.
+    private func files(of example: ParityExample, restoresLayouts: Bool) async throws -> (
+        original: [String: Data], back: [String: Data], format: Format
+    ) {
+        let (original, result) = try await roundTrip(example, restoresLayouts: restoresLayouts)
         let format = try format(of: original)
         let source = try await StructuralRoundTrip.decode(try await StructuralRoundTrip.xmiResource(of: original))
         let originalFiles = try await StructuralRoundTrip.files(of: source, named: example.name, format: format)
         let back = try await StructuralRoundTrip.decode(result.resource)
-        let files = try await StructuralRoundTrip.files(of: back, named: example.name, format: format)
-        let expectedModel = try await StructuralRoundTrip.decode(
-            try await StructuralRoundTrip.xmiResource(of: StructuralRoundTrip.expected(original)))
-        let expected = try await StructuralRoundTrip.files(of: expectedModel, named: example.name, format: format)
-        let parityCase = ParityCase(example: example, format: format, isSuspensible: true)
-        TemplateParity.expectIdentical(files, expected, case: parityCase)
-        let differing = Set(originalFiles.keys.filter { files[$0] != originalFiles[$0] })
-        #expect(differing == Set(originalFiles.keys.filter { expected[$0] != originalFiles[$0] }))
+        return (originalFiles, try await StructuralRoundTrip.files(of: back, named: example.name, format: format), format)
     }
 
-    @Test("the documented losses are reported for every machine", arguments: examples)
+    @Test("with the layouts restored, every bundle comes back byte for byte", arguments: examples)
+    func bundleRoundTrip(_ example: ParityExample) async throws {
+        let (original, back, format) = try await files(of: example, restoresLayouts: true)
+        let parityCase = ParityCase(example: example, format: format, isSuspensible: true)
+        TemplateParity.expectIdentical(back, original, case: parityCase)
+    }
+
+    @Test("without the layouts restored, only the layout files differ", arguments: examples)
+    func bundleRoundTripWithoutLayouts(_ example: ParityExample) async throws {
+        let (original, back, format) = try await files(of: example, restoresLayouts: false)
+        let expectedModel = try await StructuralRoundTrip.decode(
+            try await StructuralRoundTrip.xmiResource(of: StructuralRoundTrip.withoutLayouts(
+                try StructuralRoundTrip.model(of: example))))
+        let expected = try await StructuralRoundTrip.files(of: expectedModel, named: example.name, format: format)
+        let parityCase = ParityCase(example: example, format: format, isSuspensible: true)
+        TemplateParity.expectIdentical(back, expected, case: parityCase)
+        let differing = Set(original.keys).union(back.keys).filter { back[$0] != original[$0] }
+        #expect(differing == Set(original.keys).union(expected.keys).filter { expected[$0] != original[$0] })
+        #expect(differing.allSatisfy { StructuralRoundTrip.layoutFiles.contains(($0 as NSString).lastPathComponent) },
+                "\(differing.sorted())")
+    }
+
+    @Test("only the layouts are reported as lost for every machine", arguments: examples)
     func warnings(_ example: ParityExample) async throws {
         let (original, result) = try await roundTrip(example)
-        var machines: [(String, Machine)] = []
+        var machines: [String] = []
         switch original {
-        case .machine(let name, let machine): machines = [(name, machine)]
+        case .machine(let name, _): machines = [name]
         case .arrangement(let arrangement):
-            for instance in arrangement.namedInstances where !machines.contains(where: { $0.0 == instance.typeName }) {
-                machines.append((String(instance.typeName), instance.machine))
+            for instance in arrangement.namedInstances where !machines.contains(String(instance.typeName)) {
+                machines.append(String(instance.typeName))
             }
         }
-        var expected: [TransformationWarning.Kind] = []
-        for (name, machine) in machines {
-            expected.append(.notRecovered(.includePath, owner: name))
-            expected.append(.notRecovered(.layout, owner: name))
-            expected.append(.notRecovered(.stateBoilerplate, owner: name))
-            let variables = machine.language.extractSections(from: machine.boilerplate)[.variables] ?? ""
-            if !VariableDeclarationScanner(language: machine.language.name).scan(variables).declarations.isEmpty {
-                expected.append(.notRecovered(.declarationFormatting, owner: name))
-            }
-        }
-        #expect(result.diagnostics.warnings.map(\.kind) == expected)
+        #expect(result.diagnostics.warnings.map(\.kind) == machines.map { .notRecovered(.layout, owner: $0) })
     }
 
     @Test("the traffic light keeps its names, state order, initial state and timed labels")

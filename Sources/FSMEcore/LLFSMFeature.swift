@@ -18,7 +18,8 @@ enum LLFSMFeature: String, CaseIterable, Sendable {
     case variable, value, passThrough, actions, transitions, label, target
     case origin, state, role, transition
     case type, external, initialValue
-    case pure, parameters, result, receiverType, includes, declarations
+    case pure, parameters, result, receiverType, includes, declarations, includePaths
+    case documentation, declarationText, declarationLine
     case lower, upper, literals, element, size, text, literal
     case index, operation, operand, left, right
     case condition, whenTrue, whenFalse, instance
