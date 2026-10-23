@@ -5,6 +5,7 @@
 //  Created by Rene Hexel on 23/10/2026.
 //  Copyright © 2026 Rene Hexel. All rights reserved.
 //
+import Foundation
 
 /// Recognises simple variable declarations in host-language declaration text.
 ///
@@ -17,9 +18,15 @@
 /// `signed` have the 32-bit range, `unsigned` the non-negative part of it,
 /// and `bool` is Boolean.
 ///
+/// Every recognised declaration also records its ``Placement``: the line it
+/// was found on, its verbatim text and the text of its documentation
+/// comment. ``merged(remainder:placements:)`` puts the placements back
+/// into the remaining text, which gives back the scanned text exactly.
+///
 /// ```swift
 /// let scan = VariableDeclarationScanner(language: "c").scan("int\tcounter;\t///< Bean counter\n")
 /// // scan.declarations == [.init(name: "counter", type: .integer(name: "int", range: ...))]
+/// // scan.placements == [.init(line: 0, text: "int\tcounter;\t///< Bean counter", documentation: "Bean counter")]
 /// ```
 public struct VariableDeclarationScanner: Sendable {
     /// A recognised variable declaration.
@@ -40,12 +47,44 @@ public struct VariableDeclarationScanner: Sendable {
         }
     }
 
+    /// Where and how a recognised declaration was written.
+    public struct Placement: Sendable, Hashable {
+        /// The zero-based index of the line that holds the declaration.
+        public var line: Int
+        /// The line as written, without its line break.
+        public var text: String
+        /// The text of the documentation comment that follows the
+        /// declaration, without the comment marker and surrounding white
+        /// space, or `nil` if there is no comment or it is empty.
+        public var documentation: String?
+
+        /// Create a placement.
+        ///
+        /// - Parameters:
+        ///   - line: The zero-based index of the line that holds the declaration.
+        ///   - text: The line as written, without its line break.
+        ///   - documentation: The text of the documentation comment, if any.
+        public init(line: Int, text: String, documentation: String?) {
+            self.line = line
+            self.text = text
+            self.documentation = documentation
+        }
+    }
+
     /// The outcome of scanning declaration text.
     public struct Result: Sendable, Hashable {
         /// The recognised declarations, in text order.
         public var declarations: [Declaration]
+        /// The placements of the recognised declarations, in the order of ``declarations``.
+        public var placements: [Placement]
         /// The lines that were not recognised, joined by line breaks.
         public var remainder: String
+        /// The number of lines that were not recognised.
+        ///
+        /// The count tells a ``remainder`` that holds one empty line, as
+        /// left by a text that ends with a line break, from one that holds
+        /// no line at all.
+        public var remainderLineCount: Int
     }
 
     /// The language of the declaration text.
@@ -64,20 +103,70 @@ public struct VariableDeclarationScanner: Sendable {
     /// - Parameter text: The host-language declarations.
     /// - Returns: The recognised declarations and the remaining text.
     public func scan(_ text: String) -> Result {
+        let lines = Self.lines(of: text)
         guard let syntax = HostSyntax.syntax(for: language), !syntax.declarationTypes.isEmpty else {
-            return Result(declarations: [], remainder: text)
+            return Result(declarations: [], placements: [], remainder: text, remainderLineCount: lines.count)
         }
         var declarations: [Declaration] = []
+        var placements: [Placement] = []
         var remaining: [Substring] = []
         var names = Set<String>()
-        for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
+        for (index, line) in lines.enumerated() {
             if let declaration = declaration(in: line, syntax: syntax), names.insert(declaration.name).inserted {
                 declarations.append(declaration)
+                placements.append(Placement(
+                    line: index, text: String(line), documentation: documentation(in: line, syntax: syntax)))
             } else {
                 remaining.append(line)
             }
         }
-        return Result(declarations: declarations, remainder: remaining.joined(separator: "\n"))
+        return Result(
+            declarations: declarations, placements: placements,
+            remainder: remaining.joined(separator: "\n"), remainderLineCount: remaining.count)
+    }
+
+    /// Put recognised declarations back into the text that remained after a scan.
+    ///
+    /// Each placement is inserted as the line with its index, so that
+    /// merging the ``Result/placements`` of a scan into its
+    /// ``Result/remainder`` gives back the scanned text. A placement whose
+    /// line lies beyond the end of the text is appended, in line order.
+    ///
+    /// - Parameters:
+    ///   - remainder: The lines that were not recognised, joined by line
+    ///     breaks, or `nil` if no line remained.
+    ///   - placements: The placements of the declarations to insert.
+    /// - Returns: The text with the declarations at their lines.
+    public static func merged(remainder: String?, placements: [Placement]) -> String {
+        let remaining = remainder.map(lines(of:)) ?? []
+        let placed = placements.enumerated().sorted { ($0.element.line, $0.offset) < ($1.element.line, $1.offset) }
+            .map(\.element)
+        var result: [Substring] = []
+        var nextPlacement = placed.startIndex
+        var nextLine = remaining.startIndex
+        while nextPlacement < placed.endIndex || nextLine < remaining.endIndex {
+            if nextPlacement < placed.endIndex,
+               placed[nextPlacement].line <= result.count || nextLine == remaining.endIndex {
+                result.append(Substring(placed[nextPlacement].text))
+                nextPlacement += 1
+            } else {
+                result.append(remaining[nextLine])
+                nextLine += 1
+            }
+        }
+        return result.joined(separator: "\n")
+    }
+
+    /// The lines of a text, including an empty last line after a final line break.
+    private static func lines(of text: String) -> [Substring] {
+        text.split(separator: "\n", omittingEmptySubsequences: false)
+    }
+
+    /// The text of the documentation comment on a line, if it has a non-empty one.
+    private func documentation(in line: Substring, syntax: HostSyntax) -> String? {
+        guard let comment = line.range(of: syntax.declarationComment) else { return nil }
+        let text = line[comment.upperBound...].trimmingCharacters(in: .whitespaces)
+        return text.isEmpty ? nil : text
     }
 
     /// The declaration on one line, if the line holds exactly one simple declaration.
