@@ -24,6 +24,7 @@ let package = Package(
         .package(url: "https://github.com/mipalgu/swift-mtl.git", branch: "main"),
         .package(url: "https://github.com/mipalgu/swift-atl.git", branch: "main"),
         .package(url: "https://github.com/mipalgu/swift-aql.git", branch: "main"),
+        .package(url: "https://github.com/mipalgu/swift-modelling.git", branch: "main"),
     ],
     targets: [
         .target(
@@ -42,6 +43,8 @@ let package = Package(
                 .product(name: "MTL", package: "swift-mtl"),
                 .product(name: "ATL", package: "swift-atl"),
                 .product(name: "AQL", package: "swift-aql"),
+                .product(name: "ModellingGenerators", package: "swift-modelling"),
+                .product(name: "ModellingPipeline", package: "swift-modelling"),
             ],
             resources: [.copy("Resources")],
             swiftSettings: [.swiftLanguageMode(.v5)]
@@ -50,6 +53,9 @@ let package = Package(
             name: "fsmconvert",
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
+                .product(name: "ECore", package: "swift-ecore"),
+                .product(name: "ModellingCommandLine", package: "swift-modelling"),
+                .product(name: "ModellingGenerators", package: "swift-modelling"),
                 "FSM",
                 "FSMEcore",
             ],
@@ -63,7 +69,11 @@ let package = Package(
         ),
         .testTarget(
             name: "FSMEcoreTests",
-            dependencies: ["FSMEcore", "FSM"],
+            dependencies: [
+                "FSMEcore",
+                "FSM",
+                .product(name: "ModellingGenerators", package: "swift-modelling"),
+            ],
             resources: [.copy("Resources")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),

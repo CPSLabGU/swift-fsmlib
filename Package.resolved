@@ -1,5 +1,5 @@
 {
-  "originHash" : "36ff1e58d277eb3fe02192263ea7ffcb5ac530ce84616914661cd4525482d622",
+  "originHash" : "dc5173b9ca004bec4e954eb22583318d6ad60dd6978c911e118b9b2e5d6156bd",
   "pins" : [
     {
       "identity" : "bigint",
@@ -13,7 +13,7 @@
     {
       "identity" : "swift-aql",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/mipalgu/swift-aql",
+      "location" : "https://github.com/mipalgu/swift-aql.git",
       "state" : {
         "branch" : "main",
         "revision" : "2c135a59bb8e952c375cf662c43002c4356ca17f"
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-collections",
       "state" : {
-        "revision" : "8d9834a6189db730f6264db7556a7ffb751e99ee",
-        "version" : "1.4.0"
+        "revision" : "844289ac455816e193f1dbbe014f3c4dbe429410",
+        "version" : "1.7.4"
       }
     },
     {
@@ -71,6 +71,15 @@
       "state" : {
         "branch" : "main",
         "revision" : "375cc68f673aa34817368bcd1c95194f52753739"
+      }
+    },
+    {
+      "identity" : "swift-modelling",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/mipalgu/swift-modelling.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "47a6e865c2efcb66ea2b3f0963975edb885d11ea"
       }
     },
     {
@@ -105,8 +114,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftxml/SwiftXMLInterfaces",
       "state" : {
-        "revision" : "6456fe6b3afb9e4d2f0c02925e78ca6c5d128cb1",
-        "version" : "1.0.0"
+        "revision" : "14f6de6cf39d45cc291c59c9467d69a7b58edb50",
+        "version" : "1.0.1"
       }
     },
     {
