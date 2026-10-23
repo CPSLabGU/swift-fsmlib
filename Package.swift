@@ -23,6 +23,7 @@ let package = Package(
         .package(url: "https://github.com/mipalgu/swift-ecore.git", branch: "main"),
         .package(url: "https://github.com/mipalgu/swift-mtl.git", branch: "main"),
         .package(url: "https://github.com/mipalgu/swift-atl.git", branch: "main"),
+        .package(url: "https://github.com/mipalgu/swift-aql.git", branch: "main"),
     ],
     targets: [
         .target(
@@ -40,6 +41,7 @@ let package = Package(
                 .product(name: "EMFBase", package: "swift-ecore"),
                 .product(name: "MTL", package: "swift-mtl"),
                 .product(name: "ATL", package: "swift-atl"),
+                .product(name: "AQL", package: "swift-aql"),
             ],
             resources: [.copy("Resources")],
             swiftSettings: [.swiftLanguageMode(.v5)]
