@@ -48,22 +48,12 @@ struct TemplateParityTests {
         defer { directories.forEach { try? FileManager.default.removeItem(at: $0) } }
         let templateURL = try TemplateParity.writeArrangement(
             arrangement, language: binding, for: parityCase, in: templateDirectory)
-        func swiftRendition() throws -> [String: Data] {
-            let directory = try TemplateParity.makeDirectory("swift")
-            directories.append(directory)
-            let url = try TemplateParity.writeArrangement(
-                arrangement, language: language, for: parityCase, in: directory)
-            return try TemplateParity.files(at: url)
-        }
-        var renditions = 1
-        try TemplateParity.expectIdentical(
-            try TemplateParity.files(at: templateURL), try swiftRendition(), case: parityCase,
-            alternatives: {
-                guard renditions < TemplateParity.arrangementRenditions else { return nil }
-                renditions += 1
-                return try swiftRendition()
-            },
-            allowsReorderedLines: Set(arrangement.namedInstances.map(\.typeFile)).count > 1)
+        let swiftDirectory = try TemplateParity.makeDirectory("swift")
+        directories.append(swiftDirectory)
+        let swiftURL = try TemplateParity.writeArrangement(
+            arrangement, language: language, for: parityCase, in: swiftDirectory)
+        TemplateParity.expectIdentical(
+            try TemplateParity.files(at: templateURL), try TemplateParity.files(at: swiftURL), case: parityCase)
     }
 
     @Test("C machines", arguments: TemplateParity.cases(of: TemplateParity.machineExamples, in: .c))

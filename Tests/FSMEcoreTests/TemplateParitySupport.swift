@@ -61,12 +61,6 @@ enum TemplateParity {
     /// The bundle extension of machines.
     static let machineExtension = "machine"
 
-    /// The number of times the Swift rendition of an arrangement is repeated to find the order the templates use.
-    ///
-    /// The Swift arrangement code lists machine types in the iteration order of a set or dictionary,
-    /// which is unspecified; the templates list them in the order of their first instance.
-    static let arrangementRenditions = 8
-
     /// The directory holding the example bundles of the package.
     static var examplesDirectory: URL {
         URL(fileURLWithPath: #filePath)
@@ -207,36 +201,18 @@ enum TemplateParity {
     ///   - template: The files written through the templates.
     ///   - swift: The files written by the Swift binding.
     ///   - parityCase: The compared case, for the issue description.
-    ///   - alternatives: Further Swift renditions; a file matches if any rendition matches.
-    ///   - allowsReorderedLines: Whether a file that no rendition matches is accepted if it holds
-    ///     the same lines in another order, which is how renditions with an unspecified order of
-    ///     machine types differ. Accepted files are reported in the test output.
     ///   - sourceLocation: The location to report issues at.
     static func expectIdentical(
         _ template: [String: Data],
         _ swift: [String: Data],
         case parityCase: ParityCase,
-        alternatives: () throws -> [String: Data]? = { nil },
-        allowsReorderedLines: Bool = false,
         sourceLocation: SourceLocation = #_sourceLocation
-    ) rethrows {
+    ) {
         #expect(
             template.keys.sorted() == swift.keys.sorted(),
             "File sets differ for \(parityCase.testDescription): only templates \(Set(template.keys).subtracting(swift.keys).sorted()), only Swift \(Set(swift.keys).subtracting(template.keys).sorted())",
             sourceLocation: sourceLocation)
-        var differing = Set(template.keys.filter { swift[$0] != nil && template[$0] != swift[$0] })
-        while !differing.isEmpty, let alternative = try alternatives() {
-            differing = differing.filter { alternative[$0] != template[$0] }
-        }
-        if allowsReorderedLines {
-            let reordered = differing.filter { path in
-                sortedLines(template[path]) == sortedLines(swift[path])
-            }
-            if !reordered.isEmpty {
-                print("Parity of \(parityCase.testDescription): same lines in another order in \(reordered.sorted())")
-            }
-            differing.subtract(reordered)
-        }
+        let differing = Set(template.keys.filter { swift[$0] != nil && template[$0] != swift[$0] })
         guard let first = differing.sorted().first else { return }
         let diff = unifiedDiff(
             String(decoding: swift[first] ?? Data(), as: UTF8.self),
@@ -245,16 +221,6 @@ enum TemplateParity {
         Issue.record(
             "\(differing.count) file(s) differ for \(parityCase.testDescription): \(differing.sorted()); first:\n\(diff)",
             sourceLocation: sourceLocation)
-    }
-
-    /// The lines of a file in ascending order.
-    ///
-    /// - Parameter data: The file content.
-    /// - Returns: The sorted lines, empty if there is no content.
-    static func sortedLines(_ data: Data?) -> [Substring] {
-        guard let data else { return [] }
-        return String(decoding: data, as: UTF8.self)
-            .split(separator: "\n", omittingEmptySubsequences: false).sorted()
     }
 
     /// A unified diff of two texts, with three lines of context.
