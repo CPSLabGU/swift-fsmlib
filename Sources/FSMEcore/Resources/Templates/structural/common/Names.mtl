@@ -1,0 +1,89 @@
+[comment encoding = UTF-8 /]
+[**
+ * Names and lookups shared by every structural template set.
+ *
+ * The queries navigate a machine of the structural metamodel: its states in
+ * order, the transitions that leave a state, and the boilerplate sections and
+ * state activities that a machine bundle keeps in separate files.
+ **/]
+[module Names('http://cpslabgu.github.io/LLFSMStructural')/]
+
+[**
+ * The extension that names a machine bundle directory.
+ **/]
+[query public machineExtension() : String = '.machine'/]
+
+[**
+ * A name without the extension that follows its last full stop.
+ **/]
+[query public sansExtension(text : String) : String = let dot : Integer = text.lastIndex('.') in if dot < 1 then text else text.substring(1, dot - 1) endif/]
+
+[**
+ * The directory of the bundle for a machine type file, with the bundle extension added if it is missing.
+ **/]
+[query public bundleDirectory(typeFile : String) : String = if typeFile.endsWith(machineExtension()) then typeFile else typeFile + machineExtension() endif/]
+
+[**
+ * The states of a machine, in order.
+ **/]
+[query public states(m : Machine) : Sequence(State) = m.llfsm.states/]
+
+[**
+ * The transitions that leave a state, in the order of the machine.
+ **/]
+[query public transitionsFrom(m : Machine, s : State) : Sequence(Transition) = m.llfsm.transitions->select(t | t.source = s)/]
+
+[**
+ * The position of a state in its machine, counted from zero.
+ **/]
+[query public stateIndex(m : Machine, s : State) : Integer = m.llfsm.states->indexOf(s) - 1/]
+
+[**
+ * Whether a machine has a suspend state.
+ **/]
+[query public hasSuspendState(m : Machine) : Boolean = not m.llfsm.suspendState.oclIsUndefined()/]
+
+[**
+ * Text that may be undefined, as a string.
+ **/]
+[query public orEmpty(text : OclAny) : String = if text.oclIsUndefined() then '' else text.toString() endif/]
+
+[**
+ * A machine boilerplate section, empty if the machine has none.
+ **/]
+[query public machineSection(m : Machine, section : String) : String = if m.boilerplate.oclIsUndefined() then '' else orEmpty(m.boilerplate.eGet(section)) endif/]
+
+[**
+ * Whether a machine boilerplate section is present.
+ **/]
+[query public hasMachineSection(m : Machine, section : String) : Boolean = if m.boilerplate.oclIsUndefined() then false else m.boilerplate.eIsSet(section) endif/]
+
+[**
+ * The boilerplate entry of a state, if the machine has one.
+ **/]
+[query public stateBoilerplate(m : Machine, s : State) : OclAny = m.stateBoilerplates->select(e | e.state = s)->first()/]
+
+[**
+ * Whether a state boilerplate section, such as includes, is present.
+ **/]
+[query public hasStateSection(m : Machine, s : State, section : String) : Boolean = let entry : OclAny = stateBoilerplate(m, s) in if entry.oclIsUndefined() then false else entry.boilerplate.eIsSet(section) endif/]
+
+[**
+ * A state boilerplate section, such as includes, empty if the state has none.
+ **/]
+[query public stateSection(m : Machine, s : State, section : String) : String = let entry : OclAny = stateBoilerplate(m, s) in if entry.oclIsUndefined() then '' else orEmpty(entry.boilerplate.eGet(section)) endif/]
+
+[**
+ * Whether a state activity, such as onEntry, is present.
+ **/]
+[query public hasActivity(s : State, activity : String) : Boolean = if s.activities.oclIsUndefined() then false else s.activities.eIsSet(activity) endif/]
+
+[**
+ * A state activity, such as onEntry, empty if the state has none.
+ **/]
+[query public activity(s : State, activity : String) : String = if s.activities.oclIsUndefined() then '' else orEmpty(s.activities.eGet(activity)) endif/]
+
+[**
+ * The label of a transition as a line of text.
+ **/]
+[query public labelLine(t : Transition) : String = if t.label.endsWith('\n') then t.label else t.label + '\n' endif/]

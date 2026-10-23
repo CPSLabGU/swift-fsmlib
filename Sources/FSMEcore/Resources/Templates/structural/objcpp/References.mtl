@@ -1,0 +1,109 @@
+[comment encoding = UTF-8 /]
+[**
+ * The variable and function reference files of a machine and its states.
+ *
+ * An action includes these files to see the variables of its machine and
+ * state as references and the functions of both as declarations. A variable
+ * declaration such as an integer counter turns into a reference to the
+ * variable of the same name in the machine or state object; comments and
+ * other lines stay as they are and blank lines are dropped.
+ **/]
+[module References('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import objcpp::Identifiers/]
+
+[**
+ * The name of the variable that points to the machine object in an action.
+ **/]
+[query public machineVariable() : String = '_m'/]
+
+[**
+ * The name of the variable that points to the state object in an action.
+ **/]
+[query public stateVariable() : String = '_s'/]
+
+[**
+ * The regular expression of a variable declaration: a type, a name and a semicolon, followed by an optional comment.
+ **/]
+[query public declarationPattern() : String = '^([^;]+?)\\s+(\\w+)\\s*;(.*)$'/]
+
+[**
+ * The prefix of a comment line.
+ **/]
+[query public commentPrefix() : String = '//'/]
+
+[**
+ * Whether a trimmed line declares a variable.
+ **/]
+[query public isDeclaration(trimmed : String) : Boolean = trimmed.replace(declarationPattern(), '') <> trimmed/]
+
+[**
+ * The part of a trimmed line that the declaration pattern matches.
+ **/]
+[query public matchedDeclaration(trimmed : String) : String = trimmed.replace('(' + declarationPattern() + ')[\\s\\S]*', '$1')/]
+
+[**
+ * The reference that replaces a matched declaration: its type words separated by tabs, the name as a reference to the
+ * variable of the object, and everything after the first semicolon.
+ **/]
+[query public reference(matched : String, variable : String) : String = let declaration : String = whitespaceTrimmed(matched.replace(';[\\s\\S]*', '')) in let name : String = declaration.replace('^[\\s\\S]*' + whitespaceClass(), '') in let type : String = declaration.replace(whitespaceClass() + '+[^\t\\p{Zs}]*\\z', '').replaceAll(whitespaceClass() + '+', '\t') in type + '\t&' + name + ' = ' + variable + '->' + name + ';' + matched.replace('^[^;]*;', '')/]
+
+[**
+ * A line of a variables section as it appears in a reference file.
+ **/]
+[query public referenceLine(line : String, variable : String) : String = let trimmed : String = whitespaceTrimmed(line) in if trimmed.startsWith(commentPrefix()) then line else if isDeclaration(trimmed) then reference(matchedDeclaration(trimmed), variable) else line endif endif/]
+
+[**
+ * The lines of a reference file for a variables section, without blank lines.
+ **/]
+[query public referenceLines(variables : String, variable : String) : Sequence(String) = variables.tokenize('\n')->reject(line | whitespaceTrimmed(line) = '')->collect(line | referenceLine(line, variable))/]
+
+[**
+ * Writes the variable and function reference files of a machine and of each of its states.
+ **/]
+[template public referenceFiles(m : Machine, name : String, dir : String)]
+[file (dir + name + '_VarRefs.mm', false, 'UTF-8')][variableReferences(name + '_VarRefs.mm', name, machineVariable(), 'machine', machineSection(m, 'variables'))/][/file]
+[file (dir + name + '_FuncRefs.mm', false, 'UTF-8')][functionReferences(name + '_FuncRefs.mm', machineSection(m, 'functions'))/][/file]
+[for (s : State | states(m))]
+[file (dir + 'State_' + s.name + '_VarRefs.mm', false, 'UTF-8')][variableReferences('State_' + s.name + '_VarRefs.mm', s.name, stateVariable(), 'state', stateSection(m, s, 'variables'))/][/file]
+[file (dir + 'State_' + s.name + '_FuncRefs.mm', false, 'UTF-8')][functionReferences('State_' + s.name + '_FuncRefs.mm', stateSection(m, s, 'functions'))/][/file]
+[/for]
+[/template]
+
+[**
+ * The variable reference file: the object of a class cast from an action argument, and the references to its variables.
+ **/]
+[template public variableReferences(fileName : String, className : String, variable : String, argument : String, variables : String)]
+//
+// [fileName/]
+//
+// Automatically created through MiCASE -- do not change manually!
+//
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-variable"
+#pragma clang diagnostic ignored "-Wshadow"
+
+[className/] *[variable/] = static_cast<[className/] *>(_[argument/]);
+
+[for (line : String | referenceLines(variables, variable))]
+[line/]
+[/for]
+
+#pragma clang diagnostic pop[/template]
+
+[**
+ * The function reference file: the functions section between diagnostic pragmas.
+ **/]
+[template public functionReferences(fileName : String, functions : String)]
+//
+// [fileName/]
+//
+// Automatically created through MiCASE -- do not change manually!
+//
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++98-compat"
+
+[if (functions <> '')]
+[functions + '\n'/]
+[/if]
+#pragma clang diagnostic pop[/template]

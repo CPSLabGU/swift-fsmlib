@@ -1,0 +1,81 @@
+[comment encoding = UTF-8 /]
+[**
+ * The CMake files of a C machine.
+ *
+ * The project fragment lists the sources of the machine, so that an
+ * arrangement can include it, and the CMake lists build the machine as a
+ * static library on its own.
+ **/]
+[module CMake('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import c::CNames/]
+[import c::MachineSource/]
+[import c::StateSource/]
+
+[**
+ * The file name of the CMake project fragment.
+ **/]
+[query public cmakeFragmentFile() : String = 'project.cmake'/]
+
+[**
+ * The file name of the CMake lists.
+ **/]
+[query public cmakeListsFile() : String = 'CMakeLists.txt'/]
+
+[**
+ * The minimum CMake version that the CMake lists require.
+ **/]
+[query public cmakeMinimumVersion() : String = '3.21'/]
+
+[**
+ * The lines of the include path of a machine, without empty lines.
+ **/]
+[query public includePaths(m : Machine) : Sequence(String) = machineSection(m, 'includePath').tokenize('\n')/]
+
+[**
+ * The content of the CMake project fragment of a machine.
+ **/]
+[template public machineCMakeFragment(m : Machine, name : String)]
+# Sources for the [name/] LLFSM.
+set([name/]_FSM_SOURCES
+    [machineSourceFile(name)/]
+[for (s : State | states(m))]
+    [stateSourceFile(s)/]
+[/for]
+)
+[/template]
+
+[**
+ * The content of the CMake lists of a machine.
+ **/]
+[template public machineCMakeLists(m : Machine, name : String)]
+cmake_minimum_required(VERSION [cmakeMinimumVersion()/])
+
+project([name/] C)
+
+# Require the C standard to be C17,
+# but allow extensions.
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS ON)
+
+# Set the default build type to Debug.
+if(NOT CMAKE_BUILD_TYPE)
+   set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+include([cmakeFragmentFile()/])
+
+add_library([name/]_fsm STATIC ${[name/]_FSM_SOURCES})
+target_include_directories([name/]_fsm PRIVATE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
+  $<INSTALL_INTERFACE:include/fsms/[name/][machineExtension()/]>
+  $<INSTALL_INTERFACE:fsms/[name/][machineExtension()/]>
+[for (path : String | includePaths(m))]
+  "[path/]"
+[/for]
+)
+[/template]

@@ -1,0 +1,148 @@
+[comment encoding = UTF-8 /]
+[**
+ * The source of a state of a C machine.
+ *
+ * It defines the functions that initialise and validate the state, the
+ * actions that include the activity files of the state, and the function that
+ * checks the transitions of the state in order.
+ **/]
+[module StateSource('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import c::CNames/]
+[import c::MachineHeader/]
+[import c::StateHeader/]
+
+[**
+ * The file name of the source of a state.
+ **/]
+[query public stateSourceFile(s : State) : String = stateFileBase(s) + sourceExtension()/]
+
+[**
+ * The value that a transition check returns when the transition fires.
+ **/]
+[query public transitionTarget(m : Machine, t : Transition, name : String) : String = if stateIndex(m, t.target) >= 0 then 'machine->states[' + stateIndex(m, t.target).toString() + '];' else 'NULL; // Warning: cannot find ' + t.target.name + ' in machine ' + name endif/]
+
+[**
+ * The content of the source of a state.
+ **/]
+[template public stateSource(m : Machine, s : State, name : String, isSuspensible : Boolean)]
+[let l = lower(name)]
+[let ls = lower(s.name)]
+[banner(stateSourceFile(s))/]
+#include "[machineHeaderFile(name)/]"
+#include "[stateHeaderFile(s)/]"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wincompatible-function-pointer-types"
+#pragma clang diagnostic ignored "-Wcompare-distinct-pointer-types"
+#pragma clang diagnostic ignored "-Wvisibility"
+
+/// Initialise the given [s.name/] state.
+///
+/// - Parameter state: The state to initialise.
+void fsm_[l/]_[ls/]_init(struct FSM[name/]_State_[s.name/] * const state)
+{
+    state->check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *))fsm_[l/]_[ls/]_check_transitions;
+    state->on_entry   = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_[l/]_[ls/]_on_entry;
+    state->on_exit    = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_[l/]_[ls/]_on_exit;
+    state->internal   = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_[l/]_[ls/]_internal;
+[if (isSuspensible)]
+    state->on_suspend = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_[l/]_[ls/]_on_suspend;
+    state->on_resume  = (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_[l/]_[ls/]_on_resume;
+[/if]
+}
+
+/// Check the validity of the given [s.name/] state.
+///
+/// - Parameter state: The state to validate.
+bool fsm_[l/]_[ls/]_validate(const struct Machine_[name/] * const machine, const struct FSM[name/]_State_[s.name/] * const state)
+{
+    (void)machine;
+    return state->check_transitions == (struct LLFSMState *(*)(const struct LLFSMachine * const machine, const struct LLFSMState * const state))fsm_[l/]_[ls/]_check_transitions &&
+           state->on_entry   == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_[l/]_[ls/]_on_entry &&
+           state->on_exit    == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_[l/]_[ls/]_on_exit &&
+[if (isSuspensible)]
+           state->internal   == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_[l/]_[ls/]_internal &&
+           state->on_suspend == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_[l/]_[ls/]_on_suspend &&
+           state->on_resume  == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_[l/]_[ls/]_on_resume;
+[else]
+           state->internal   == (void (*)(struct LLFSMachine *, struct LLFSMState *))fsm_[l/]_[ls/]_internal ;
+[/if]
+}
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+
+/// The onEntry function for [s.name/].
+///
+/// - Parameters:
+///   - machine: The machine that entered the state.
+///   - state: The state that was entered.
+void fsm_[l/]_[ls/]_on_entry(struct Machine_[name/] * const machine, struct FSM[name/]_State_[s.name/] * const state)
+{
+#   include "State_[s.name/]_OnEntry.mm"
+}
+
+/// The onExit function for [s.name/].
+///
+/// - Parameters:
+///   - machine: The machine this function belongs to.
+///   - state: The state being exited.
+void fsm_[l/]_[ls/]_on_exit(struct Machine_[name/] * const machine, struct FSM[name/]_State_[s.name/] * const state)
+{
+#   include "State_[s.name/]_OnExit.mm"
+}
+
+/// The internal action for [s.name/].
+///
+/// - Parameters:
+///   - machine: The machine this function belongs to.
+///   - state: The state whose internal action to execute.
+void fsm_[l/]_[ls/]_internal(struct Machine_[name/] * const machine, struct FSM[name/]_State_[s.name/] * const state)
+{
+#   include "State_[s.name/]_Internal.mm"
+}
+
+[if (isSuspensible)]
+/// The onSuspend function for [s.name/].
+///
+/// - Parameters:
+///   - machine: The machine that entered the state.
+///   - state: The state that was suspended.
+void fsm_[l/]_[ls/]_on_suspend(struct Machine_[name/] * const machine, struct FSM[name/]_State_[s.name/] * const state)
+{
+#   include "State_[s.name/]_OnSuspend.mm"
+}
+
+/// The onResume function for [s.name/].
+///
+/// - Parameters:
+///   - machine: The machine this function belongs to.
+///   - state: The state being resumed.
+void fsm_[l/]_[ls/]_on_resume(struct Machine_[name/] * const machine, struct FSM[name/]_State_[s.name/] * const state)
+{
+#   include "State_[s.name/]_OnResume.mm"
+}
+[/if]
+
+/// Check the sequence of transitions for [s.name/].
+///
+/// - Parameters:
+///   - machine: The machine this function belongs to.
+///   - state: The state being resumed.
+/// - Returns: The state the machine transitions to (`NULL` if no transition fired).
+struct LLFSMState *fsm_[l/]_[ls/]_check_transitions(const struct Machine_[name/] * const machine, const struct FSM[name/]_State_[s.name/] * const state)
+{
+[for (t : Transition | transitionsFrom(m, s))]
+    if (
+        #include "State_[s.name/]_Transition_[(i - 1).toString()/].expr"
+    ) return [transitionTarget(m, t, name)/]
+[/for]
+    return NULL; // None of the transitions fired.
+}
+[/let]
+[/let]
+[/template]

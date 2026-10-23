@@ -1,0 +1,9 @@
+{
+  "name": "objcpp",
+  "language": "objc++",
+  "formats": ["objc++", "objcpp", "objc", "c++", "cpp", "cxx"],
+  "mainModule": "generate",
+  "machineTemplate": "generateMachine",
+  "arrangementTemplate": "generateArrangement",
+  "isSingleFile": false
+}

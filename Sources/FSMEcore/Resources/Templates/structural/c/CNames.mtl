@@ -1,0 +1,68 @@
+[comment encoding = UTF-8 /]
+[**
+ * Names and fixed text shared by the files of the C template set.
+ *
+ * The queries derive the upper and lower case forms of machine, state and
+ * arrangement names that the generated C identifiers use, the include guard
+ * names of the header files, and the banner that starts every generated file.
+ **/]
+[module CNames('http://cpslabgu.github.io/LLFSMStructural')/]
+
+[**
+ * The notice that marks a file as generated.
+ **/]
+[query public generatedNotice() : String = 'Automatically created using fsmconvert -- do not change manually!'/]
+
+[**
+ * The extension of a C source file.
+ **/]
+[query public sourceExtension() : String = '.c'/]
+
+[**
+ * The extension of a C header file.
+ **/]
+[query public headerExtension() : String = '.h'/]
+
+[**
+ * A name in upper case, as used by macros.
+ **/]
+[query public upper(text : String) : String = text.toUpperCase()/]
+
+[**
+ * A name in lower case, as used by functions and variables.
+ **/]
+[query public lower(text : String) : String = text.toLowerCase()/]
+
+[**
+ * The include guard macro for a base name: the name in upper case with every
+ * run of characters other than ASCII letters and digits turned into a single
+ * underscore, and without leading or trailing underscores.
+ **/]
+[query public guardName(base : String) : String = base.toUpperCase().replaceAll('[^A-Z0-9]+', '_').replaceAll('^_+|_+$', '')/]
+
+[**
+ * The file name of the header of a machine.
+ **/]
+[query public machineFileBase(name : String) : String = 'Machine_' + name/]
+
+[**
+ * The file name of the header or source of a state, without extension.
+ **/]
+[query public stateFileBase(s : State) : String = 'State_' + s.name/]
+
+[**
+ * The marker that the library writes in place of a list of machine types
+ * when an arrangement has no instances.
+ **/]
+[query public emptyListMarker() : String = '%%i%%'/]
+
+[**
+ * The banner that starts a generated file.
+ **/]
+[template public banner(fileName : String)]
+//
+// [fileName/]
+//
+// [generatedNotice()/]
+//
+[/template]

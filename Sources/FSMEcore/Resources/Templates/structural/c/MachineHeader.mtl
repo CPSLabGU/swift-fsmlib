@@ -1,0 +1,109 @@
+[comment encoding = UTF-8 /]
+[**
+ * The header of a C machine.
+ *
+ * It declares the machine structure with its states, the macros that give the
+ * numbers of states and transitions, and the functions that initialise and
+ * validate a machine.
+ **/]
+[module MachineHeader('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import c::CNames/]
+
+[**
+ * The file name of the header of a machine.
+ **/]
+[query public machineHeaderFile(name : String) : String = machineFileBase(name) + headerExtension()/]
+
+[**
+ * The content of the header of a machine.
+ **/]
+[template public machineHeader(m : Machine, name : String, isSuspensible : Boolean)]
+[let u = upper(name)]
+[let l = lower(name)]
+[let guardMacro = guardName('LLFSM_MACHINE_' + u + '_H')]
+[banner(machineHeaderFile(name))/]
+#ifndef [guardMacro/]
+#define [guardMacro/]
+
+#include <inttypes.h>
+#include <stdbool.h>
+#include "Machine_[name/]_Includes.h"
+
+#ifdef INCLUDE_MACHINE_CUSTOM
+#include "Machine_Custom.h"
+#endif
+
+#ifdef INCLUDE_MACHINE_[u/]_CUSTOM
+#include "Machine_[name/]_Custom.h"
+#endif
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-macros"
+
+#define MACHINE_[u/]_NUMBER_OF_STATES [m.llfsm.states->size()/]
+#define MACHINE_[u/]_NUMBER_OF_TRANSITIONS [m.llfsm.transitions->size()/]
+
+[if (isSuspensible)]
+#define MACHINE_[u/]_IS_SUSPENSIBLE 1
+[else]
+#define MACHINE_[u/]_IS_SUSPENSIBLE 0
+[/if]
+
+#ifndef RESTART
+#define RESTART(m) (((m)->previous_state = (m)->current_state) && ((m)->current_state = (m)->states['['/]0[']'/]))
+#endif
+#ifndef GET_TIME
+#define GET_TIME() (machine->state_time + 1)
+#endif
+#ifndef TAKE_SNAPSHOT
+#define TAKE_SNAPSHOT()
+#endif
+
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpadded"
+
+struct LLFSMArrangement;
+struct LLFSMState;
+struct LLFSMachine;
+
+/// A [name/] LLFSM.
+struct Machine_[name/]
+{
+    struct LLFSMState *current_state;
+    struct LLFSMState *previous_state;
+    uintptr_t          state_time;
+[if (isSuspensible)]
+    struct LLFSMState *suspend_state;
+    struct LLFSMState *resume_state;
+[/if]
+    struct LLFSMState * const states['['/]MACHINE_[u/]_NUMBER_OF_STATES[']'/];
+
+#   include "Machine_[name/]_Variables.h"
+};
+
+/// Initialise a `Machine_[name/]` LLFSM.
+///
+/// - Parameter machine: The LLFSM to initialise.
+void fsm_[l/]_init(struct Machine_[name/] *);
+
+/// Validate a `Machine_[name/]` LLFSM.
+///
+/// - Parameter machine: The LLFSM to initialise.
+bool fsm_[l/]_validate(struct Machine_[name/] *);
+
+#pragma clang diagnostic pop
+#pragma GCC diagnostic pop
+
+#endif /* [guardMacro/] */
+[/let]
+[/let]
+[/let]
+[/template]

@@ -1,0 +1,8 @@
+{
+  "name": "scxml",
+  "language": "scxml",
+  "formats": ["scxml"],
+  "mainModule": "generate",
+  "machineTemplate": "generateMachine",
+  "isSingleFile": true
+}

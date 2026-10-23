@@ -1,0 +1,57 @@
+[comment encoding = UTF-8 /]
+[**
+ * The implementation of a machine class.
+ *
+ * The implementation creates the states of the machine, sets its suspend
+ * state if it has one and its initial state, deletes the states again, and
+ * offers the C function that creates the machine.
+ **/]
+[module MachineSource('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+
+[**
+ * The implementation of the machine class.
+ **/]
+[template public machineSource(m : Machine, name : String)]
+//
+// [name/].mm
+//
+// Automatically created through MiCASE -- do not change manually!
+//
+#include "[name/]_Includes.h"
+#include "[name/].h"
+[for (s : State | states(m))]
+#include "State_[s.name/].h"
+[/for]
+
+using namespace FSM;
+using namespace CLM;
+
+extern "C"
+{
+	[name/] *CLM_Create_[name/](int mid, const char *name)
+	{
+		return new [name/](mid, name);
+	}
+}
+
+[name/]::[name/](int mid, const char *name): CLMachine(mid, name)
+{
+[for (s : State | states(m))]
+	_states['['/][(i - 1).toString()/][']'/] = new FSM[name/]::State::[s.name/];
+[/for]
+
+[if (hasSuspendState(m))]
+[if (states(m)->includes(m.llfsm.suspendState))]
+	setSuspendState(_states['['/][stateIndex(m, m.llfsm.suspendState).toString()/][']'/]);            // set suspend state
+[/if]
+[/if]
+	setInitialState(_states['['/]0[']'/]);            // set initial state
+}
+
+[name/]::~[name/]()
+{
+[for (s : State | states(m))]
+	delete _states['['/][(i - 1).toString()/][']'/];
+[/for]
+}[/template]

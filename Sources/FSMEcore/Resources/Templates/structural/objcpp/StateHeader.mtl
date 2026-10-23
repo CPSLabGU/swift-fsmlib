@@ -1,0 +1,95 @@
+[comment encoding = UTF-8 /]
+[**
+ * The header of a state class.
+ *
+ * The header declares the state as a subclass of CLState with one action
+ * class per activity and one transition class per transition that leaves the
+ * state, and includes the state variables and methods.
+ **/]
+[module StateHeader('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import objcpp::Identifiers/]
+
+[**
+ * The header of the class of a state.
+ **/]
+[template public stateHeader(m : Machine, s : State, name : String)]
+//
+// State_[s.name/].h
+//
+// Automatically created through MiCASE -- do not change manually!
+//
+#ifndef clfsm_[name/]_State_[s.name/]_h
+#define clfsm_[name/]_State_[s.name/]_h
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++98-compat"
+
+#include "CLState.h"
+#include "CLAction.h"
+#include "CLTransition.h"
+
+namespace FSM
+{
+    namespace CLM
+    {
+      namespace FSM[name/]
+      {
+        namespace State
+        {
+            class [s.name/]: public CLState
+            {
+                class OnEntry: public CLAction
+                {
+                    virtual void perform(CLMachine *, CLState *) const;
+                };
+
+                class OnExit: public CLAction
+                {
+                    virtual void perform(CLMachine *, CLState *) const;
+                };
+
+                class Internal: public CLAction
+                {
+                    virtual void perform(CLMachine *, CLState *) const;
+                };
+
+                class OnSuspend: public CLAction
+                {
+                    virtual void perform(CLMachine *, CLState *) const;
+                };
+
+                class OnResume: public CLAction
+                {
+                    virtual void perform(CLMachine *, CLState *) const;
+                };
+
+[for (t : Transition | transitionsFrom(m, s))]
+                class Transition_[(i - 1).toString()/]: public CLTransition
+                {
+                public:
+                    Transition_[(i - 1).toString()/](int toState = [targetIndex(m, t).toString()/]): CLTransition(toState) {}
+
+                    virtual bool check(CLMachine *, CLState *) const;
+                };
+
+[/for]
+
+                CLTransition *_transitions['['/][transitionsFrom(m, s)->size().toString()/][']'/];
+
+                public:
+                    [s.name/](const char *name = "[s.name/]");
+                    virtual ~[s.name/]();
+
+                    virtual CLTransition * const *transitions() const { return _transitions; }
+                    virtual int numberOfTransitions() const { return [transitionsFrom(m, s)->size().toString()/]; }
+
+#                   include "State_[s.name/]_Variables.h"
+#                   include "State_[s.name/]_Methods.h"
+            };
+        }
+      }
+    }
+}
+
+#endif[/template]

@@ -1,0 +1,136 @@
+[comment encoding = UTF-8 /]
+[**
+ * The header and source of a C arrangement.
+ *
+ * The header declares the arrangement structure that holds one machine per
+ * instance, and the source defines the functions that initialise and validate
+ * every instance of the arrangement.
+ **/]
+[module ArrangementFiles('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import common::Arrangements/]
+[import c::CNames/]
+[import c::MachineHeader/]
+[import c::MachineCommon/]
+
+[**
+ * The file name of the header of an arrangement.
+ **/]
+[query public arrangementHeaderFile(name : String) : String = 'Arrangement_' + name + headerExtension()/]
+
+[**
+ * The file name of the source of an arrangement.
+ **/]
+[query public arrangementSourceFile(name : String) : String = 'Arrangement_' + name + sourceExtension()/]
+
+[**
+ * The path of the machine header of a machine type, relative to the arrangement.
+ **/]
+[query public typeHeaderPath(type : String) : String = type + machineExtension() + '/' + machineHeaderFile(type)/]
+
+[**
+ * The content of the header of an arrangement.
+ **/]
+[template public arrangementHeader(a : Arrangement, name : String, isSuspensible : Boolean)]
+[let u = upper(name)]
+[let l = lower(name)]
+[let guardMacro = guardName('LLFSM_ARRANGEMENT_' + u + '_H')]
+[banner(arrangementHeaderFile(name))/]
+#ifndef [guardMacro/]
+#define [guardMacro/]
+
+#include <inttypes.h>
+#include <stdbool.h>
+
+#define ARRANGEMENT_[u/]_NUMBER_OF_INSTANCES [a.instances->size()/]
+
+struct LLFSMachine;
+struct LLFSMArrangement;
+
+/// A [name/] LLFSM Arrangement.
+struct Arrangement_[name/]
+{
+    /// The number of instances in this arrangement.
+    uintptr_t number_of_instances;
+    union
+    {
+        /// The machines in this arrangement.
+        struct LLFSMachine *machines['['/][a.instances->size()/][']'/];
+        struct
+        {
+[if (a.instances->isEmpty())]
+            
+[/if]
+[for (instance : Instance | a.instances)]
+            /// An instance of the [typeName(instance)/] LLFSM.
+            struct Machine_[typeName(instance)/] *fsm_[lower(instanceName(a, i))/];
+[/for]
+        };
+    };
+};
+
+/// Initialise the [name/] LLFSM arrangement.
+///
+/// - Parameter arrangement: The machine arrangement to initialise.
+void arrangement_[l/]_init(struct Arrangement_[name/] * const arrangement);
+
+/// Validate the [name/] LLFSM arrangement.
+///
+/// - Parameter arrangement: The machine arrangement to initialise.
+bool arrangement_[l/]_validate(struct Arrangement_[name/] * const arrangement);
+
+
+#endif /* [guardMacro/] */
+[/let]
+[/let]
+[/let]
+[/template]
+
+[**
+ * The content of the source of an arrangement.
+ **/]
+[template public arrangementSource(a : Arrangement, name : String, isSuspensible : Boolean)]
+[let u = upper(name)]
+[let l = lower(name)]
+[banner(arrangementSourceFile(name))/]
+#include "[commonHeaderFile()/]"
+#include "[arrangementHeaderFile(name)/]"
+[if (machineTypeNames(a)->isEmpty())]
+
+[emptyListMarker()/]
+
+[/if]
+[for (type : String | machineTypeNames(a))]
+#include "[typeHeaderPath(type)/]"
+[/for]
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-macros"
+
+#ifndef NULL
+#define NULL ((void*)0)
+#endif
+
+/// Initialise the [name/] LLFSM arrangement.
+///
+/// - Parameter arrangement: The machine arrangement to initialise.
+void arrangement_[l/]_init(struct Arrangement_[name/] * const arrangement)
+{
+    arrangement->number_of_instances = ARRANGEMENT_[u/]_NUMBER_OF_INSTANCES;
+[for (instance : Instance | a.instances)]
+    fsm_[lower(typeName(instance))/]_init(arrangement->fsm_[lower(instanceName(a, i))/]);
+[/for]
+}
+
+/// Validate the [name/] LLFSM arrangement.
+///
+/// - Parameter arrangement: The machine arrangement to initialise.
+bool arrangement_[l/]_validate(struct Arrangement_[name/] * const arrangement)
+{
+    return arrangement->number_of_instances == ARRANGEMENT_[u/]_NUMBER_OF_INSTANCES &&
+[for (instance : Instance | a.instances)]
+        fsm_[lower(typeName(instance))/]_validate(arrangement->fsm_[lower(instanceName(a, i))/][if (i < a.instances->size())]) &&[else]);[/if]
+[/for]
+}
+[/let]
+[/let]
+[/template]

@@ -1,0 +1,85 @@
+[comment encoding = UTF-8 /]
+[**
+ * The implementation of a state class.
+ *
+ * The implementation creates and deletes the actions and transitions of the
+ * state. Each action and transition check includes the variable and function
+ * references of its machine and state before the code of the activity or the
+ * transition expression.
+ **/]
+[module StateSource('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import objcpp::Identifiers/]
+
+[**
+ * The activities of a state, in the order of their actions.
+ **/]
+[query public actionNames() : Sequence(String) = Sequence{'OnEntry', 'OnExit', 'Internal', 'OnSuspend', 'OnResume'}/]
+
+[**
+ * The implementation of the class of a state.
+ **/]
+[template public stateSource(m : Machine, s : State, name : String)]
+//
+// State_[s.name/].mm
+//
+// Automatically created through MiCASE -- do not change manually!
+//
+#include "[name/]_Includes.h"
+#include "[name/].h"
+#include "State_[s.name/].h"
+
+#include "State_[s.name/]_Includes.h"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++98-compat"
+
+using namespace FSM;
+using namespace CLM;
+using namespace FSM[name/];
+using namespace State;
+
+[s.name/]::[s.name/](const char *name): CLState(name, *new [s.name/]::OnEntry, *new [s.name/]::OnExit, *new [s.name/]::Internal, NULLPTR, new [s.name/]::OnSuspend, new [s.name/]::OnResume)
+{
+[for (t : Transition | transitionsFrom(m, s))]	_transitions['['/][(i - 1).toString()/][']'/] = new Transition_[(i - 1).toString()/]([implementationTargetIndex(m, s, i).toString()/]);[/for]    }
+
+[s.name/]::~[s.name/]()
+{
+	delete &onEntryAction();
+	delete &onExitAction();
+	delete &internalAction();
+	delete onSuspendAction();
+	delete onResumeAction();
+
+[for (t : Transition | transitionsFrom(m, s))]
+	delete _transitions['['/][(i - 1).toString()/][']'/];
+[/for]
+    }
+
+[for (action : String | actionNames())]
+void [s.name/]::[action/]::perform(CLMachine *_machine, CLState *_state) const
+{
+#	include "[name/]_VarRefs.mm"
+#	include "State_[s.name/]_VarRefs.mm"
+#	include "[name/]_FuncRefs.mm"
+#	include "State_[s.name/]_FuncRefs.mm"
+#	include "State_[s.name/]_[action/].mm"
+}
+
+[/for]
+[for (t : Transition | transitionsFrom(m, s))]
+bool [s.name/]::Transition_[(i - 1).toString()/]::check(CLMachine *_machine, CLState *_state) const
+{
+#	include "[name/]_VarRefs.mm"
+#	include "State_[s.name/]_VarRefs.mm"
+#	include "[name/]_FuncRefs.mm"
+#	include "State_[s.name/]_FuncRefs.mm"
+
+	return
+	(
+#		include "State_[s.name/]_Transition_[(i - 1).toString()/].expr"
+	);
+}
+
+[/for]
+[/template]

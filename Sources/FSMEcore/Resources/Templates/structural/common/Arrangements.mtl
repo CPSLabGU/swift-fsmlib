@@ -1,0 +1,69 @@
+[comment encoding = UTF-8 /]
+[**
+ * Instances and machine types of an arrangement.
+ *
+ * Instance names are made unique in arrangement order: the name of an
+ * instance without its extension is kept if no earlier instance took it, and
+ * otherwise numbered with the first free suffix. An instance that repeats the
+ * name of an earlier instance runs the machine of that earlier instance. Each
+ * machine type is written once, in the order of its first instance.
+ **/]
+[module Arrangements('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+
+[**
+ * The separator between the instance name and the machine of a line in the machines file.
+ **/]
+[query public machinesFieldSeparator() : String = '\t'/]
+
+[**
+ * The first name, out of a base name and the base name numbered from one, that is not yet used.
+ **/]
+[query public freeName(base : String, used : Sequence(String), number : Integer) : String = let candidate : String = if number = 0 then base else base + '_' + number.toString() endif in if used->includes(candidate) then freeName(base, used, number + 1) else candidate endif/]
+
+[**
+ * The unique names of a sequence of instances, in order.
+ **/]
+[query public uniqueNames(instances : Sequence(Instance)) : Sequence(String) = if instances->isEmpty() then Sequence{} else let earlier : Sequence(String) = uniqueNames(instances->dropRight(1)) in earlier->append(freeName(sansExtension(instances->last().name), earlier, 0)) endif/]
+
+[**
+ * The unique name of the instance at a position of an arrangement, counted from one.
+ **/]
+[query public instanceName(a : Arrangement, position : Integer) : String = uniqueNames(a.instances)->at(position)/]
+
+[**
+ * The machine that the instance at a position of an arrangement runs, counted from one.
+ **/]
+[query public instanceMachine(a : Arrangement, position : Integer) : Machine = let instance : Instance = a.instances->at(position) in a.instances->select(other | other.name = instance.name)->first().machine/]
+
+[**
+ * The name of the machine type of an instance: its type file without extension.
+ **/]
+[query public typeName(instance : Instance) : String = sansExtension(instance.typeFile)/]
+
+[**
+ * The bundle directories of the machine types of an arrangement, in the order of their first instance.
+ **/]
+[query public machineDirectories(a : Arrangement) : Sequence(String) = a.instances->collect(instance | bundleDirectory(instance.typeFile))->asOrderedSet()->asSequence()/]
+
+[**
+ * The machine names of the machine types of an arrangement, in the order of their first instance.
+ **/]
+[query public machineTypeNames(a : Arrangement) : Sequence(String) = a.instances->collect(instance | typeName(instance))->asOrderedSet()->asSequence()/]
+
+[**
+ * The first instance whose machine is stored in a bundle directory.
+ **/]
+[query public firstInstance(a : Arrangement, directory : String) : Instance = a.instances->select(instance | bundleDirectory(instance.typeFile) = directory)->first()/]
+
+[**
+ * The first instance of a machine type.
+ **/]
+[query public firstInstanceOfType(a : Arrangement, type : String) : Instance = a.instances->select(instance | typeName(instance) = type)->first()/]
+
+[**
+ * Writes the machines file: one line per instance with its unique name and its machine.
+ **/]
+[template public machinesFile(a : Arrangement)]
+[file ('Machines', false, 'UTF-8')][for (instance : Instance | a.instances) separator('\n')][instanceName(a, i)/][machinesFieldSeparator()/][instance.typeFile/][/for][/file]
+[/template]

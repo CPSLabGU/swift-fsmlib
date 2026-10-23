@@ -1,0 +1,94 @@
+[comment encoding = UTF-8 /]
+[**
+ * The state elements of an SCXML document.
+ *
+ * Every state becomes a state element positioned by its open layout, with
+ * its entry and exit activities as scripts, its other activities as named
+ * code sections and its outgoing transitions guarded by their labels.
+ **/]
+[module States('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import scxml::Xml/]
+[import scxml::Boilerplate/]
+
+[**
+ * The indentation of a line of script inside an activity element.
+ **/]
+[query public scriptIndentation() : String = '        '/]
+
+[**
+ * The indentation of a transition element inside its state.
+ **/]
+[query public transitionIndentation() : String = '    '/]
+
+[**
+ * The activities of a state, in the order of a state body.
+ **/]
+[query public activityNames() : Sequence(String) = Sequence{'onEntry', 'onExit', 'internal', 'onSuspend', 'onResume'}/]
+
+[**
+ * Whether a state element has a body: code in a section or activity, or an outgoing transition.
+ **/]
+[query public hasBody(m : Machine, s : State) : Boolean = boilerplateSections()->exists(n | stateSection(m, s, n) <> '') or activityNames()->exists(n | activity(s, n) <> '') or transitionsFrom(m, s)->notEmpty()/]
+
+[**
+ * The layout entry of a state, if the machine has one.
+ **/]
+[query public layoutEntry(m : Machine, s : State) : OclAny = m.stateLayouts->select(e | e.state = s)->first()/]
+
+[**
+ * The editor position and size attributes of a state, from the top left corner of its open layout.
+ **/]
+[query public positionAttributes(m : Machine, s : State) : String = let entry : OclAny = layoutEntry(m, s) in if entry.oclIsUndefined() then '' else let l : OclAny = entry.layout in ' se:x="' + truncated(l.openX - l.openW / 2.0).toString() + '" se:y="' + truncated(l.openY - l.openH / 2.0).toString() + '" se:width="' + truncated(l.openW).toString() + '" se:height="' + truncated(l.openH).toString() + '"' endif/]
+
+[**
+ * The start of the opening tag of a state element, without its closing bracket.
+ **/]
+[query public stateTagStart(m : Machine, s : State) : String = '  <state' + attribute('id', s.name) + positionAttributes(m, s)/]
+
+[**
+ * A line of script holding an activity.
+ **/]
+[query public scriptLine(code : String) : String = scriptIndentation() + escaped(code) + '\n'/]
+
+[**
+ * The element of a transition, guarded by its label if it has one, as a line.
+ **/]
+[query public transitionElement(t : Transition) : String = transitionIndentation() + '<transition' + (if t.label = '' then '' else attribute('cond', t.label) endif) + (if t.target.oclIsUndefined() then '' else attribute('target', t.target.name) endif) + '/>\n'/]
+
+[**
+ * Writes an activity with code as a script inside the element of the given name.
+ **/]
+[template public scriptActivity(elementName : String, code : String)]
+    <[elementName/]>
+      <script>
+[scriptLine(code)/]
+      </script>
+    </[elementName/]>
+[/template]
+
+[**
+ * Writes the element of a state.
+ **/]
+[template public stateElement(m : Machine, s : State)]
+[if (hasBody(m, s))]
+[stateTagStart(m, s)/]>
+[if (activity(s, 'onEntry') <> '')]
+[scriptActivity('onentry', activity(s, 'onEntry'))/]
+[/if]
+[if (activity(s, 'onExit') <> '')]
+[scriptActivity('onexit', activity(s, 'onExit'))/]
+[/if]
+[for (activityName : String | extensionActivities())]
+[if (hasActivity(s, activityName))]
+[codeSection(activityName, activity(s, activityName))/]
+[/if]
+[/for]
+[for (t : Transition | transitionsFrom(m, s))]
+[transitionElement(t)/]
+[/for]
+  </state>
+[else]
+[stateTagStart(m, s)/]/>
+[/if]
+[/template]

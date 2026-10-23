@@ -1,7 +1,0 @@
-[module Structural2CMake('http://www.cpslabgu.org/GeneratedFiles')]
-
-[template main(root : GeneratedFileSet)]
-[for (entry in root.files)]
-[file (entry.path, 'overwrite', 'UTF-8')][entry.content/][/file]
-[/for]
-[/template]

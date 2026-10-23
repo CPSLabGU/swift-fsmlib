@@ -1,0 +1,94 @@
+[comment encoding = UTF-8 /]
+[**
+ * The source of a C machine.
+ *
+ * It defines the functions that initialise a machine, including its suspend
+ * state when the machine is suspensible, and that validate a machine.
+ **/]
+[module MachineSource('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import c::CNames/]
+[import c::MachineHeader/]
+
+[**
+ * The file name of the source of a machine.
+ **/]
+[query public machineSourceFile(name : String) : String = machineFileBase(name) + sourceExtension()/]
+
+[**
+ * The value that initialises the suspend state of a machine.
+ **/]
+[query public suspendStateValue(m : Machine) : String = if hasSuspendState(m) and stateIndex(m, m.llfsm.suspendState) >= 0 then 'machine->states[' + stateIndex(m, m.llfsm.suspendState).toString() + '];' else 'NULL;' endif/]
+
+[**
+ * The content of the source of a machine.
+ **/]
+[template public machineSource(m : Machine, name : String, isSuspensible : Boolean)]
+[let u = upper(name)]
+[let l = lower(name)]
+[banner(machineSourceFile(name))/]
+#include "[machineHeaderFile(name)/]"
+
+#ifndef NULL
+#define NULL ((void*)0)
+#endif
+
+/// Initialise an instance of `Machine_[name/].
+///
+/// - Parameter machine: The machine to initialise.
+void fsm_[l/]_init(struct Machine_[name/] * const machine)
+{
+    machine->current_state = machine->states['['/]0[']'/];
+    machine->previous_state = NULL;
+    machine->state_time = 0;
+[if (isSuspensible)]
+    machine->suspend_state = [suspendStateValue(m)/]
+    machine->resume_state = NULL;
+[/if]
+}
+
+/// Validate an instance of `Machine_[name/].
+///
+/// - Parameter machine: The machine to validate.
+/// - Returns: `true` iff the machine appears valid.
+bool fsm_[l/]_validate(struct Machine_[name/] * const machine)
+{
+    if (machine->current_state == NULL) return false;
+    
+    for (int i = 0; i < MACHINE_[u/]_NUMBER_OF_STATES; i++)
+    {
+        if (machine->states['['/]i[']'/] == NULL) return false;
+    }
+    
+    bool current_state_valid = false;
+    for (int i = 0; i < MACHINE_[u/]_NUMBER_OF_STATES; i++)
+    {
+        if (machine->current_state == machine->states['['/]i[']'/])
+        {
+            current_state_valid = true;
+            break;
+        }
+    }
+    if (!current_state_valid) return false;
+    
+[if (isSuspensible)]
+    if (machine->suspend_state != NULL)
+    {
+        bool suspend_state_valid = false;
+        for (int i = 0; i < MACHINE_[u/]_NUMBER_OF_STATES; i++)
+        {
+            if (machine->suspend_state == machine->states['['/]i[']'/])
+            {
+                suspend_state_valid = true;
+                break;
+            }
+        }
+        if (!suspend_state_valid) return false;
+    }
+    
+[/if]
+    return true;
+}
+[/let]
+[/let]
+[/template]

@@ -1,0 +1,122 @@
+[comment encoding = UTF-8 /]
+[**
+ * The header of a state of a C machine.
+ *
+ * It declares the state structure with its action function pointers and the
+ * functions that initialise and validate the state, check its transitions and
+ * perform its actions.
+ **/]
+[module StateHeader('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import c::CNames/]
+
+[**
+ * The file name of the header of a state.
+ **/]
+[query public stateHeaderFile(s : State) : String = stateFileBase(s) + headerExtension()/]
+
+[**
+ * The content of the header of a state.
+ **/]
+[template public stateHeader(m : Machine, s : State, name : String, isSuspensible : Boolean)]
+[let u = upper(name)]
+[let l = lower(name)]
+[let us = upper(s.name)]
+[let ls = lower(s.name)]
+[let guardMacro = guardName('LLFSM_' + name + '_' + s.name + '_h')]
+[banner(stateHeaderFile(s))/]
+#ifndef [guardMacro/]
+#define [guardMacro/]
+
+#include <stdbool.h>
+#include "Machine_[name/]_Includes.h"
+#include "State_[s.name/]_Includes.h"
+
+#ifndef NULL
+#define NULL ((void*)0)
+#endif
+
+#define MACHINE_[u/]_STATE_[us/]_NUMBER_OF_TRANSITIONS [transitionsFrom(m, s)->size()/]
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvisibility"
+
+struct FSM[name/]_State_[s.name/]
+{
+    struct LLFSMState *(*check_transitions)(const struct LLFSMachine *, const struct LLFSMState *);
+    void (*on_entry)(struct LLFSMachine *, struct LLFSMState *);
+    void (*on_exit) (struct LLFSMachine *, struct LLFSMState *);
+    void (*internal)(struct LLFSMachine *, struct LLFSMState *);
+[if (isSuspensible)]
+    void (*on_suspend)(struct LLFSMachine *, struct LLFSMState *);
+    void (*on_resume) (struct LLFSMachine *, struct LLFSMState *);
+[/if]
+
+#   include "State_[s.name/]_Variables.h"
+};
+
+/// Initialise the given state.
+///
+/// - Parameter state: The state to initialise.
+void fsm_[l/]_[ls/]_init(struct FSM[name/]_State_[s.name/] * const state);
+
+/// Validate the given state.
+///
+/// - Parameter state: The state to initialise.
+bool fsm_[l/]_[ls/]_validate(const struct Machine_[name/] * const machine, const struct FSM[name/]_State_[s.name/] * const state);
+
+/// Check the sequence of transitions for [s.name/].
+///
+/// - Returns: The state the machine transitions to (`NULL` if no transition fired).
+struct LLFSMState *fsm_[l/]_[ls/]_check_transitions(const struct Machine_[name/] * const machine, const struct FSM[name/]_State_[s.name/] * const state);
+
+/// The onEntry function for [s.name/].
+///
+/// - Parameters:
+///   - machine: The machine that entered the state.
+///   - state: The state that was entered.
+void fsm_[l/]_[ls/]_on_entry(struct Machine_[name/] * const machine, struct FSM[name/]_State_[s.name/] * const state);
+
+/// The onExit function for [s.name/].
+///
+/// - Parameters:
+///   - machine: The machine this function belongs to.
+///   - state: The state being exited.
+void fsm_[l/]_[ls/]_on_exit(struct Machine_[name/] * const machine, struct FSM[name/]_State_[s.name/] * const state);
+
+/// The internal action for [s.name/].
+///
+/// - Parameters:
+///   - machine: The machine this function belongs to.
+///   - state: The state whose internal action to execute.
+void fsm_[l/]_[ls/]_internal(struct Machine_[name/] * const machine, struct FSM[name/]_State_[s.name/] * const state);
+
+[if (isSuspensible)]
+/// The onSuspend function for [s.name/].
+///
+/// - Parameters:
+///   - machine: The machine that entered the state.
+///   - state: The state that was suspended.
+void fsm_[l/]_[ls/]_on_suspend(struct Machine_[name/] * const machine, struct FSM[name/]_State_[s.name/] * const state);
+
+/// The onResume function for [s.name/].
+///
+/// - Parameters:
+///   - machine: The machine this function belongs to.
+///   - state: The state being resumed.
+void fsm_[l/]_[ls/]_on_resume(struct Machine_[name/] * const machine, struct FSM[name/]_State_[s.name/] * const state);
+[/if]
+
+#pragma clang diagnostic pop
+#pragma GCC diagnostic pop
+
+#endif /* [guardMacro/] */
+[/let]
+[/let]
+[/let]
+[/let]
+[/let]
+[/template]

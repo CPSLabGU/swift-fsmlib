@@ -1,0 +1,82 @@
+[comment encoding = UTF-8 /]
+[**
+ * The CMake files of an arrangement.
+ *
+ * The project fragment lists the sources of the arrangement and of the
+ * runtime infrastructure together with the include directories of the
+ * machines; the project file builds the machines and links them into an
+ * executable that runs the static arrangement.
+ **/]
+[module ArrangementCMake('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import common::Arrangements/]
+
+[**
+ * The project fragment of an arrangement.
+ **/]
+[template public arrangementCMakeFragment(a : Arrangement, name : String, isSuspensible : Boolean)]
+# Sources for the [name/] Objective-C++ FSM arrangement.
+set([name/]_ARRANGEMENT_SOURCES
+    Arrangement_[name/].mm
+    Static_Arrangement_[name/].mm
+)
+
+# Infrastructure sources for the FSM C++ runtime.
+set(INFRASTRUCTURE_SOURCES
+    infrastructure/StateMachineVector.cc
+[if (isSuspensible)]
+    infrastructure/SuspensibleMachine.cc
+[/if]
+)
+
+# Include directories for building [name/].
+set([name/]_ARRANGEMENT_INCDIRS
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/infrastructure>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
+[for (type : String | machineTypeNames(a))]
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/[type/].machine/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/[type/].machine>
+[/for]
+)
+[/template]
+
+[**
+ * The project file of an arrangement.
+ **/]
+[template public arrangementCMakeLists(a : Arrangement, name : String, isSuspensible : Boolean)]
+cmake_minimum_required(VERSION 3.21)
+
+project([name/]_arrangement CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)
+
+# Set the default build type to Debug.
+if(NOT CMAKE_BUILD_TYPE)
+   set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+[if (isSuspensible)]
+# Define FSM_SUPPORT_SUSPEND for suspensible machines
+add_definitions(-DFSM_SUPPORT_SUSPEND)
+
+[/if]
+include(project.cmake)
+
+[for (type : String | machineTypeNames(a))]
+add_subdirectory([type/].machine)
+[/for]
+add_executable(run_[name/]_arrangement static_main.cc ${[name/]_ARRANGEMENT_SOURCES} ${INFRASTRUCTURE_SOURCES})
+target_include_directories(run_[name/]_arrangement PRIVATE
+  ${[name/]_ARRANGEMENT_INCDIRS}
+)
+target_link_libraries(run_[name/]_arrangement
+[for (type : String | machineTypeNames(a))]
+    [type/]_fsm
+[/for]
+)
+[/template]

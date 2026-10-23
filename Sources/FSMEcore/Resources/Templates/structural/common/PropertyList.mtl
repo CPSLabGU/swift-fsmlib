@@ -1,0 +1,146 @@
+[comment encoding = UTF-8 /]
+[**
+ * XML property lists, as the layout files of a machine bundle hold them.
+ *
+ * Dictionaries list their keys in ascending order, one tab indents each
+ * nesting level, floating point numbers carry up to seventeen significant
+ * digits and zero is written as 0.0. Binary data is written in Base64 lines
+ * whose length shrinks with the nesting level.
+ **/]
+[module PropertyList('http://cpslabgu.github.io/LLFSMStructural')/]
+
+[**
+ * The lines that open a property list document.
+ **/]
+[template public plistPrologue()]
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+[/template]
+
+[**
+ * The line that closes a property list document.
+ **/]
+[template public plistEpilogue()]
+</plist>
+[/template]
+
+[**
+ * The indentation of one more nesting level.
+ **/]
+[query public plistIndent(indent : String) : String = indent + '\t'/]
+
+[**
+ * Text with the characters that XML reserves replaced by entities.
+ **/]
+[query public plistEscaped(text : String) : String = text.substituteAll('&', '&amp;').substituteAll('<', '&lt;').substituteAll('>', '&gt;')/]
+
+[**
+ * A floating point number as a property list writes it.
+ **/]
+[query public plistReal(value : Real) : String = if value = 0.0 then '0.0' else value.formatted('%.17g') endif/]
+
+[**
+ * The number of Base64 characters on one line of binary data at a nesting depth.
+ **/]
+[query public plistDataWidth(indent : String) : Integer = 76 - 8 * (if indent.size() > 8 then 8 else indent.size() endif)/]
+
+[**
+ * A dictionary key line.
+ **/]
+[template public plistKey(key : String, indent : String)]
+[indent/]<key>[plistEscaped(key)/]</key>
+[/template]
+
+[**
+ * A floating point value line.
+ **/]
+[template public plistRealLine(value : Real, indent : String)]
+[indent/]<real>[plistReal(value)/]</real>
+[/template]
+
+[**
+ * A Boolean value line.
+ **/]
+[template public plistBooleanLine(value : Boolean, indent : String)]
+[indent/][if (value)]<true/>[else]<false/>[/if]
+[/template]
+
+[**
+ * A key followed by a floating point value.
+ **/]
+[template public plistRealEntry(key : String, value : Real, indent : String)]
+[plistKey(key, indent)/]
+[plistRealLine(value, indent)/]
+[/template]
+
+[**
+ * An array holding the two coordinates of a point.
+ **/]
+[template public plistPoint(p : Point2D, indent : String)]
+[indent/]<array>
+[plistRealLine(p.x, plistIndent(indent))/]
+[plistRealLine(p.y, plistIndent(indent))/]
+[indent/]</array>
+[/template]
+
+[**
+ * The Base64 lines of binary data.
+ **/]
+[template public plistDataLines(text : String, indent : String, width : Integer)]
+[if (text.size() > width)]
+[indent/][text.first(width)/]
+[plistDataLines(text.last(text.size() - width), indent, width)/]
+[elseif (text.size() > 0)]
+[indent/][text/]
+[/if]
+[/template]
+
+[**
+ * A typed property list value.
+ **/]
+[template public plistValue(v : PropertyListValue, indent : String)]
+[if (v.oclIsKindOf(PropertyListReal))]
+[plistRealLine(v.value, indent)/]
+[elseif (v.oclIsKindOf(PropertyListInteger))]
+[indent/]<integer>[v.value/]</integer>
+[elseif (v.oclIsKindOf(PropertyListBoolean))]
+[plistBooleanLine(v.value, indent)/]
+[elseif (v.oclIsKindOf(PropertyListString))]
+[indent/]<string>[plistEscaped(v.value)/]</string>
+[elseif (v.oclIsKindOf(PropertyListData))]
+[indent/]<data>
+[plistDataLines(v.value, indent, plistDataWidth(indent))/]
+[indent/]</data>
+[elseif (v.oclIsKindOf(PropertyListDate))]
+[indent/]<date>[v.value/]</date>
+[elseif (v.oclIsKindOf(PropertyListArray))]
+[if (v.items->isEmpty())]
+[indent/]<array/>
+[else]
+[indent/]<array>
+[for (item : PropertyListValue | v.items)]
+[plistValue(item, plistIndent(indent))/]
+[/for]
+[indent/]</array>
+[/if]
+[elseif (v.oclIsKindOf(PropertyListDictionary))]
+[if (v.entries->isEmpty())]
+[indent/]<dict/>
+[else]
+[indent/]<dict>
+[for (e : PropertyListEntry | v.entries->sortedBy(e | e.key))]
+[plistEntry(e, plistIndent(indent))/]
+[/for]
+[indent/]</dict>
+[/if]
+[/if]
+[/template]
+
+[**
+ * A keyed property list value.
+ **/]
+[template public plistEntry(e : PropertyListEntry, indent : String)]
+[plistKey(e.key, indent)/]
+[plistValue(e.value, indent)/]
+[/template]

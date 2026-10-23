@@ -1,0 +1,71 @@
+[comment encoding = UTF-8 /]
+[**
+ * Identifiers and text helpers of the Objective-C++ template set.
+ *
+ * The queries derive the C++ names of arrangement instances, the indices of
+ * transition targets, and join or trim text the way the generated sources
+ * expect it.
+ **/]
+[module Identifiers('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import common::Arrangements/]
+
+[**
+ * The marker that stands in for an empty list of generated lines.
+ **/]
+[query public ignoredCode() : String = '\n%%i%%\n'/]
+
+[**
+ * The regular expression class of the white space that is trimmed from a line, excluding line breaks.
+ **/]
+[query public whitespaceClass() : String = '[\t\\p{Zs}]'/]
+
+[**
+ * Text without the leading and trailing white space of a line.
+ **/]
+[query public whitespaceTrimmed(text : String) : String = text.replaceAll('\\A' + whitespaceClass() + '+|' + whitespaceClass() + '+\\z', '')/]
+
+[**
+ * Strings joined with a separator between neighbours.
+ **/]
+[query public joined(items : Sequence(String), separator : String) : String = if items->isEmpty() then '' else if items->size() = 1 then items->first() else items->first() + separator + joined(items->drop(1), separator) endif endif/]
+
+[**
+ * The C++ member that holds an instance: the instance name with its first letter in upper case, after 'fsm'.
+ **/]
+[query public memberName(instanceName : String) : String = 'fsm' + instanceName.toUpperFirst()/]
+
+[**
+ * The C member that holds an instance: the instance name in lower case, after 'fsm_'.
+ **/]
+[query public cMemberName(instanceName : String) : String = 'fsm_' + instanceName.toLowerCase()/]
+
+[**
+ * The name of the getter of an instance, without its 'get' prefix.
+ **/]
+[query public getterName(instanceName : String) : String = memberName(instanceName).toUpperFirst()/]
+
+[**
+ * The unique instance names of an arrangement, in order.
+ **/]
+[query public instanceNames(a : Arrangement) : Sequence(String) = uniqueNames(a.instances)/]
+
+[**
+ * The machine type names of an arrangement, in alphabetical order.
+ **/]
+[query public sortedMachineTypeNames(a : Arrangement) : Sequence(String) = machineTypeNames(a)->sortedBy(type | type)/]
+
+[**
+ * The index, counted from zero, of the target of a transition, or zero if it has none.
+ **/]
+[query public targetIndex(m : Machine, t : Transition) : Integer = if t.target.oclIsUndefined() then 0 else let k : Integer = states(m)->indexOf(t.target) in if k < 1 then 0 else k - 1 endif endif/]
+
+[**
+ * The indices, counted from zero, of the transition targets of a state that are states of the machine.
+ **/]
+[query public targetIndices(m : Machine, s : State) : Sequence(Integer) = transitionsFrom(m, s)->reject(t | t.target.oclIsUndefined())->collect(t | states(m)->indexOf(t.target))->select(k | k > 0)->collect(k | k - 1)/]
+
+[**
+ * The target index, counted from zero, that the implementation of a state gives its transition at a position counted from one.
+ **/]
+[query public implementationTargetIndex(m : Machine, s : State, position : Integer) : Integer = let indices = targetIndices(m, s) in if position <= indices->size() then indices->at(position) else 0 endif/]

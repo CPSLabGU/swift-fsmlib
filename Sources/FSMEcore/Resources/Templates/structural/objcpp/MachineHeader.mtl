@@ -1,0 +1,51 @@
+[comment encoding = UTF-8 /]
+[**
+ * The header of a machine class.
+ *
+ * The header declares the machine as a subclass of CLMachine that holds its
+ * states and includes the machine variables and methods, together with the C
+ * function that creates the machine.
+ **/]
+[module MachineHeader('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+
+[**
+ * The header of the machine class.
+ **/]
+[template public machineHeader(m : Machine, name : String)]
+//
+// [name/].h
+//
+// Automatically created through MiCASE -- do not change manually!
+//
+#ifndef clfsm_machine_[name/]_
+#define clfsm_machine_[name/]_
+
+#include "CLMachine.h"
+
+namespace FSM
+{
+    class CLState;
+
+    namespace CLM
+    {
+        class [name/]: public CLMachine
+        {
+            CLState *_states['['/][states(m)->size().toString()/][']'/];
+        public:
+            [name/](int mid = 0, const char *name = "[name/]");
+            virtual ~[name/]();
+            virtual CLState * const * states() const { return _states; }
+            virtual int numberOfStates() const { return [states(m)->size().toString()/]; }
+#           include "[name/]_Variables.h"
+#           include "[name/]_Methods.h"
+        };
+    }
+}
+
+extern "C"
+{
+    FSM::CLM::[name/] *CLM_Create_[name/](int mid, const char *name);
+}
+
+#endif // defined(clfsm_machine_[name/]_)[/template]

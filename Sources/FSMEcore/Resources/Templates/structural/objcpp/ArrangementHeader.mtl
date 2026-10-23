@@ -1,0 +1,204 @@
+[comment encoding = UTF-8 /]
+[**
+ * The header of an arrangement.
+ *
+ * The header declares the arrangement struct, whose machines can be reached
+ * by index or by instance name, a C++ class that creates and runs the
+ * machines, and the C functions that use the struct and the class.
+ **/]
+[module ArrangementHeader('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import common::Arrangements/]
+[import objcpp::Identifiers/]
+
+[**
+ * The header of an arrangement.
+ **/]
+[template public arrangementHeader(a : Arrangement, name : String, isSuspensible : Boolean)]
+//
+// Arrangement_[name/].h
+//
+// Automatically created through MiCASE -- do not change manually!
+//
+#ifndef clfsm_arrangement_[name/]_h
+#define clfsm_arrangement_[name/]_h
+
+#include <inttypes.h>
+#include <stdbool.h>
+
+#define ARRANGEMENT_[name.toUpperCase()/]_NUMBER_OF_INSTANCES [a.instances->size().toString()/]
+
+#ifdef __cplusplus
+#include "StateMachineVector.h"
+namespace FSM {
+    class CLMachine;
+    namespace CLM {
+[for (type : String | sortedMachineTypeNames(a))]
+            class [type/];
+[/for]
+[if (a.instances->isEmpty())]
+
+[/if]
+    }
+}
+#endif
+
+/// A [name/] CLFSM Arrangement.
+struct Arrangement_[name/]
+{
+    /// The number of instances in this arrangement.
+    uintptr_t number_of_instances;
+    union {
+#ifdef __cplusplus
+        /// The machines in this arrangement.
+        FSM::CLMachine *machines['['/][a.instances->size().toString()/][']'/];
+#else
+        /// The machines in this arrangement.
+        void *machines['['/][a.instances->size().toString()/][']'/];
+#endif
+        struct {
+
+[for (instance : Instance | a.instances)]
+#ifdef __cplusplus
+                /// An instance of the [typeName(instance)/] CLFSM.
+                FSM::CLM::[typeName(instance)/] *[memberName(instanceName(a, i))/];
+#else
+                /// An instance of the [typeName(instance)/] CLFSM.
+                void *[cMemberName(instanceName(a, i))/];
+#endif
+[/for]
+[if (a.instances->isEmpty())]
+
+[/if]
+
+        };
+    };
+};
+
+#ifdef __cplusplus
+namespace FSM {
+    /// C++ wrapper class for the [name/] arrangement.
+    ///
+    /// This class wraps the Arrangement_[name/] struct and provides
+    /// RAII lifecycle management and convenient C++ methods.
+    class Arrangement[name/] {
+    private:
+        Arrangement_[name/] arrangement_;
+        StateMachineVector vector_;
+
+    public:
+        /// Create a new arrangement with dynamically allocated machines.
+        Arrangement[name/]();
+
+        /// Destructor - cleans up dynamically allocated machines.
+        ~Arrangement[name/]();
+
+        // Prevent copying
+        Arrangement[name/](const Arrangement[name/]&) = delete;
+        Arrangement[name/]& operator=(const Arrangement[name/]&) = delete;
+
+[for (instance : Instance | a.instances)]
+            /// Get the [instanceName(a, i)/] machine instance.
+            CLM::[typeName(instance)/]* get[getterName(instanceName(a, i))/]() const { return arrangement_.[memberName(instanceName(a, i))/]; }
+[/for]
+[if (a.instances->isEmpty())]
+
+[/if]
+
+        /// Execute all machines in the arrangement once.
+        void executeOnce();
+
+        /// Execute all machines in the arrangement continuously.
+        void execute();
+
+[if (isSuspensible)]
+        /// Suspend all machines in the arrangement.
+        void suspend();
+
+        /// Resume all machines in the arrangement.
+        void resume();
+
+        /// Restart all machines in the arrangement.
+        void restart();
+[/if]
+
+        /// Validate the arrangement.
+        ///
+        /// - Returns: true if the arrangement is valid, false otherwise.
+        bool validate() const;
+
+        /// Get the underlying arrangement struct.
+        ///
+        /// - Returns: Pointer to the arrangement struct.
+        Arrangement_[name/]* getStruct() { return &arrangement_; }
+
+        /// Get the underlying arrangement struct (const).
+        ///
+        /// - Returns: Pointer to the arrangement struct.
+        const Arrangement_[name/]* getStruct() const { return &arrangement_; }
+    };
+}
+
+/// Opaque handle for C code to use the C++ arrangement class.
+typedef struct FSM_Arrangement[name/] FSM_Arrangement[name/];
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/// Initialise the [name/] CLFSM arrangement struct.
+///
+/// - Parameter arrangement: The machine arrangement struct to initialise.
+void arrangement_[name.toLowerCase()/]_init(struct Arrangement_[name/] * const arrangement);
+
+/// Validate the [name/] CLFSM arrangement struct.
+///
+/// - Parameter arrangement: The machine arrangement struct to validate.
+/// - Returns: true if valid, false otherwise.
+bool arrangement_[name.toLowerCase()/]_validate(const struct Arrangement_[name/] * const arrangement);
+
+#ifdef __cplusplus
+// C API for dynamic allocation using the C++ class
+
+/// Create a new [name/] arrangement with dynamic allocation.
+///
+/// - Returns: Opaque handle to the arrangement.
+FSM_Arrangement[name/]* fsm_arrangement_[name.toLowerCase()/]_create(void);
+
+/// Destroy a dynamically allocated [name/] arrangement.
+///
+/// - Parameter arrangement: The arrangement to destroy.
+void fsm_arrangement_[name.toLowerCase()/]_destroy(FSM_Arrangement[name/]* arrangement);
+
+/// Execute all machines in the arrangement once.
+///
+/// - Parameter arrangement: The arrangement to execute.
+void fsm_arrangement_[name.toLowerCase()/]_execute_once(FSM_Arrangement[name/]* arrangement);
+
+[if (isSuspensible)]
+/// Suspend all machines in the arrangement.
+///
+/// - Parameter arrangement: The arrangement to suspend.
+void fsm_arrangement_[name.toLowerCase()/]_suspend(FSM_Arrangement[name/]* arrangement);
+
+/// Resume all machines in the arrangement.
+///
+/// - Parameter arrangement: The arrangement to resume.
+void fsm_arrangement_[name.toLowerCase()/]_resume(FSM_Arrangement[name/]* arrangement);
+
+/// Restart all machines in the arrangement.
+///
+/// - Parameter arrangement: The arrangement to restart.
+void fsm_arrangement_[name.toLowerCase()/]_restart(FSM_Arrangement[name/]* arrangement);
+[/if]
+
+/// Validate a dynamically allocated arrangement.
+///
+/// - Parameter arrangement: The arrangement to validate.
+/// - Returns: true if valid, false otherwise.
+bool fsm_arrangement_[name.toLowerCase()/]_validate(const FSM_Arrangement[name/]* arrangement);
+}
+#endif
+
+#endif // clfsm_arrangement_[name/]_h[/template]

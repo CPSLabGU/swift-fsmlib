@@ -1,0 +1,216 @@
+[comment encoding = UTF-8 /]
+[**
+ * The static instantiation of a C arrangement.
+ *
+ * The header declares one statically allocated machine per instance together
+ * with its states, the source defines and links them, and the main program
+ * validates the static arrangement and runs its ringlets.
+ **/]
+[module StaticArrangement('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import common::Arrangements/]
+[import c::CNames/]
+[import c::StateHeader/]
+[import c::MachineCommon/]
+[import c::ArrangementFiles/]
+
+[**
+ * The file name of the header of the static arrangement.
+ **/]
+[query public staticArrangementHeaderFile() : String = 'Static_Arrangement' + headerExtension()/]
+
+[**
+ * The file name of the source of the static arrangement.
+ **/]
+[query public staticArrangementSourceFile(name : String) : String = 'Static_Arrangement_' + name + sourceExtension()/]
+
+[**
+ * The file name of the main program that runs the static arrangement.
+ **/]
+[query public staticMainFile() : String = 'static_main' + sourceExtension()/]
+
+[**
+ * The machine that the first instance of a machine type runs.
+ **/]
+[query public typeMachine(a : Arrangement, type : String) : Machine = instanceMachine(a, a.instances->indexOf(firstInstanceOfType(a, type)))/]
+
+[**
+ * The content of the header of the static arrangement.
+ **/]
+[template public staticArrangementHeader(a : Arrangement, name : String, isSuspensible : Boolean)]
+[let u = upper(name)]
+[let l = lower(name)]
+[let guardMacro = guardName('LLFSM_STATIC_ARRANGEMENT_H')]
+[banner(staticArrangementHeaderFile())/]
+#ifndef [guardMacro/]
+#define [guardMacro/]
+
+#include "[arrangementHeaderFile(name)/]"
+[for (type : String | machineTypeNames(a))]
+#include "[typeHeaderPath(type)/]"
+[/for]
+
+#define STATIC_ARRANGEMENT_[u/]_NUMBER_OF_INSTANCES [a.instances->size()/]
+#ifndef SUSPEND_ALL
+#define SUSPEND_ALL() fsm_arrangement_suspend_all((struct LLFSMArrangement *)&static_arrangement_[l/])
+#endif // SUSPEND_ALL
+#ifndef RESUME_ALL
+#define RESUME_ALL() fsm_arrangement_resume_all((struct LLFSMArrangement *)&static_arrangement_[l/])
+#endif // RESUME_ALL
+#ifndef RESTART_ALL
+#define RESTART_ALL() fsm_arrangement_restart_all((struct LLFSMArrangement *)&static_arrangement_[l/])
+#endif // RESTART_ALL
+
+struct LLFSMachine;
+struct LLFSMArrangement;
+
+[for (instance : Instance | a.instances)]
+[let type = typeName(instance)]
+[let li = lower(instanceName(a, i))]
+[let mach = instanceMachine(a, i)]
+/// Static instantiation of a [type/] LLFSM.
+extern struct Machine_[type/] static_fsm_[li/];
+[for (s : State | states(mach))]
+/// Static instantiation of the [type/] LLFSM state [s.name/].
+extern struct FSM[type/]_State_[s.name/] static_[li/]_state_[s.name/];
+[/for]
+[/let]
+[/let]
+[/let]
+[/for]
+/// Static instantiation of the [name/] LLFSM Arrangement.
+extern struct Arrangement_[name/] static_arrangement_[l/];
+
+#endif /* [guardMacro/] */
+[/let]
+[/let]
+[/let]
+[/template]
+
+[**
+ * The content of the source of the static arrangement.
+ **/]
+[template public staticArrangementSource(a : Arrangement, name : String, isSuspensible : Boolean)]
+[let u = upper(name)]
+[let l = lower(name)]
+[banner(staticArrangementSourceFile(name))/]
+#include <stdbool.h>
+#include "[commonHeaderFile()/]"
+#include "[arrangementHeaderFile(name)/]"
+#include "[staticArrangementHeaderFile()/]"
+[if (machineTypeNames(a)->isEmpty())]
+
+[emptyListMarker()/]
+
+[/if]
+[for (type : String | machineTypeNames(a))]
+#include "[typeHeaderPath(type)/]"
+[for (s : State | states(typeMachine(a, type)))]
+#include "[type/][machineExtension()/]/[stateHeaderFile(s)/]"
+[/for]
+[/for]
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-macros"
+
+#ifndef NULL
+#define NULL ((void*)0)
+#endif
+#include <stdbool.h>
+
+[for (instance : Instance | a.instances)]
+[let type = typeName(instance)]
+[let lt = lower(type)]
+[let li = lower(instanceName(a, i))]
+[let mach = instanceMachine(a, i)]
+/// Static instantiation of a [type/] LLFSM.
+struct Machine_[type/] static_fsm_[li/] = 
+{
+[if (states(mach)->notEmpty())]
+    .current_state = (struct LLFSMState *) &static_[li/]_state_[states(mach)->first().name/],
+[/if]
+[if (isSuspensible and hasSuspendState(mach))]
+    .suspend_state = (struct LLFSMState *) &static_[li/]_state_[mach.llfsm.suspendState.name/],
+[/if]
+    .states =
+    {
+[for (s : State | states(mach))]
+        (struct LLFSMState *) &static_[li/]_state_[s.name/][if (i < states(mach)->size())],[/if]
+[/for]
+    }
+};
+
+[for (s : State | states(mach))]
+[let ls = lower(s.name)]
+/// Static instantiation of the [type/] LLFSM state [s.name/].
+struct FSM[type/]_State_[s.name/] static_[li/]_state_[s.name/] = 
+{
+    .check_transitions = (struct LLFSMState *(*)(const struct LLFSMachine *, const struct LLFSMState *)) fsm_[lt/]_[ls/]_check_transitions,
+    .on_entry = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_[lt/]_[ls/]_on_entry,
+    .on_exit = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_[lt/]_[ls/]_on_exit,
+    .internal = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_[lt/]_[ls/]_internal[if (isSuspensible)],[/if]
+[if (isSuspensible)]
+    .on_suspend = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_[lt/]_[ls/]_on_suspend,
+    .on_resume = (void (*)(struct LLFSMachine *, struct LLFSMState *)) fsm_[lt/]_[ls/]_on_resume
+[/if]
+};
+[/let]
+[/for]
+[/let]
+[/let]
+[/let]
+[/let]
+[/for]
+/// Static instantiation of the [name/] LLFSM Arrangement.
+struct Arrangement_[name/] static_arrangement_[l/] =
+{
+    .number_of_instances = STATIC_ARRANGEMENT_[u/]_NUMBER_OF_INSTANCES,
+    {
+[if (a.instances->isEmpty())]
+        
+[/if]
+[for (instance : Instance | a.instances)]
+        .fsm_[lower(instanceName(a, i))/] = &static_fsm_[lower(instanceName(a, i))/][if (i < a.instances->size())],[/if]
+[/for]
+    },
+};
+[/let]
+[/let]
+[/template]
+
+[**
+ * The content of the main program that runs the static arrangement.
+ **/]
+[template public staticMain(a : Arrangement, name : String, isSuspensible : Boolean)]
+[let l = lower(name)]
+//
+// main.c for running the static LLFSM arrangement named [name/].
+//
+// [generatedNotice()/]
+//
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
+#include "[commonHeaderFile()/]"
+#include "[arrangementHeaderFile(name)/]"
+#include "[staticArrangementHeaderFile()/]"
+
+int main(int argc, char *argv['['/][']'/]){
+    uintptr_t num_runs = (uintptr_t)(argc > 1 ? strtoull(argv['['/]1[']'/], NULL, 10) : ~0ULL);
+    
+    if (!arrangement_[l/]_validate(&static_arrangement_[l/]))
+    {
+        printf("'static_arrangement_[l/]' does not validate!\n");
+        return EXIT_FAILURE;
+    }
+    
+    while (num_runs--)
+    {
+        fsm_arrangement_execute_once((struct LLFSMArrangement *)&static_arrangement_[l/]);
+    }
+    
+    return EXIT_SUCCESS;
+}
+[/let]
+[/template]

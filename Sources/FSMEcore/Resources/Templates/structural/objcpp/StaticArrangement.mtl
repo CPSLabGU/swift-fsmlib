@@ -1,0 +1,188 @@
+[comment encoding = UTF-8 /]
+[**
+ * The static arrangement files.
+ *
+ * The static arrangement instantiates every machine of an arrangement as a
+ * static object, fills in the arrangement struct and the machine vector with
+ * them, and offers a main program that validates the arrangement and runs its
+ * machines a given number of times.
+ **/]
+[module StaticArrangement('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import common::Arrangements/]
+[import objcpp::Identifiers/]
+
+[**
+ * Generated lines joined by line breaks, or the marker of an empty list if there are none.
+ **/]
+[query public generatedLines(lines : Sequence(String)) : String = if lines->isEmpty() then ignoredCode() else joined(lines, '\n') endif/]
+
+[**
+ * The positions of the instances of an arrangement, counted from one.
+ **/]
+[query public positions(a : Arrangement) : Sequence(Integer) = a.instances->collect(instance | a.instances->indexOf(instance))/]
+
+[**
+ * The separator after the entry for the instance at a position, counted from one, of a list of all instances.
+ **/]
+[query public entrySeparator(a : Arrangement, position : Integer) : String = if position < a.instances->size() then ',' else '' endif/]
+
+[**
+ * The static instantiations of the machines of an arrangement.
+ **/]
+[query public staticInstances(a : Arrangement) : String = generatedLines(positions(a)->collect(k | '/// Static instantiation of a ' + typeName(a.instances->at(k)) + ' CLFSM.\nstatic ' + typeName(a.instances->at(k)) + ' ' + memberName(instanceName(a, k)) + '(' + (k - 1).toString() + ', "' + instanceName(a, k) + '");'))/]
+
+[**
+ * The members of the static arrangement struct, in braces.
+ **/]
+[query public staticMembers(a : Arrangement) : String = '    {' + generatedLines(positions(a)->collect(k | '        .' + memberName(instanceName(a, k)) + ' = &' + memberName(instanceName(a, k)) + entrySeparator(a, k))) + '    }'/]
+
+[**
+ * The static machine vector of an arrangement.
+ **/]
+[query public staticVector(a : Arrangement) : String = 'static FSM::CLMachine *machine_vector' + '[' + a.instances->size().toString() + '] = {' + generatedLines(positions(a)->collect(k | '    &' + memberName(instanceName(a, k)) + entrySeparator(a, k))) + '};'/]
+
+[**
+ * The interface of the static arrangement.
+ **/]
+[template public staticArrangementHeader(a : Arrangement, name : String, isSuspensible : Boolean)]
+//
+// Static_Arrangement.h
+//
+// Automatically created using fsmconvert -- do not change manually!
+//
+#ifndef clfsm_static_arrangement_[name.toLowerCase()/]_h
+#define clfsm_static_arrangement_[name.toLowerCase()/]_h
+
+[if (isSuspensible)]
+#ifndef FSM_SUPPORT_SUSPEND
+#define FSM_SUPPORT_SUSPEND
+#endif
+[/if]
+
+#include "Arrangement_[name/].h"
+[for (type : String | machineTypeNames(a))]
+#include "[type/].machine/[type/].h"
+[/for]
+[if (a.instances->isEmpty())]
+
+[/if]
+
+
+#define STATIC_ARRANGEMENT_[name.toUpperCase()/]_NUMBER_OF_INSTANCES [a.instances->size().toString()/]
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/// Get a pointer to the static [name/] arrangement.
+struct Arrangement_[name/] *static_arrangement_[name.toLowerCase()/](void);
+
+#ifdef __cplusplus
+}
+
+namespace FSM {
+    /// Get the StateMachineVector for the static [name/] arrangement.
+    StateMachineVector *static_arrangement_[name.toLowerCase()/]_vector(void);
+}
+#endif
+
+#endif // clfsm_static_arrangement_[name.toLowerCase()/]_h[/template]
+
+[**
+ * The code of the static arrangement.
+ **/]
+[template public staticArrangementSource(a : Arrangement, name : String, isSuspensible : Boolean)]
+//
+// Static_Arrangement_[name/].mm
+//
+// Automatically created using fsmconvert -- do not change manually!
+//
+#include <cstddef>
+#include "Static_Arrangement.h"
+#include "StateMachineVector.h"
+[for (type : String | sortedMachineTypeNames(a))]
+#include "[type/].machine/[type/].h"
+[/for]
+[if (a.instances->isEmpty())]
+
+[/if]
+
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-macros"
+
+#ifndef NULL
+#define NULL nullptr
+#endif
+
+using namespace FSM::CLM;
+[staticInstances(a) + '\n'/]
+/// Static instantiation of the [name/] CLFSM Arrangement.
+static Arrangement_[name/] static_arrangement = {
+    .number_of_instances = STATIC_ARRANGEMENT_[name.toUpperCase()/]_NUMBER_OF_INSTANCES,
+[staticMembers(a)/]
+};
+
+/// Static machine vector for the arrangement.
+[staticVector(a)/]
+
+/// Static StateMachineVector for the arrangement.
+static FSM::StateMachineVector static_vector(machine_vector, [a.instances->size().toString()/]);
+
+extern "C" {
+    /// Get a pointer to the static [name/] arrangement.
+    struct Arrangement_[name/] *static_arrangement_[name.toLowerCase()/](void)
+    {
+        return &static_arrangement;
+    }
+}
+
+namespace FSM {
+    /// Get the StateMachineVector for the static [name/] arrangement.
+    StateMachineVector *static_arrangement_[name.toLowerCase()/]_vector(void)
+    {
+        set_global_machine_vector(&static_vector);
+        return &static_vector;
+    }
+}
+
+#pragma clang diagnostic pop[/template]
+
+[**
+ * The main program that validates and runs the static arrangement.
+ **/]
+[template public staticMain(a : Arrangement, name : String)]
+//
+// static_main.cc
+//
+// Automatically created using fsmconvert -- do not change manually!
+//
+#include <cstdio>
+#include <cstdlib>
+#include "Static_Arrangement.h"
+#include "StateMachineVector.h"
+
+/// Main function to run the static [name/] arrangement.
+///
+/// - Parameter argc: The number of command line arguments.
+/// - Parameter argv: The command line arguments. If argc > 1, argv['['/]1[']'/] is the number of runs.
+/// - Returns: EXIT_SUCCESS if the arrangement validates and runs successfully, EXIT_FAILURE otherwise.
+int main(int argc, char *argv['['/][']'/])
+{
+    unsigned long num_runs = argc > 1 ? strtoull(argv['['/]1[']'/], nullptr, 10) : ~0UL;
+
+    struct Arrangement_[name/] *arrangement = static_arrangement_[name.toLowerCase()/]();
+    if (!arrangement_[name.toLowerCase()/]_validate(arrangement)) {
+        printf("Error: 'static_arrangement_[name.toLowerCase()/]' does not validate!\n");
+        return EXIT_FAILURE;
+    }
+
+    FSM::StateMachineVector *vector = FSM::static_arrangement_[name.toLowerCase()/]_vector();
+
+    while (num_runs--) {
+        vector->executeOnce();
+    }
+
+    return EXIT_SUCCESS;
+}[/template]

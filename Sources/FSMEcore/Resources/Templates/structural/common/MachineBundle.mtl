@@ -1,0 +1,247 @@
+[comment encoding = UTF-8 /]
+[**
+ * The files that a machine bundle holds whatever its language.
+ *
+ * These are the names of the states, the include path, the machine and state
+ * boilerplate sections, one file per transition expression, and the layout of
+ * the states and transitions together with the window layout of the editor.
+ * Every template takes the directory of the bundle, which is empty for a
+ * bundle written on its own and ends in a slash for a bundle inside an
+ * arrangement.
+ **/]
+[module MachineBundle('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import common::PropertyList/]
+
+[**
+ * The format version that the layout file declares.
+ **/]
+[query public layoutVersion() : String = '1.3'/]
+
+[**
+ * The character set that carries the window layout bytes unchanged.
+ **/]
+[query public windowLayoutCharset() : String = 'ISO-8859-1'/]
+
+[**
+ * The keys of a state layout dictionary in ascending order, including the
+ * additional properties of the layout.
+ **/]
+[query public stateLayoutKeys(layout : StateLayout) : Sequence(String) = Sequence{'Transitions', 'expanded', 'expandedHeight', 'expandedWidth', 'h', 'internalHeight', 'onEntryHeight', 'onExitHeight', 'onResumeHeight', 'onSuspendHeight', 'w', 'x', 'y', 'zoomedInternalHeight', 'zoomedOnEntryHeight', 'zoomedOnExitHeight', 'zoomedOnResumeHeight', 'zoomedOnSuspendHeight'}->union(layout.properties->collect(p | p.key))->asSet()->sortedBy(k | k)/]
+
+[**
+ * The layouts of the transitions that leave a state, in transition order.
+ **/]
+[query public transitionLayoutsFrom(m : Machine, s : State) : Sequence(TransitionLayout) = transitionsFrom(m, s)->collect(t | m.transitionLayouts->select(e | e.transition = t)->first())->reject(e | e.oclIsUndefined())->collect(e | e.layout)/]
+
+[**
+ * Writes the names of the states, one per line.
+ **/]
+[template public statesFile(m : Machine, dir : String)]
+[file (dir + 'States', false, 'UTF-8')][for (s : State | states(m)) separator('\n')][s.name/][/for][/file]
+[/template]
+
+[**
+ * Writes the include path of the machine.
+ **/]
+[template public includePathFile(m : Machine, dir : String)]
+[file (dir + 'IncludePath', false, 'UTF-8')][machineSection(m, 'includePath')/][/file]
+[/template]
+
+[**
+ * Writes the machine boilerplate sections, with file names that start with the given prefix.
+ **/]
+[template public machineBoilerplateFiles(m : Machine, dir : String, prefix : String)]
+[file (dir + prefix + '_Includes.h', false, 'UTF-8')][machineSection(m, 'includes')/][/file]
+[file (dir + prefix + '_Variables.h', false, 'UTF-8')][machineSection(m, 'variables')/][/file]
+[file (dir + prefix + '_Methods.h', false, 'UTF-8')][machineSection(m, 'functions')/][/file]
+[/template]
+
+[**
+ * Writes the boilerplate sections and activities of every state.
+ **/]
+[template public stateBoilerplateFiles(m : Machine, dir : String)]
+[for (s : State | states(m))]
+[file (dir + 'State_' + s.name + '_Includes.h', false, 'UTF-8')][stateSection(m, s, 'includes')/][/file]
+[file (dir + 'State_' + s.name + '_Variables.h', false, 'UTF-8')][stateSection(m, s, 'variables')/][/file]
+[file (dir + 'State_' + s.name + '_Methods.h', false, 'UTF-8')][stateSection(m, s, 'functions')/][/file]
+[file (dir + 'State_' + s.name + '_OnEntry.mm', false, 'UTF-8')][activity(s, 'onEntry')/][/file]
+[file (dir + 'State_' + s.name + '_OnExit.mm', false, 'UTF-8')][activity(s, 'onExit')/][/file]
+[file (dir + 'State_' + s.name + '_Internal.mm', false, 'UTF-8')][activity(s, 'internal')/][/file]
+[file (dir + 'State_' + s.name + '_OnSuspend.mm', false, 'UTF-8')][activity(s, 'onSuspend')/][/file]
+[file (dir + 'State_' + s.name + '_OnResume.mm', false, 'UTF-8')][activity(s, 'onResume')/][/file]
+[/for]
+[/template]
+
+[**
+ * Writes the expression of every transition, numbered per state from zero.
+ **/]
+[template public transitionFiles(m : Machine, dir : String)]
+[for (s : State | states(m))]
+[for (t : Transition | transitionsFrom(m, s))]
+[file (dir + 'State_' + s.name + '_Transition_' + (i - 1).toString() + '.expr', false, 'UTF-8')][labelLine(t)/][/file]
+[/for]
+[/for]
+[/template]
+
+[**
+ * Writes the layout of the states and transitions and the window layout, if there is one.
+ **/]
+[template public layoutFiles(m : Machine, dir : String)]
+[file (dir + 'Layout.plist', false, 'UTF-8')][layoutText(m)/][/file]
+[if (not m.windowLayout.oclIsUndefined())]
+[if (m.windowLayout.size() > 0)]
+[file (dir + 'WindowLayout.plist', false, windowLayoutCharset())][m.windowLayout.base64Decoded(windowLayoutCharset())/][/file]
+[/if]
+[/if]
+[/template]
+
+[**
+ * The layout file: a dictionary of the state layouts by state name and the format version.
+ **/]
+[template public layoutText(m : Machine)]
+[plistPrologue()/]
+<dict>
+[plistKey('States', '\t')/]
+[if (m.stateLayouts->isEmpty())]
+	<dict/>
+[else]
+	<dict>
+[for (e : StateLayoutEntry | m.stateLayouts->sortedBy(e | e.state.name))]
+[stateLayoutEntry(m, e, '\t\t')/]
+[/for]
+	</dict>
+[/if]
+[plistKey('Version', '\t')/]
+	<string>[layoutVersion()/]</string>
+</dict>
+[plistEpilogue()/]
+[/template]
+
+[**
+ * The layout of one state, keyed by the state name.
+ **/]
+[template public stateLayoutEntry(m : Machine, e : StateLayoutEntry, indent : String)]
+[plistKey(e.state.name, indent)/]
+[indent/]<dict>
+[for (key : String | stateLayoutKeys(e.layout))]
+[stateLayoutProperty(m, e, key, plistIndent(indent))/]
+[/for]
+[indent/]</dict>
+[/template]
+
+[**
+ * One keyed property of a state layout.
+ **/]
+[template public stateLayoutProperty(m : Machine, e : StateLayoutEntry, key : String, indent : String)]
+[plistKey(key, indent)/]
+[let layout : StateLayout = e.layout]
+[if (key = 'Transitions')]
+[transitionLayouts(transitionLayoutsFrom(m, e.state), indent)/]
+[elseif (key = 'expanded')]
+[plistBooleanLine(layout.isOpen, indent)/]
+[elseif (key = 'expandedHeight')]
+[plistRealLine(layout.openH, indent)/]
+[elseif (key = 'expandedWidth')]
+[plistRealLine(layout.openW, indent)/]
+[elseif (key = 'h')]
+[plistRealLine(layout.closedH, indent)/]
+[elseif (key = 'internalHeight')]
+[plistRealLine(layout.internalHeight, indent)/]
+[elseif (key = 'onEntryHeight')]
+[plistRealLine(layout.onEntryHeight, indent)/]
+[elseif (key = 'onExitHeight')]
+[plistRealLine(layout.onExitHeight, indent)/]
+[elseif (key = 'onResumeHeight')]
+[plistRealLine(layout.onResumeHeight, indent)/]
+[elseif (key = 'onSuspendHeight')]
+[plistRealLine(layout.onSuspendHeight, indent)/]
+[elseif (key = 'w')]
+[plistRealLine(layout.closedW, indent)/]
+[elseif (key = 'x')]
+[plistRealLine(layout.closedX, indent)/]
+[elseif (key = 'y')]
+[plistRealLine(layout.closedY, indent)/]
+[elseif (key = 'zoomedInternalHeight')]
+[plistRealLine(layout.zoomedInternalHeight, indent)/]
+[elseif (key = 'zoomedOnEntryHeight')]
+[plistRealLine(layout.zoomedOnEntryHeight, indent)/]
+[elseif (key = 'zoomedOnExitHeight')]
+[plistRealLine(layout.zoomedOnExitHeight, indent)/]
+[elseif (key = 'zoomedOnResumeHeight')]
+[plistRealLine(layout.zoomedOnResumeHeight, indent)/]
+[elseif (key = 'zoomedOnSuspendHeight')]
+[plistRealLine(layout.zoomedOnSuspendHeight, indent)/]
+[else]
+[plistValue(layout.properties->select(p | p.key = key)->first().value, indent)/]
+[/if]
+[/let]
+[/template]
+
+[**
+ * The array of transition layouts of a state.
+ **/]
+[template public transitionLayouts(layouts : Sequence(TransitionLayout), indent : String)]
+[if (layouts->isEmpty())]
+[indent/]<array/>
+[else]
+[indent/]<array>
+[for (layout : TransitionLayout | layouts)]
+[transitionLayout(layout, plistIndent(indent))/]
+[/for]
+[indent/]</array>
+[/if]
+[/template]
+
+[**
+ * The layout of one transition: the whole Bezier path, its end and control
+ * points as coordinate pairs, and, for a cubic path, their coordinates.
+ **/]
+[template public transitionLayout(layout : TransitionLayout, indent : String)]
+[let points = layout.points]
+[let n : Integer = points->size()]
+[if (n = 0)]
+[indent/]<dict/>
+[else]
+[indent/]<dict>
+[let inner : String = plistIndent(indent)]
+[plistKey('bezierPath', inner)/]
+[inner/]<array>
+[for (p : Point2D | points)]
+[plistPoint(p, plistIndent(inner))/]
+[/for]
+[inner/]</array>
+[if (n > 2)]
+[plistKey('controlPoint1', inner)/]
+[plistPoint(points->at(2), inner)/]
+[if (n > 3)]
+[plistRealEntry('controlPoint1X', points->at(2).x, inner)/]
+[plistRealEntry('controlPoint1Y', points->at(2).y, inner)/]
+[/if]
+[plistKey('controlPoint2', inner)/]
+[plistPoint(points->at(n - 1), inner)/]
+[if (n > 3)]
+[plistRealEntry('controlPoint2X', points->at(n - 1).x, inner)/]
+[plistRealEntry('controlPoint2Y', points->at(n - 1).y, inner)/]
+[/if]
+[/if]
+[if (n > 1)]
+[plistKey('dstPoint', inner)/]
+[plistPoint(points->at(n), inner)/]
+[if (n > 3)]
+[plistRealEntry('dstPointX', points->at(n).x, inner)/]
+[plistRealEntry('dstPointY', points->at(n).y, inner)/]
+[/if]
+[plistKey('srcPoint', inner)/]
+[plistPoint(points->at(1), inner)/]
+[if (n > 3)]
+[plistRealEntry('srcPointX', points->at(1).x, inner)/]
+[plistRealEntry('srcPointY', points->at(1).y, inner)/]
+[/if]
+[/if]
+[/let]
+[indent/]</dict>
+[/if]
+[/let]
+[/let]
+[/template]

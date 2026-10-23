@@ -1,0 +1,50 @@
+[comment encoding = UTF-8 /]
+[**
+ * The code sections that an SCXML document carries in the fsmlib namespace.
+ *
+ * The machine boilerplate and the state activities that SCXML has no element
+ * for are kept as named sections in character data, so that a machine can be
+ * converted back into its original language.
+ **/]
+[module Boilerplate('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import scxml::Xml/]
+
+[**
+ * The machine boilerplate sections, in document order.
+ **/]
+[query public boilerplateSections() : Sequence(String) = Sequence{'includePath', 'includes', 'variables', 'functions'}/]
+
+[**
+ * The activities without an SCXML element, in document order.
+ **/]
+[query public extensionActivities() : Sequence(String) = Sequence{'internal', 'onSuspend', 'onResume'}/]
+
+[**
+ * Writes a named code section.
+ **/]
+[template public codeSection(sectionName : String, content : String)]
+    <fsm:section name="[sectionName/]"><!['['/]CDATA['['/]
+[characterData(content)/]
+    [']'/][']'/]></fsm:section>
+[/template]
+
+[**
+ * Writes the machine boilerplate block.
+ *
+ * It holds every boilerplate section the machine has, followed by the
+ * machine activities without an SCXML element, which a machine always has
+ * and which are empty.
+ **/]
+[template public machineBoilerplate(m : Machine)]
+  <fsm:boilerplate>
+[for (sectionName : String | boilerplateSections())]
+[if (hasMachineSection(m, sectionName))]
+[codeSection(sectionName, machineSection(m, sectionName))/]
+[/if]
+[/for]
+[for (sectionName : String | extensionActivities())]
+[codeSection(sectionName, '')/]
+[/for]
+  </fsm:boilerplate>
+[/template]

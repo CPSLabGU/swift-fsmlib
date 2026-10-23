@@ -1,0 +1,9 @@
+{
+  "name": "c",
+  "language": "c",
+  "formats": ["c"],
+  "mainModule": "generate",
+  "machineTemplate": "generateMachine",
+  "arrangementTemplate": "generateArrangement",
+  "isSingleFile": false
+}

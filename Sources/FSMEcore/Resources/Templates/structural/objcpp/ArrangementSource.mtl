@@ -1,0 +1,155 @@
+[comment encoding = UTF-8 /]
+[**
+ * The implementation of an arrangement.
+ *
+ * The implementation offers the C++ class that creates, runs, validates and,
+ * for suspensible machines, suspends, resumes and restarts the machines of
+ * the arrangement, and the C functions that use the struct and the class.
+ **/]
+[module ArrangementSource('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import common::Arrangements/]
+[import objcpp::Identifiers/]
+
+[**
+ * The condition that the member of the instance at a position, counted from one, is set, continued with a conjunction
+ * unless the instance is the last one.
+ **/]
+[query public validationLine(a : Arrangement, access : String, position : Integer) : String = '        ' + access + memberName(instanceName(a, position)) + ' != nullptr' + if position < a.instances->size() then ' &&\n        ' else ';' endif/]
+
+[**
+ * The implementation of an arrangement.
+ **/]
+[template public arrangementSource(a : Arrangement, name : String, isSuspensible : Boolean)]
+//
+// Arrangement_[name/].mm
+//
+// Automatically created using fsmconvert -- do not change manually!
+//
+#include "Arrangement_[name/].h"
+#include "StateMachineVector.h"
+#include "CLMacros.h"
+[for (type : String | machineTypeNames(a))]
+#include "[type/].machine/[type/].h"
+[/for]
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-macros"
+
+#ifndef NULL
+#define NULL nullptr
+#endif
+
+namespace FSM {
+    // C++ class implementation
+
+    Arrangement[name/]::Arrangement[name/]()
+        : vector_(nullptr, 0)
+    {
+        arrangement_.number_of_instances = ARRANGEMENT_[name.toUpperCase()/]_NUMBER_OF_INSTANCES;
+[for (instance : Instance | a.instances)]
+        arrangement_.[memberName(instanceName(a, i))/] = new CLM::[typeName(instance)/]([(i - 1).toString()/], "[instanceName(a, i)/]");
+        arrangement_.machines['['/][(i - 1).toString()/][']'/] = arrangement_.[memberName(instanceName(a, i))/];
+[/for]
+        // Initialize execution engine with machine array
+        vector_ = StateMachineVector(arrangement_.machines, ARRANGEMENT_[name.toUpperCase()/]_NUMBER_OF_INSTANCES);
+    }
+
+    Arrangement[name/]::~Arrangement[name/]() {
+[for (instance : Instance | a.instances)]
+        delete arrangement_.[memberName(instanceName(a, i))/];
+[/for]
+    }
+
+    void Arrangement[name/]::executeOnce() {
+        set_global_machine_vector(&vector_);
+        vector_.executeOnce();
+    }
+
+    void Arrangement[name/]::execute() {
+        while (true) {
+            executeOnce();
+        }
+    }
+[if (isSuspensible)]
+    void Arrangement[name/]::suspend() {
+        set_global_machine_vector(&vector_);
+        for (uintptr_t i = 0; i < arrangement_.number_of_instances; ++i) {
+            control_machine_at_index(static_cast<int>(i), CLSuspend);
+        }
+    }
+
+    void Arrangement[name/]::resume() {
+        set_global_machine_vector(&vector_);
+        for (uintptr_t i = 0; i < arrangement_.number_of_instances; ++i) {
+            control_machine_at_index(static_cast<int>(i), CLResume);
+        }
+    }
+
+    void Arrangement[name/]::restart() {
+        set_global_machine_vector(&vector_);
+        for (uintptr_t i = 0; i < arrangement_.number_of_instances; ++i) {
+            control_machine_at_index(static_cast<int>(i), CLRestart);
+        }
+    }
+[/if]
+    bool Arrangement[name/]::validate() const {
+        return arrangement_.number_of_instances == ARRANGEMENT_[name.toUpperCase()/]_NUMBER_OF_INSTANCES &&
+[for (instance : Instance | a.instances)]
+[validationLine(a, 'arrangement_.', i)/]
+[/for]
+        }
+}
+
+extern "C" {
+    /// Initialise the [name/] CLFSM arrangement struct.
+    ///
+    /// - Parameter arrangement: The machine arrangement struct to initialise.
+    void arrangement_[name.toLowerCase()/]_init(struct Arrangement_[name/] * const arrangement)
+    {
+        arrangement->number_of_instances = ARRANGEMENT_[name.toUpperCase()/]_NUMBER_OF_INSTANCES;
+    }
+
+    /// Validate the [name/] CLFSM arrangement struct.
+    ///
+    /// - Parameter arrangement: The machine arrangement struct to validate.
+    bool arrangement_[name.toLowerCase()/]_validate(const struct Arrangement_[name/] * const arrangement)
+    {
+        return arrangement->number_of_instances == ARRANGEMENT_[name.toUpperCase()/]_NUMBER_OF_INSTANCES &&
+[for (instance : Instance | a.instances)]
+[validationLine(a, 'arrangement->', i)/]
+[/for]
+        }
+
+    // C wrapper functions for dynamic allocation using C++ class
+
+    FSM_Arrangement[name/]* fsm_arrangement_[name.toLowerCase()/]_create(void) {
+        return reinterpret_cast<FSM_Arrangement[name/]*>(new FSM::Arrangement[name/]());
+    }
+
+    void fsm_arrangement_[name.toLowerCase()/]_destroy(FSM_Arrangement[name/]* arrangement) {
+        delete reinterpret_cast<FSM::Arrangement[name/]*>(arrangement);
+    }
+
+    void fsm_arrangement_[name.toLowerCase()/]_execute_once(FSM_Arrangement[name/]* arrangement) {
+        reinterpret_cast<FSM::Arrangement[name/]*>(arrangement)->executeOnce();
+    }
+[if (isSuspensible)]
+    void fsm_arrangement_[name.toLowerCase()/]_suspend(FSM_Arrangement[name/]* arrangement) {
+        reinterpret_cast<FSM::Arrangement[name/]*>(arrangement)->suspend();
+    }
+
+    void fsm_arrangement_[name.toLowerCase()/]_resume(FSM_Arrangement[name/]* arrangement) {
+        reinterpret_cast<FSM::Arrangement[name/]*>(arrangement)->resume();
+    }
+
+    void fsm_arrangement_[name.toLowerCase()/]_restart(FSM_Arrangement[name/]* arrangement) {
+        reinterpret_cast<FSM::Arrangement[name/]*>(arrangement)->restart();
+    }
+[/if]
+    bool fsm_arrangement_[name.toLowerCase()/]_validate(const FSM_Arrangement[name/]* arrangement) {
+        return reinterpret_cast<const FSM::Arrangement[name/]*>(arrangement)->validate();
+    }
+}
+
+#pragma clang diagnostic pop[/template]

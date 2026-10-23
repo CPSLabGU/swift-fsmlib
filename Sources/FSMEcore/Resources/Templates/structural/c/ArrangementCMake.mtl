@@ -1,0 +1,119 @@
+[comment encoding = UTF-8 /]
+[**
+ * The CMake files of a C arrangement.
+ *
+ * The project fragment collects the sources, include directories and
+ * subdirectories of the arrangement and of every machine type it uses, and the
+ * CMake lists build the arrangement libraries and the program that runs the
+ * static arrangement.
+ **/]
+[module ArrangementCMake('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import common::Arrangements/]
+[import c::CNames/]
+[import c::CMake/]
+[import c::MachineCommon/]
+[import c::ArrangementFiles/]
+[import c::StaticArrangement/]
+
+[**
+ * The content of the CMake project fragment of an arrangement.
+ **/]
+[template public arrangementCMakeFragment(a : Arrangement, name : String)]
+# Sources for the [name/] LLFSM arrangement.
+set([name/]_ARRANGEMENT_SOURCES
+    [arrangementSourceFile(name)/]
+    [commonSourceFile()/]
+)
+
+# Static arrangement of machines for [name/].
+set([name/]_STATIC_ARRANGEMENT_SOURCES
+    [staticArrangementSourceFile(name)/]
+)
+
+# Include directories for building [name/].
+set([name/]_ARRANGEMENT_INCDIRS
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
+[for (type : String | machineTypeNames(a))]
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/[type/][machineExtension()/]/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/[type/][machineExtension()/]>
+[/for]
+)
+
+# Subdirectories for building [name/].
+set([name/]_ARRANGEMENT_SUBDIRS
+[for (type : String | machineTypeNames(a))]
+    "[type/][machineExtension()/]"
+[/for]
+)
+
+# Build directories for [name/].
+set([name/]_ARRANGEMENT_BUILD_DIRS
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+[for (type : String | machineTypeNames(a))]
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/[type/][machineExtension()/]>
+[/for]
+)
+
+# Installed include directories for [name/].
+set([name/]_ARRANGEMENT_INSTALL_INCDIRS
+  $<INSTALL_INTERFACE:include/fsms/[name/].arrangement> 
+  $<INSTALL_INTERFACE:fsms/[name/].arrangement> 
+[for (type : String | machineTypeNames(a))]
+  $<INSTALL_INTERFACE:include/fsms/[name/].arrangement/[type/][machineExtension()/]>
+  $<INSTALL_INTERFACE:fsms/[name/].arrangement/[type/][machineExtension()/]>
+[/for]
+)
+[if (machineTypeNames(a)->notEmpty())]
+
+[for (type : String | machineTypeNames(a)) separator('\n')]
+[let directory = type + machineExtension()]
+include(${CMAKE_CURRENT_LIST_DIR}/[directory/]/[cmakeFragmentFile()/])
+foreach(src ${[type/]_FSM_SOURCES})
+  list(APPEND [name/]_ARRANGEMENT_FSMS "[type/]")
+  list(APPEND [name/]_ARRANGEMENT_FSM_[type/]_SOURCES [directory/]/${src})
+  list(APPEND [name/]_ARRANGEMENT_SOURCES [directory/]/${src})
+endforeach()[/let][/for][/if][/template]
+
+[**
+ * The content of the CMake lists of an arrangement.
+ **/]
+[template public arrangementCMakeLists(a : Arrangement, name : String)]
+cmake_minimum_required(VERSION [cmakeMinimumVersion()/])
+
+project([name/] C)
+
+include([cmakeFragmentFile()/])
+
+add_library([name/]_arrangement STATIC ${[name/]_ARRANGEMENT_SOURCES})
+add_library([name/]_static_arrangement STATIC ${[name/]_STATIC_ARRANGEMENT_SOURCES})
+
+target_include_directories([name/]_arrangement PRIVATE 
+  ${[name/]_ARRANGEMENT_INCDIRS}
+  ${[name/]_ARRANGEMENT_INSTALL_INCDIRS}
+)
+target_include_directories([name/]_static_arrangement PRIVATE
+  ${[name/]_ARRANGEMENT_INCDIRS}
+  ${[name/]_ARRANGEMENT_INSTALL_INCDIRS}
+)
+
+add_executable(run_[name/]_arrangement [staticMainFile()/])
+
+target_include_directories(run_[name/]_arrangement PRIVATE
+  ${[name/]_ARRANGEMENT_INCDIRS}
+  ${[name/]_ARRANGEMENT_INSTALL_INCDIRS}
+)
+[for (type : String | machineTypeNames(a))]
+add_subdirectory([type/][machineExtension()/])
+[/for]
+target_link_libraries(run_[name/]_arrangement
+    [name/]_static_arrangement
+    [name/]_arrangement
+[for (type : String | machineTypeNames(a))]
+    [type/]_fsm
+[/for]
+)
+[/template]

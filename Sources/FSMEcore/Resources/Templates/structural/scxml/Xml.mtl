@@ -1,0 +1,29 @@
+[comment encoding = UTF-8 /]
+[**
+ * Text helpers for writing SCXML documents.
+ *
+ * The queries escape the characters that XML reserves, terminate the
+ * contents of character data sections and turn layout coordinates into the
+ * whole numbers that SCXML editors read.
+ **/]
+[module Xml('http://cpslabgu.github.io/LLFSMStructural')/]
+
+[**
+ * Text with the characters that XML reserves replaced by their entity references.
+ **/]
+[query public escaped(text : String) : String = text.substituteAll('&', '&amp;').substituteAll('<', '&lt;').substituteAll('>', '&gt;').substituteAll('"', '&quot;').substituteAll('\'', '&apos;')/]
+
+[**
+ * An attribute with an escaped value, preceded by a space.
+ **/]
+[query public attribute(attributeName : String, value : String) : String = ' ' + attributeName + '="' + escaped(value) + '"'/]
+
+[**
+ * The contents of a character data section, ending in a line break.
+ **/]
+[query public characterData(content : String) : String = if content.endsWith('\n') then content else content + '\n' endif/]
+
+[**
+ * A coordinate as a whole number, with any fraction discarded towards zero.
+ **/]
+[query public truncated(value : Real) : Integer = if value < 0 then 0 - (0 - value).floor() else value.floor() endif/]

@@ -1,0 +1,74 @@
+[comment encoding = UTF-8 /]
+[**
+ * The main module of the Objective-C++ template set.
+ *
+ * It writes a machine bundle, or an arrangement bundle together with the
+ * bundles of its machines, in the layout that the Objective-C++ language binding uses.
+ **/]
+[module generate('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import common::MachineBundle/]
+[import common::Arrangements/]
+[import objcpp::MachineHeader/]
+[import objcpp::MachineSource/]
+[import objcpp::StateHeader/]
+[import objcpp::StateSource/]
+[import objcpp::References/]
+[import objcpp::CMake/]
+[import objcpp::ArrangementHeader/]
+[import objcpp::ArrangementSource/]
+[import objcpp::ArrangementCMake/]
+[import objcpp::StaticArrangement/]
+[import objcpp::Infrastructure/]
+
+[**
+ * The language name that the bundles declare.
+ **/]
+[query public languageName() : String = 'objc++'/]
+
+[**
+ * Writes the bundle of a machine.
+ **/]
+[template public generateMachine(m : Machine, name : String, isSuspensible : Boolean)]
+[machineBundle(m, name, '', isSuspensible)/]
+[/template]
+
+[**
+ * Writes the files of a machine bundle into a directory, which is empty or ends in a slash.
+ **/]
+[template public machineBundle(m : Machine, name : String, dir : String, isSuspensible : Boolean)]
+[file (dir + 'Language', false, 'UTF-8')][languageName()/][/file]
+[statesFile(m, dir)/]
+[includePathFile(m, dir)/]
+[machineBoilerplateFiles(m, dir, 'Machine_' + name)/]
+[stateBoilerplateFiles(m, dir)/]
+[transitionFiles(m, dir)/]
+[layoutFiles(m, dir)/]
+[file (dir + name + '.h', false, 'UTF-8')][machineHeader(m, name)/][/file]
+[file (dir + name + '.mm', false, 'UTF-8')][machineSource(m, name)/][/file]
+[for (s : State | states(m))]
+[file (dir + 'State_' + s.name + '.h', false, 'UTF-8')][stateHeader(m, s, name)/][/file]
+[file (dir + 'State_' + s.name + '.mm', false, 'UTF-8')][stateSource(m, s, name)/][/file]
+[/for]
+[referenceFiles(m, name, dir)/]
+[cmakeFiles(m, name, dir, isSuspensible)/]
+[/template]
+
+[**
+ * Writes the bundle of an arrangement and the bundles of its machines.
+ **/]
+[template public generateArrangement(a : Arrangement, name : String, isSuspensible : Boolean)]
+[file ('Language', false, 'UTF-8')][languageName()/][/file]
+[machinesFile(a)/]
+[file ('Arrangement_' + name + '.h', false, 'UTF-8')][arrangementHeader(a, name, isSuspensible)/][/file]
+[file ('Arrangement_' + name + '.mm', false, 'UTF-8')][arrangementSource(a, name, isSuspensible)/][/file]
+[file ('project.cmake', false, 'UTF-8')][arrangementCMakeFragment(a, name, isSuspensible)/][/file]
+[file ('CMakeLists.txt', false, 'UTF-8')][arrangementCMakeLists(a, name, isSuspensible)/][/file]
+[file ('Static_Arrangement.h', false, 'UTF-8')][staticArrangementHeader(a, name, isSuspensible)/][/file]
+[file ('Static_Arrangement_' + name + '.mm', false, 'UTF-8')][staticArrangementSource(a, name, isSuspensible)/][/file]
+[file ('static_main.cc', false, 'UTF-8')][staticMain(a, name)/][/file]
+[infrastructureFiles(isSuspensible)/]
+[for (directory : String | machineDirectories(a))]
+[machineBundle(firstInstance(a, directory).machine, sansExtension(directory), directory + '/', isSuspensible)/]
+[/for]
+[/template]

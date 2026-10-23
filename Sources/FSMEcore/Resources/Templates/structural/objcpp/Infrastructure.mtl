@@ -1,0 +1,49 @@
+[comment encoding = UTF-8 /]
+[**
+ * The runtime infrastructure of an arrangement.
+ *
+ * The infrastructure directory holds the headers of the action, transition,
+ * state and machine classes, the macros, the state machine vector and the
+ * common machine declarations, together with the implementations that an
+ * arrangement compiles. The files are resources of this template set that are
+ * written unchanged.
+ **/]
+[module Infrastructure('http://cpslabgu.github.io/LLFSMStructural')/]
+
+[**
+ * The directory of the infrastructure files, both in this template set and in an arrangement bundle.
+ **/]
+[query public infrastructureDirectory() : String = 'infrastructure/'/]
+
+[**
+ * The directory of the infrastructure variants for suspensible machines in this template set.
+ **/]
+[query public suspensibleDirectory() : String = 'suspensible/'/]
+
+[**
+ * The infrastructure files that every arrangement holds.
+ **/]
+[query public commonInfrastructureFiles() : Sequence(String) = Sequence{'CLAction.h', 'CLTransition.h', 'CLState.h', 'CLMacros.h', 'StateMachineVector.h', 'Machine_Common.h', 'StateMachineVector.cc'}/]
+
+[**
+ * The header of the machine class.
+ **/]
+[query public machineClassHeader() : String = 'CLMachine.h'/]
+
+[**
+ * The implementation of suspensible machines.
+ **/]
+[query public suspensibleMachineSource() : String = 'SuspensibleMachine.cc'/]
+
+[**
+ * Writes the infrastructure files of an arrangement.
+ **/]
+[template public infrastructureFiles(isSuspensible : Boolean)]
+[for (file : String | commonInfrastructureFiles())]
+[file (infrastructureDirectory() + file, false, 'UTF-8')][resourceText(infrastructureDirectory() + file)/][/file]
+[/for]
+[file (infrastructureDirectory() + machineClassHeader(), false, 'UTF-8')][resourceText(infrastructureDirectory() + (if isSuspensible then suspensibleDirectory() else '' endif) + machineClassHeader())/][/file]
+[if (isSuspensible)]
+[file (infrastructureDirectory() + suspensibleMachineSource(), false, 'UTF-8')][resourceText(infrastructureDirectory() + suspensibleMachineSource())/][/file]
+[/if]
+[/template]

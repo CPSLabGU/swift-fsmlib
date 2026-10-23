@@ -1,0 +1,66 @@
+[comment encoding = UTF-8 /]
+[**
+ * The main module of the SCXML template set.
+ *
+ * It writes a machine as a single SCXML document.
+ **/]
+[module generate('http://cpslabgu.github.io/LLFSMStructural')/]
+[import common::Names/]
+[import scxml::Xml/]
+[import scxml::Boilerplate/]
+[import scxml::States/]
+
+[**
+ * The file extension of an SCXML document.
+ **/]
+[query public documentExtension() : String = '.scxml'/]
+
+[**
+ * The SCXML version that the document declares.
+ **/]
+[query public scxmlVersion() : String = '1.0'/]
+
+[**
+ * The data model that the document declares.
+ **/]
+[query public dataModel() : String = 'null'/]
+
+[**
+ * The data binding that the document declares.
+ **/]
+[query public dataBinding() : String = 'early'/]
+
+[**
+ * The namespace declarations of the document element.
+ **/]
+[query public namespaces() : String = ' xmlns="http://www.w3.org/2005/07/scxml" xmlns:fsm="http://mipal.net.au/fsmlib" xmlns:qt="http://www.qt.io/2015/02/scxml-ext" xmlns:se="http://scxmleditor.sf.net"'/]
+
+[**
+ * The initial state attribute of a machine, naming its first state if it has any.
+ **/]
+[query public initialAttribute(m : Machine) : String = if states(m)->isEmpty() then '' else attribute('initial', states(m)->first().name) endif/]
+
+[**
+ * The opening tag of the document element, naming the language the machine was written in.
+ **/]
+[query public documentTag(m : Machine) : String = '<scxml' + namespaces() + ' version="' + scxmlVersion() + '" datamodel="' + dataModel() + '" binding="' + dataBinding() + '"' + attribute('fsm:language', m.language) + initialAttribute(m) + '>'/]
+
+[**
+ * The SCXML document of a machine.
+ **/]
+[template public scxmlDocument(m : Machine)]
+<?xml version="1.0" encoding="UTF-8"?>
+[documentTag(m)/]
+[machineBoilerplate(m)/]
+[for (s : State | states(m))]
+[stateElement(m, s)/]
+[/for]
+</scxml>
+[/template]
+
+[**
+ * Writes the SCXML document of a machine.
+ **/]
+[template public generateMachine(m : Machine, name : String, isSuspensible : Boolean)]
+[file (name + documentExtension(), false, 'UTF-8')][scxmlDocument(m)/][/file]
+[/template]
