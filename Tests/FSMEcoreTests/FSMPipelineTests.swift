@@ -6,6 +6,7 @@
 //  Copyright © 2026 Rene Hexel. All rights reserved.
 //
 import ECore
+import FSM
 import Foundation
 import ModellingGenerators
 import Synchronization
@@ -143,17 +144,19 @@ struct FSMPipelineTests {
         #expect(lines.sorted() == reference.sorted())
     }
 
-    @Test("native formats are not yet written from the sectioned and kernel levels",
+    @Test("native bundles are written from the sectioned and kernel levels",
           arguments: [(KernelFixture.sectionedCrossing, LLFSMLevel.sectioned), (.doorInterlock, .kernel)])
     func nativeFromUpperLevels(_ fixture: KernelFixture, _ level: LLFSMLevel) async throws {
         let directory = try FSMEcoreTestSupport.makeTemporaryDirectory(prefix: "pipeline-native")
         defer { try? FileManager.default.removeItem(at: directory) }
         let pipeline = try await FSMPipeline()
-        let output = directory.appendingPathComponent("Out.machine")
-        await #expect(throws: FSMPipelineError.transformationUnavailable(from: level, to: .structural)) {
-            try await pipeline.convert([try #require(fixture.bundledURL)], to: .c, output: output)
-        }
-        #expect(!FileManager.default.fileExists(atPath: output.path))
+        let output = directory.appendingPathComponent("Out.arrangement")
+        let report = try await pipeline.convert([try #require(fixture.bundledURL)], to: .c, output: output)
+        #expect(!report.files.isEmpty)
+        #expect(FileManager.default.fileExists(atPath: output.appendingPathComponent("Machines").path))
+        let arrangement = try Arrangement(from: output)
+        #expect(!arrangement.namedInstances.isEmpty)
+        #expect(arrangement.namedInstances.allSatisfy { !$0.machine.llfsm.states.isEmpty })
     }
 
     @Test("validation reports the diagnostics of the chosen profile",

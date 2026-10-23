@@ -201,16 +201,18 @@ struct CLIPipelineTests {
             .filter { $0.key.hasPrefix("DoorInterlock.") })
     }
 
-    @Test("native formats are not yet written from the kernel level")
-    func nativeFromKernelIsUnavailable() throws {
-        let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "unavailable")
+    @Test("native bundles are written from the kernel level with a flat-mapping warning")
+    func nativeFromKernel() throws {
+        let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "kernel-native")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let output = directory.appendingPathComponent("DoorInterlock.machine")
-        let result = try FSMConvertRunner.run([FSMConvertRunner.kernelModel("DoorInterlock").path,
-                                              "--metamodel", "structural", "-f", "c", "-o", output.path])
-        #expect(result.status == FSMConvertRunner.failureStatus)
-        #expect(result.standardError.contains("not available"), "\(result.standardError)")
-        #expect(!FileManager.default.fileExists(atPath: output.path))
+        let output = directory.appendingPathComponent("DoorInterlock.arrangement")
+        let result = try succeed([FSMConvertRunner.kernelModel("DoorInterlock").path,
+                                  "--metamodel", "structural", "-f", "c", "-o", output.path])
+        #expect(result.standardError.contains("mapped flatly"), "\(result.standardError)")
+        #expect(FileManager.default.fileExists(atPath: output.appendingPathComponent("Machines").path))
+        let arrangement = try Arrangement(from: output)
+        #expect(arrangement.namedInstances.count == 2)
+        #expect(arrangement.namedInstances.allSatisfy { !$0.machine.llfsm.states.isEmpty })
     }
 
     @Test("the plain reference style writes fragments without a leading #")
