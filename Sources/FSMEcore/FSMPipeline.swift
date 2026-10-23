@@ -535,7 +535,9 @@ public struct FSMPipeline {
     /// - Throws: ``FSMPipelineError/transformationUnavailable(from:to:)`` while the
     ///   transformation to the structural level is not available.
     func writeNativeFromSectioned(_ resource: Resource, level: LLFSMLevel) async throws -> TransformationResult {
-        throw FSMPipelineError.transformationUnavailable(from: level, to: .structural)
+        level == .kernel
+            ? try await transformations.kernelToStructural(resource)
+            : try await transformations.sectionedToStructural(resource)
     }
 
     /// The resource of a sectioned or kernel model.

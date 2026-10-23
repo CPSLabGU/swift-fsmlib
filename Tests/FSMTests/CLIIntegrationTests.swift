@@ -224,41 +224,6 @@ final class CLIIntegrationTests: XCTestCase {
         assertMachinesEquivalent(renderedMachine, expectedMachine, includeSuspendState: false)
     }
 
-    func testDeprecatedExecutableLevelReportsUnavailableSectionedLevel() throws {
-        let sourceMachineURL = try copyTrafficLightMachine(named: "TrafficLight.machine")
-        let xmiURL = tempDirectoryURL.appendingPathComponent("TrafficLight.xmi")
-
-        let result = try runCLIExpectingFailure(arguments: [
-            sourceMachineURL.path,
-            "--metamodel", "executable",
-            "--format", "xmi",
-            "--output", xmiURL.path,
-        ])
-
-        XCTAssertNotEqual(result.status, 0)
-        XCTAssertTrue(result.standardError.contains("deprecated"), result.standardError)
-        XCTAssertTrue(result.standardError.contains("sectioned"), result.standardError)
-        XCTAssertTrue(result.standardError.contains("not yet available"), result.standardError)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: xmiURL.path))
-    }
-
-    func testSectionedLevelIsNotYetAvailable() throws {
-        let sourceMachineURL = try copyTrafficLightMachine(named: "TrafficLight.machine")
-        let xmiURL = tempDirectoryURL.appendingPathComponent("TrafficLight.xmi")
-
-        let result = try runCLIExpectingFailure(arguments: [
-            sourceMachineURL.path,
-            "--metamodel", "sectioned",
-            "--format", "xmi",
-            "--output", xmiURL.path,
-        ])
-
-        XCTAssertNotEqual(result.status, 0)
-        XCTAssertFalse(result.standardError.contains("deprecated"), result.standardError)
-        XCTAssertTrue(result.standardError.contains("not yet available"), result.standardError)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: xmiURL.path))
-    }
-
     func testTransformRequiresStructuralMetamodel() throws {
         let sourceMachineURL = try copyTrafficLightMachine(named: "TrafficLight.machine")
         let renderedURL = tempDirectoryURL.appendingPathComponent("TrafficLight.scxml")
