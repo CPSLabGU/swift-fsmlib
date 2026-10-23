@@ -1,0 +1,97 @@
+[comment]
+Language-neutral queries of the verification targets: template
+parameters, the representation of calls and the treatment of opaque
+nodes.
+
+A pure function whose parameter and result types are finite kernel types
+is uninterpreted: a table chosen once for every path, so that it returns
+the same value for the same arguments. With opaque=havoc an opaque
+expression, or a call that cannot be tabulated, is unconstrained
+wherever it is evaluated, and Print, call and opaque statements do not
+change the model.
+[/comment]
+[module verification('http://cpslabgu.github.io/llfsm/kernel')/]
+[import expressions::kernel/]
+
+[comment The values of the template parameters. /]
+[query public roundLimit() : String = if hasParameter('maxRounds') then parameter('maxRounds').toString() else '0' endif/]
+[query public hasRound() : Boolean = roundLimit() <> '0'/]
+[query public entryMode() : String = if hasParameter('entry') then parameter('entry').toString() else 'ringlet' endif/]
+[query public fused() : Boolean = entryMode() = 'fused'/]
+[query public sanity() : Boolean = hasParameter('sanity') and parameter('sanity').toString() = 'true'/]
+[query public opaqueMode() : String = if hasParameter('opaque') then parameter('opaque').toString() else 'reject' endif/]
+[query public havoc() : Boolean = opaqueMode() = 'havoc'/]
+
+[comment The problems of the template parameters. /]
+[query public parameterProblems() : Sequence(String) =
+  (if Sequence{'ringlet', 'fused'}->includes(entryMode()) then Sequence{} else Sequence{'parameter entry: unknown value ' + entryMode() + '; expected ringlet or fused'} endif)
+  ->addAll(if Sequence{'reject', 'havoc'}->includes(opaqueMode()) then Sequence{} else Sequence{'parameter opaque: unknown value ' + opaqueMode() + '; expected reject or havoc'} endif)
+  ->addAll(if (not hasParameter('sanity')) or Sequence{'true', 'false'}->includes(parameter('sanity').toString()) then Sequence{} else Sequence{'parameter sanity: unknown value ' + parameter('sanity').toString() + '; expected true or false'} endif)
+  ->addAll(if roundLimit().matches('[0-9]+') then Sequence{} else Sequence{'parameter maxRounds: unknown value ' + roundLimit() + '; expected a non-negative integer'} endif)/]
+
+[comment Whether a type is a finite typed kernel type that a verification model can represent. /]
+[query public isFinite(t : OclAny) : Boolean =
+  (not t.oclIsUndefined()) and (t.oclIsKindOf(BooleanType) or t.oclIsKindOf(IntegerType) or t.oclIsKindOf(EnumerationType))/]
+
+[comment Whether a variable is represented in the verification model: its type, or its element type, is finite. /]
+[query public isModelledVariable(v : Variable) : Boolean = isFinite(scalarType(v.type))/]
+
+[comment The types of the arguments of a function: the receiver type first for a method, then the parameter types. /]
+[query public domain(f : FunctionDeclaration) : Sequence(Type) =
+  (if f.receiverType.oclIsUndefined() then Sequence{} else Sequence{f.receiverType} endif)->addAll(f.parameters->collect(p | p.type))/]
+
+[comment Whether a function is represented as a frozen table: it is pure and all its types are finite. /]
+[query public isTabulated(f : FunctionDeclaration) : Boolean =
+  f.pure and isFinite(f.result) and domain(f)->forAll(t | isFinite(t))/]
+
+[comment Whether an expression has no counterpart in the model: an opaque expression or a call that cannot be tabulated. /]
+[query public isHavocked(o : OclAny) : Boolean =
+  o.oclIsKindOf(OpaqueExpression) or (o.oclIsKindOf(CallExpression) and not isTabulated(o.function))/]
+
+[comment Whether an element affects the model: it is outside Print, call and opaque statements and outside havocked expressions. /]
+[query public isModelled(o : OclAny) : Boolean =
+  o.ancestors()->forAll(p | not (p.oclIsKindOf(Print) or p.oclIsKindOf(CallStatement) or p.oclIsKindOf(OpaqueStatement) or isHavocked(p)))
+  and not (o.eContainer().oclIsKindOf(Variable) and not isModelledVariable(o.eContainer()))/]
+
+[comment The base name of the table of a function: its name, qualified by its machine for a machine function. /]
+[query public tableBaseName(f : FunctionDeclaration) : String =
+  if f.eContainer().oclIsKindOf(Machine) then f.eContainer().name + '_' + f.name else f.name endif/]
+
+[comment The functions represented as frozen tables. /]
+[query public tables(a : Arrangement) : Sequence(FunctionDeclaration) = a.eAllContents(FunctionDeclaration)->select(f | isTabulated(f))/]
+
+[comment Whether a machine calls a tabulated function in an element that affects the model. /]
+[query public callsTables(m : Machine) : Boolean =
+  m.eAllContents(CallExpression)->exists(c | isModelled(c) and isTabulated(c.function))/]
+
+[comment The havocked expressions of a machine that affect the model, numbered by their position. /]
+[query public havocked(m : Machine) : Sequence(Expression) = m.eAllContents(Expression)->select(e | isHavocked(e) and isModelled(e))/]
+
+[comment The name of the input variable of a havocked expression. /]
+[query public havocName(e : Expression) : String = 'opaque' + havocked(e.eContainer(Machine))->indexOf(e).toString()/]
+
+[comment The type of the value of a havocked expression: its declared type, or Boolean for a label. /]
+[query public havocType(e : Expression) : OclAny =
+  if e.oclIsKindOf(CallExpression) then e.function.result
+  else if not e.type.oclIsUndefined() then e.type
+  else if e.eContainer().oclIsKindOf(Transition) then e.eContainer(Arrangement).types->select(t | t.oclIsKindOf(BooleanType))->first()
+  else null endif endif endif/]
+
+[comment Whether a havocked expression is a label without a declared type, which is Boolean. /]
+[query public isUntypedLabel(e : Expression) : Boolean =
+  e.oclIsKindOf(OpaqueExpression) and e.type.oclIsUndefined() and e.eContainer().oclIsKindOf(Transition)/]
+
+[comment The problems that stop a verification target, given the treatment of opaque nodes. /]
+[query public verificationProblems(a : Arrangement) : Sequence(String) =
+  if havoc() then
+    a.machines->collect(m | havocked(m))->select(e | not isUntypedLabel(e) and not isFinite(havocType(e)))
+      ->collect(e | path(e) + ': the value has no finite kernel type, so it cannot be left unconstrained')
+    ->addAll(a.eAllContents(VariableReference)->select(r | isModelled(r) and not isModelledVariable(r.variable))
+      ->collect(r | path(r) + ': the variable ' + r.variable.name + ' has an opaque type, which cannot be verified'))
+  else
+    opaqueNodes(a)->collect(o | path(o) + ': an opaque node cannot be verified; generate with opaque=havoc to treat it as unconstrained')
+    ->addAll(a.eAllContents(CallExpression)->select(c | isModelled(c) and not c.function.pure)
+      ->collect(c | path(c) + ': the call of ' + c.function.name + ', which is not pure, cannot be verified'))
+    ->addAll(a.eAllContents(CallExpression)->select(c | isModelled(c) and c.function.pure and not isTabulated(c.function))
+      ->collect(c | path(c) + ': the call of ' + c.function.name + ' has types that are not finite kernel types, so it cannot be verified'))
+  endif/]

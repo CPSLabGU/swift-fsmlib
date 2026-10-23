@@ -1,0 +1,24 @@
+arrangement DoorInterlock
+R1 lock Idle
+R1 watch Quiet
+R2 lock Running
+R2 watch Quiet
+log 1
+R3 lock Running
+R3 watch Quiet
+R4 lock Running
+R4 watch Quiet
+log 2
+R5 lock Idle
+R5 watch Quiet
+R6 lock Idle
+R6 watch Quiet
+R7 lock Idle
+R7 watch Quiet
+R8 lock Running
+R8 watch Quiet
+log 1
+R9 lock Running
+R9 watch Quiet
+R10 lock Running
+R10 watch Quiet

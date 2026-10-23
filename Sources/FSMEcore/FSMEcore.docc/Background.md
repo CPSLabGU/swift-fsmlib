@@ -21,4 +21,4 @@ Use `FSMEcore` when you need one of the following:
 - Structural XMI for lossless machine or arrangement round-trips.
 - MTL generation driven from a model rather than the native file wrappers.
 
-Further metamodel levels (`sectioned` and `kernel`) are planned.
+Use the sectioned and kernel metamodels when you need machines with typed, language-neutral expressions and statements, for example to validate a kernel model before it is handed to a verification or code target (see <doc:MetamodelLevels>).

@@ -8,8 +8,26 @@ import XCTest
 /// These tests build the command-line tool once in a scratch build directory
 /// and then invoke it through `Process` so the metamodel-backed conversion
 /// paths are exercised exactly as users run them.
+///
+/// The scratch build directory is ``defaultBuildPath`` unless the environment
+/// variable named by ``buildPathVariable`` names another one, for example the
+/// scratch path of the test run itself, so that the tool is built against the
+/// same dependency checkouts as the tests.
 final class CLIIntegrationTests: XCTestCase {
-    static let buildPath = "/tmp/build-swift-fsmlib-cli-tests"
+    /// The scratch build directory used when the environment names none.
+    static let defaultBuildPath = "/tmp/build-swift-fsmlib-cli-tests"
+
+    /// The environment variable that overrides the scratch build directory.
+    static let buildPathVariable = "FSMCONVERT_BUILD_PATH"
+
+    /// The scratch build directory named by the environment, if any.
+    static var overriddenBuildPath: String? {
+        let path = ProcessInfo.processInfo.environment[buildPathVariable] ?? ""
+        return path.isEmpty ? nil : path
+    }
+
+    /// The scratch build directory in which the command-line tool is built.
+    static var buildPath: String { overriddenBuildPath ?? defaultBuildPath }
 
     private let tempDirectoryURL: URL = {
         let url = FileManager.default.temporaryDirectory
@@ -29,6 +47,11 @@ final class CLIIntegrationTests: XCTestCase {
             "--product", "fsmconvert",
             "--build-path", buildPath,
         ]
+        if overriddenBuildPath != nil {
+            // The running test command holds the lock of its own scratch path while the
+            // tests execute, so a build into that path has to proceed without it.
+            process.arguments?.append("--ignore-lock")
+        }
 
         let stdout = Pipe()
         let stderr = Pipe()

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kernel:Arrangement xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:kernel="http://cpslabgu.github.io/llfsm/kernel" name="CrossingController">
+  <types xsi:type="kernel:BooleanType" name="Bool"/>
+  <types xsi:type="kernel:IntegerType" name="Time" upper="10000"/>
+  <variables name="now" type="kernel:IntegerType #//@types.1" external="true"/>
+  <variables name="request" type="kernel:BooleanType #//@types.0" external="true"/>
+  <machines name="Crossing" initial="#//@machines.0/@states.0">
+    <variables name="enteredAt" type="kernel:IntegerType #//@types.1"/>
+    <states name="Go">
+      <actions xsi:type="kernel:Assignment">
+        <target variable="#//@machines.0/@variables.0"/>
+        <value xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+      </actions>
+      <actions xsi:type="kernel:Print" text="go"/>
+      <transitions target="#//@machines.0/@states.1">
+        <label xsi:type="kernel:VariableReference" variable="#//@variables.1"/>
+        <origin state="Go" role="exit" transition="0"/>
+      </transitions>
+      <origin state="Go"/>
+    </states>
+    <states name="Go_x0" passThrough="true">
+      <actions xsi:type="kernel:Print" text="clearing"/>
+      <transitions target="#//@machines.0/@states.2">
+        <label xsi:type="kernel:BooleanLiteral" value="true"/>
+        <origin state="Go" role="exit" transition="0"/>
+      </transitions>
+      <origin state="Go" role="exit" transition="0"/>
+    </states>
+    <states name="Amber">
+      <actions xsi:type="kernel:Assignment">
+        <target variable="#//@machines.0/@variables.0"/>
+        <value xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+      </actions>
+      <actions xsi:type="kernel:Print" text="amber"/>
+      <transitions target="#//@machines.0/@states.3">
+        <label xsi:type="kernel:BinaryExpression" operation="greaterOrEqual">
+          <left xsi:type="kernel:BinaryExpression" operation="subtraction">
+            <left xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+            <right xsi:type="kernel:VariableReference" variable="#//@machines.0/@variables.0"/>
+          </left>
+          <right xsi:type="kernel:IntegerLiteral" value="3"/>
+        </label>
+      </transitions>
+      <origin state="Amber"/>
+    </states>
+    <states name="Stop">
+      <actions xsi:type="kernel:Assignment">
+        <target variable="#//@machines.0/@variables.0"/>
+        <value xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+      </actions>
+      <actions xsi:type="kernel:Print" text="stop"/>
+      <transitions target="#//@machines.0/@states.0">
+        <label xsi:type="kernel:BinaryExpression" operation="greaterOrEqual">
+          <left xsi:type="kernel:BinaryExpression" operation="subtraction">
+            <left xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+            <right xsi:type="kernel:VariableReference" variable="#//@machines.0/@variables.0"/>
+          </left>
+          <right xsi:type="kernel:IntegerLiteral" value="5"/>
+        </label>
+      </transitions>
+      <origin state="Stop"/>
+    </states>
+  </machines>
+  <instances name="main" machine="#//@machines.0"/>
+</kernel:Arrangement>

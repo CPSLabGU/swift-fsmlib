@@ -1,0 +1,323 @@
+[comment]
+TLA+ verification target for kernel arrangements.
+
+Generates <Arrangement>.tla and the TLC configuration <Arrangement>.cfg,
+which checks TypeOK and one range invariant Range_<variable> for every
+integer variable. A step is one micro-step of the instance whose turn it
+is, as in the smv target: Run (an action of a state with transitions),
+Finish (an action of an accepting state, which ends the ringlet), Fire
+and Chain (a transition into a state that ends or continues the
+ringlet) and Yield (no label holds). Halt stutters once the arrangement
+has halted. External variables keep their values within a ringlet and
+take any value when the turn advances.
+
+Parameters:
+  maxRounds  the value of the constant MaxRounds that bounds the round counter
+             (default 0, which keeps the counter at 0)
+  entry      ringlet (default) or fused, as in the smv target
+  sanity     true adds the invariants Sanity_Reach_<instance>_<state> (pc differs
+             from the state) and Sanity_<action> (the transition is not enabled),
+             each with its own configuration <Arrangement>.<invariant>.cfg: every
+             one of them must be violated, and TLC's counterexample is the
+             witness that the state is reachable or the transition fires
+  opaque     reject (default) or havoc, as in the smv target
+[/comment]
+[module generate('http://cpslabgu.github.io/llfsm/kernel')/]
+[import expressions::kernel/]
+[import expressions::verification/]
+[import expressions::tla/]
+
+[comment Variables. /]
+[query public modelledShared(a : Arrangement) : Sequence(Variable) = a.variables->select(v | isModelledVariable(v))/]
+[query public locals(m : Machine) : Sequence(Variable) = m.variables->select(v | isModelledVariable(v))/]
+[query public isIntegerTyped(t : Type) : Boolean = scalarType(t).oclIsKindOf(IntegerType)/]
+[query public turnOf(a : Arrangement, inst : Instance) : Integer = a.instances->indexOf(inst) - 1/]
+
+[comment Action names: Run and Chain continue the ringlet; Finish, Fire and Yield end it. /]
+[query public runName(s : State) : String = if isAccepting(s) then 'Finish' else 'Run' endif/]
+[query public fireName(t : Transition) : String = if t.target.passThrough then 'Chain' else 'Fire' endif/]
+[query public actionSuffix(inst : Instance, s : State) : String = '_' + inst.name + '_' + s.name/]
+
+[comment The havocked expressions that the actions of a state evaluate. /]
+[query public stateHavoc(s : State) : Sequence(Expression) =
+  havocked(s.eContainer(Machine))->select(e | e.eContainer(State) = s or (fused() and s.transitions->exists(t | t.target = e.eContainer(State))))/]
+
+[comment The parameters and the binders of the actions of a state. /]
+[template public parameters(s : State)][if (stateHavoc(s)->notEmpty())]([for (e : Expression | stateHavoc(s)) separator(', ')][havocName(e)/][/for])[/if][/template]
+[template public binders(s : State)][if (stateHavoc(s)->notEmpty())]\E [for (e : Expression | stateHavoc(s)) separator(', ')][havocName(e)/] \in [if (isUntypedLabel(e))]BOOLEAN[else][valueSet(havocType(e))/][/if][/for] : [/if][/template]
+
+[template public generate(a : Arrangement)]
+[comment @main /]
+[let problems = parameterProblems()->addAll(verificationProblems(a))]
+[if (problems->notEmpty())]
+[for (p : String | problems)]
+error [p/]
+[/for]
+[else]
+[file (a.name + '.tla', false)]
+[specification(a)/]
+[/file]
+[file (a.name + '.cfg', false)]
+SPECIFICATION Spec
+INVARIANT TypeOK
+[for (name : String | rangeNames(a))]
+INVARIANT [name/]
+[/for]
+CONSTANT MaxRounds = [roundLimit()/]
+[/file]
+[if (sanity())]
+[for (name : String | sanityNames(a))]
+[file (a.name + '.' + name + '.cfg', false)]
+SPECIFICATION Spec
+INVARIANT [name/]
+CONSTANT MaxRounds = [roundLimit()/]
+[/file]
+[/for]
+[/if]
+[/if]
+[/let]
+[/template]
+
+[comment The names of the sanity properties: reachability of every state, then firing of every transition. /]
+[query public sanityNames(a : Arrangement) : Sequence(String) =
+  a.instances->collect(inst | inst.machine.states->collect(s | 'Sanity_Reach' + actionSuffix(inst, s))
+    ->addAll(inst.machine.states->collect(s | s.transitions->collect(t | 'Sanity_' + fireName(t) + s.transitions->indexOf(t).toString() + actionSuffix(inst, s)))))/]
+
+[comment The names of the range invariants. /]
+[query public rangeNames(a : Arrangement) : Sequence(String) =
+  a.instances->collect(inst | locals(inst.machine)->select(v | isIntegerTyped(v.type))->collect(v | 'Range_' + variableName(v, inst)))
+  ->addAll(modelledShared(a)->select(v | isIntegerTyped(v.type))->collect(v | 'Range_' + variableName(v, a.instances->first())))/]
+
+[comment The tuple of all variables. /]
+[template public variableTuple(a : Arrangement)]turn, round[for (inst : Instance | a.instances)], pc_[inst.name/], entered_[inst.name/][for (v : Variable | locals(inst.machine))], [variableName(v, inst)/][/for][/for][for (v : Variable | modelledShared(a))], [tlaId(v.name)/][/for][for (f : FunctionDeclaration | tables(a))], [tableName(f)/][/for][/template]
+
+[comment The value with which a variable of an instance starts, or its set when it starts unconstrained. /]
+[template public initialConjunct(v : Variable, inst : Instance)]
+[let value = initialExpression(inst, v)]
+[if (v.external or (not value.oclIsUndefined() and (isHavocked(value) or value.eAllContents(Expression)->exists(e | isHavocked(e)))))]
+  /\ [variableName(v, inst)/] \in [valueSet(v.type)/]
+[elseif (not value.oclIsUndefined() and not v.type.oclIsKindOf(ArrayType))]
+  /\ [variableName(v, inst)/] = [expr(value, inst)/]
+[else]
+  /\ [variableName(v, inst)/] = [defaultValue(v.type)/]
+[/if]
+[/let]
+[/template]
+
+[comment The turn and round counter of a micro-step. /]
+[template public turnAndRound(k : Integer, n : Integer, advance : Boolean)]
+[if (advance)]
+  /\ turn' = [if (k = n - 1)]0[else][k + 1/][/if]
+[if (k = n - 1)]
+  /\ round' = IF round < MaxRounds THEN round + 1 ELSE round
+[else]
+  /\ UNCHANGED round
+[/if]
+[else]
+  /\ UNCHANGED <<turn, round>>
+[/if]
+[/template]
+
+[comment The next value of a variable: assigned by the action of a state, or unchanged. /]
+[template public assignedConjunct(s : State, v : Variable, name : String, inst : Instance, assigning : Boolean)]
+[let assigned = s.actions->filter(Assignment)->select(x | x.target.variable = v)]
+[if (assigning and assigned->notEmpty())]
+[if (assigned->first().target.index.oclIsUndefined())]
+  /\ [name/]' = [expr(assigned->first().value, inst)/]
+[else]
+  /\ [name/]' = ['['/][name/] EXCEPT [for (x : Assignment | assigned) separator(', ')]!['['/][expr(x.target.index, inst)/][']'/] = [expr(x.value, inst)/][/for][']'/]
+[/if]
+[else]
+  /\ UNCHANGED [name/]
+[/if]
+[/let]
+[/template]
+
+[comment Every variable of a micro-step: primed or unchanged. /]
+[template public frame(a : Arrangement, inst : Instance, effect : State, nextPc : String, nextEntered : String, advance : Boolean, assigning : Boolean, externalsFree : Boolean)]
+[turnAndRound(turnOf(a, inst), a.instances->size(), advance)/]
+[for (j : Instance | a.instances)]
+[if (j = inst and nextPc <> '')]
+  /\ pc_[j.name/]' = [nextPc/]
+[else]
+  /\ UNCHANGED pc_[j.name/]
+[/if]
+[if (j = inst and nextEntered <> '')]
+  /\ entered_[j.name/]' = [nextEntered/]
+[else]
+  /\ UNCHANGED entered_[j.name/]
+[/if]
+[for (v : Variable | locals(j.machine))]
+[assignedConjunct(effect, v, variableName(v, j), inst, assigning and j = inst)/]
+[/for]
+[/for]
+[for (v : Variable | modelledShared(a))]
+[if (v.external)]
+[if (externalsFree)]
+  /\ [tlaId(v.name)/]' \in [valueSet(v.type)/]
+[else]
+  /\ UNCHANGED [tlaId(v.name)/]
+[/if]
+[else]
+[assignedConjunct(effect, v, tlaId(v.name), inst, assigning)/]
+[/if]
+[/for]
+[if (tables(a)->notEmpty())]
+  /\ UNCHANGED <<[for (f : FunctionDeclaration | tables(a)) separator(', ')][tableName(f)/][/for]>>
+[/if]
+[/template]
+
+[comment The labels of a state before a position fail. /]
+[template public earlierLabelsFail(s : State, upTo : Integer, inst : Instance)]
+[for (u : Transition | s.transitions)]
+[if (s.transitions->indexOf(u) < upTo)]
+  /\ ~[expr(u.label, inst)/]
+[/if]
+[/for]
+[/template]
+
+[template public stateActions(a : Arrangement, inst : Instance, s : State)]
+[let k = turnOf(a, inst)]
+[runName(s)/][actionSuffix(inst, s)/][parameters(s)/] ==
+  /\ turn = [k/]
+  /\ pc_[inst.name/] = "[s.name/]"
+  /\ entered_[inst.name/]
+[frame(a, inst, s, '', 'FALSE', isAccepting(s), true, isAccepting(s))/]
+[for (t : Transition | s.transitions)]
+[fireName(t)/][i/][actionSuffix(inst, s)/][parameters(s)/] ==
+  /\ turn = [k/]
+  /\ pc_[inst.name/] = "[s.name/]"
+  /\ ~entered_[inst.name/]
+[earlierLabelsFail(s, i, inst)/]
+  /\ [expr(t.label, inst)/]
+[if (fused())]
+[frame(a, inst, t.target, '"' + t.target.name + '"', 'FALSE', not t.target.passThrough, true, not t.target.passThrough)/]
+[else]
+[frame(a, inst, s, '"' + t.target.name + '"', 'TRUE', not t.target.passThrough, false, not t.target.passThrough)/]
+[/if]
+[/for]
+Yield[actionSuffix(inst, s)/][parameters(s)/] ==
+  /\ turn = [k/]
+  /\ pc_[inst.name/] = "[s.name/]"
+  /\ ~entered_[inst.name/]
+[earlierLabelsFail(s, s.transitions->size() + 1, inst)/]
+  /\ ~Halted
+[frame(a, inst, s, '', '', true, false, true)/]
+Step[actionSuffix(inst, s)/] ==
+  \/ [binders(s)/][runName(s)/][actionSuffix(inst, s)/][parameters(s)/]
+[for (t : Transition | s.transitions)]
+  \/ [binders(s)/][fireName(t)/][i/][actionSuffix(inst, s)/][parameters(s)/]
+[/for]
+  \/ [binders(s)/]Yield[actionSuffix(inst, s)/][parameters(s)/]
+[/let]
+[/template]
+
+[template public specification(a : Arrangement)]
+---------------------------- MODULE [a.name/] ----------------------------
+\* Generated by the tla templates from the arrangement [a.name/].
+[if (havoc())]
+\* WARNING: generated with opaque=havoc: opaque values and calls that cannot be represented are unconstrained, and opaque statements do nothing.
+[/if]
+EXTENDS Integers
+CONSTANT MaxRounds
+ASSUME MaxRounds \in Nat
+VARIABLE turn
+VARIABLE round
+[for (inst : Instance | a.instances)]
+VARIABLE pc_[inst.name/]
+VARIABLE entered_[inst.name/]
+[for (v : Variable | locals(inst.machine))]
+VARIABLE [variableName(v, inst)/]
+[/for]
+[/for]
+[for (v : Variable | modelledShared(a))]
+VARIABLE [tlaId(v.name)/]
+[/for]
+[for (f : FunctionDeclaration | tables(a))]
+VARIABLE [tableName(f)/]
+[/for]
+vars == <<[variableTuple(a)/]>>
+TypeOK ==
+  /\ turn \in 0..[a.instances->size() - 1/]
+  /\ round \in 0..MaxRounds
+[for (inst : Instance | a.instances)]
+  /\ pc_[inst.name/] \in {[for (s : State | inst.machine.states) separator(', ')]"[s.name/]"[/for]}
+  /\ entered_[inst.name/] \in BOOLEAN
+[for (v : Variable | locals(inst.machine))]
+  /\ [variableName(v, inst)/] \in [valueSet(v.type)/]
+[/for]
+[/for]
+[for (v : Variable | modelledShared(a))]
+  /\ [tlaId(v.name)/] \in [valueSet(v.type)/]
+[/for]
+[for (f : FunctionDeclaration | tables(a))]
+  /\ [tableName(f)/] \in [tableSet(f)/]
+[/for]
+[for (inst : Instance | a.instances)]
+[for (v : Variable | locals(inst.machine)->select(x | isIntegerTyped(x.type)))]
+[range(variableName(v, inst), v.type)/]
+[/for]
+[/for]
+[for (v : Variable | modelledShared(a)->select(x | isIntegerTyped(x.type)))]
+[range(tlaId(v.name), v.type)/]
+[/for]
+Init ==
+  /\ turn = 0
+  /\ round = 0
+[for (inst : Instance | a.instances)]
+  /\ pc_[inst.name/] = "[inst.machine.initial.name/]"
+  /\ entered_[inst.name/] = TRUE
+[for (v : Variable | locals(inst.machine))]
+[initialConjunct(v, inst)/]
+[/for]
+[/for]
+[for (v : Variable | modelledShared(a))]
+[initialConjunct(v, a.instances->first())/]
+[/for]
+[for (f : FunctionDeclaration | tables(a))]
+  /\ [tableName(f)/] \in [tableSet(f)/]
+[/for]
+Halted ==
+  /\ turn = 0
+[for (inst : Instance | a.instances)]
+  /\ pc_[inst.name/] \in {[for (s : State | inst.machine.states->select(x | isAccepting(x))) separator(', ')]"[s.name/]"[/for]}
+  /\ ~entered_[inst.name/]
+[/for]
+[for (inst : Instance | a.instances)]
+[for (s : State | inst.machine.states)]
+[stateActions(a, inst, s)/]
+[/for]
+[/for]
+Halt ==
+  /\ Halted
+  /\ UNCHANGED vars
+Next ==
+[for (inst : Instance | a.instances)]
+[for (s : State | inst.machine.states)]
+  \/ Step[actionSuffix(inst, s)/]
+[/for]
+[/for]
+  \/ Halt
+Spec == Init /\ ['[]['/]Next[']_vars'/]
+[if (sanity())]
+[for (inst : Instance | a.instances)]
+[for (s : State | inst.machine.states)]
+Sanity_Reach[actionSuffix(inst, s)/] == pc_[inst.name/] # "[s.name/]"
+[/for]
+[for (s : State | inst.machine.states)]
+[for (t : Transition | s.transitions)]
+Sanity_[fireName(t)/][i/][actionSuffix(inst, s)/] == ~ENABLED ([binders(s)/][fireName(t)/][i/][actionSuffix(inst, s)/][parameters(s)/])
+[/for]
+[/for]
+[/for]
+[/if]
+=============================================================================
+[/template]
+
+[comment The range invariant of an integer variable. /]
+[template public range(name : String, t : IntegerType)]
+Range_[name/] == [name/] \in [t.lower/]..[t.upper/]
+[/template]
+[template public range(name : String, t : ArrayType)]
+Range_[name/] == \A k \in 0..[t.size - 1/] : [name/]['['/]k[']'/] \in [t.element.oclAsType(IntegerType).lower/]..[t.element.oclAsType(IntegerType).upper/]
+[/template]

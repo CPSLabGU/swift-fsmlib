@@ -1,0 +1,27 @@
+digraph "DoorInterlock" {
+  graph [rankdir=TB, fontname="Helvetica", fontsize=8, nodesep=0.3, ranksep=0.25, pad=0.03, margin=0];
+  node [fontname="Helvetica", fontsize=8, margin="0.03,0.02"];
+  edge [fontname="Helvetica", fontsize=7, arrowsize=0.6];
+  subgraph "cluster_lock" {
+    label=<<I>lock</I> : Interlock>;
+    style="rounded,dashed"; color="#888888";
+    "lock.initial" [shape=circle, style=filled, fillcolor=black, label="", width=0.12, fixedsize=true];
+    "lock.Idle" [shape=ellipse, style=solid, label=<<B>Idle</B>>];
+    "lock.Running" [shape=ellipse, style=solid, label=<<B>Running</B><BR/><FONT POINT-SIZE="6">motorOn := true<BR/>logEvent(1)</FONT>>];
+    "lock.Halting" [shape=ellipse, style=dashed, label=<<B>Halting</B><BR/><FONT POINT-SIZE="6">motorOn := false<BR/>logEvent(2)</FONT>>];
+    "lock.initial" -> "lock.Idle";
+    "lock.Idle" -> "lock.Running" [label=<1: isSafe(doorClosed)>];
+    "lock.Running" -> "lock.Halting" [label=<1: (not doorClosed)>];
+    "lock.Halting" -> "lock.Idle" [label=<1: true>];
+  }
+  subgraph "cluster_watch" {
+    label=<<I>watch</I> : Monitor>;
+    style="rounded,dashed"; color="#888888";
+    "watch.initial" [shape=circle, style=filled, fillcolor=black, label="", width=0.12, fixedsize=true];
+    "watch.Quiet" [shape=ellipse, style=solid, label=<<B>Quiet</B>>];
+    "watch.Alarm" [shape=ellipse, style=solid, label=<<B>Alarm</B><BR/><FONT POINT-SIZE="6">print "alarm" motorOn</FONT>>];
+    "watch.initial" -> "watch.Quiet";
+    "watch.Quiet" -> "watch.Alarm" [label=<1: (lock in Running and (not doorClosed))>];
+    "watch.Alarm" -> "watch.Quiet" [label=<1: lock in Idle>];
+  }
+}

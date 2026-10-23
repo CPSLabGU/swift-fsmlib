@@ -1,0 +1,19 @@
+arrangement HostTally
+start
+R1 counter Work
+note 0
+sum 0
+R2 counter Work
+note 1
+sum 1
+pause 2
+R3 counter Work
+note 2
+sum 3
+R4 counter Work
+note 3
+sum 6
+R5 counter Done
+done
+R6 counter Done
+halt R6

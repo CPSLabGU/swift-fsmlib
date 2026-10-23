@@ -1,0 +1,152 @@
+[comment]
+Language-neutral queries shared by every kernel target.
+
+  path(o)               the path of a model element from the root of the model,
+                        written as in validation diagnostics, for example
+                        /Relay/machines[Pinger]/states[Ping]/transitions[0]/label
+  valueKind(e)          the kind of value of an expression: boolean, integer,
+                        enumeration, opaque, array, or empty when no type is known
+  valueTypeName(e)      the name of the declared type of an enumeration or opaque value
+  effectiveLanguage(o)  the language of opaque text or host declarations: their own,
+                        else their machine's, else the arrangement's
+  printProblems(a)      the Print values that no printer can print
+[/comment]
+[module kernel('http://cpslabgu.github.io/llfsm/kernel')/]
+
+[comment The path of an element: the root is named by the arrangement, every other element by its feature. /]
+[query public path(o : OclAny) : String =
+  if o.eContainer().oclIsUndefined() then '/' + o.name else path(o.eContainer()) + '/' + segment(o.eContainer(), o) endif/]
+
+[comment Whether elements of a class are named by their name rather than by their position. /]
+[query public isNamed(o : OclAny) : Boolean =
+  o.oclIsKindOf(Machine) or o.oclIsKindOf(Instance) or o.oclIsKindOf(State) or o.oclIsKindOf(Variable)
+  or o.oclIsKindOf(FunctionDeclaration) or o.oclIsKindOf(Parameter) or o.oclIsKindOf(Type)/]
+
+[comment One element of a many-valued feature: the feature name and the element's name or zero-based position. /]
+[query public element(feature : String, items : OclAny, o : OclAny) : String =
+  feature + '[' + (if isNamed(o) then o.name else (items->indexOf(o) - 1).toString() endif) + ']'/]
+
+[comment The path segment of an element within its container. /]
+[query public segment(c : OclAny, o : OclAny) : String =
+  if c.oclIsKindOf(Arrangement) then
+    (if c.types->includes(o) then element('types', c.types, o)
+     else if c.variables->includes(o) then element('variables', c.variables, o)
+     else if c.functions->includes(o) then element('functions', c.functions, o)
+     else if c.hostDeclarations->includes(o) then element('hostDeclarations', c.hostDeclarations, o)
+     else if c.machines->includes(o) then element('machines', c.machines, o)
+     else element('instances', c.instances, o) endif endif endif endif endif)
+  else if c.oclIsKindOf(Machine) then
+    (if c.variables->includes(o) then element('variables', c.variables, o)
+     else if c.functions->includes(o) then element('functions', c.functions, o)
+     else if c.hostDeclarations->includes(o) then element('hostDeclarations', c.hostDeclarations, o)
+     else element('states', c.states, o) endif endif endif)
+  else if c.oclIsKindOf(Instance) then element('bindings', c.bindings, o)
+  else if c.oclIsKindOf(Binding) then 'value'
+  else if c.oclIsKindOf(State) then
+    (if c.actions->includes(o) then element('actions', c.actions, o)
+     else if c.transitions->includes(o) then element('transitions', c.transitions, o)
+     else 'origin' endif endif)
+  else if c.oclIsKindOf(Transition) then (if c.label = o then 'label' else 'origin' endif)
+  else if c.oclIsKindOf(Variable) then 'initialValue'
+  else if c.oclIsKindOf(FunctionDeclaration) then element('parameters', c.parameters, o)
+  else if c.oclIsKindOf(VariableReference) then 'index'
+  else if c.oclIsKindOf(UnaryExpression) then 'operand'
+  else if c.oclIsKindOf(BinaryExpression) then (if c.left = o then 'left' else 'right' endif)
+  else if c.oclIsKindOf(ConditionalExpression) then
+    (if c.condition = o then 'condition' else if c.whenTrue = o then 'whenTrue' else 'whenFalse' endif endif)
+  else if c.oclIsKindOf(CallExpression) then (if c.receiver = o then 'receiver' else element('arguments', c.arguments, o) endif)
+  else if c.oclIsKindOf(Assignment) then (if c.target = o then 'target' else 'value' endif)
+  else if c.oclIsKindOf(Print) then element('values', c.values, o)
+  else 'call' endif endif endif endif endif endif endif endif endif endif endif endif endif endif endif/]
+
+[comment The element type of an array type, or the type itself for a scalar type. /]
+[query public scalarType(t : Type) : Type = if t.oclIsKindOf(ArrayType) then t.oclAsType(ArrayType).element else t endif/]
+
+[comment The value an instance gives a variable: its binding, else the declared initial value (possibly undefined). /]
+[query public initialExpression(i : Instance, v : Variable) : Expression =
+  if i.bindings->exists(b | b.variable = v) then i.bindings->select(b | b.variable = v)->first().value else v.initialValue endif/]
+
+[comment Whether a variable is a local variable of a machine. /]
+[query public isLocal(v : Variable) : Boolean = v.eContainer().oclIsKindOf(Machine)/]
+
+[comment Whether a binary operation yields an integer. /]
+[query public isArithmetic(operation : String) : Boolean =
+  operation = 'addition' or operation = 'subtraction' or operation = 'multiplication'
+  or operation = 'division' or operation = 'modulo'/]
+
+[comment Whether a state has no transitions and therefore accepts. /]
+[query public isAccepting(s : State) : Boolean = s.transitions->isEmpty()/]
+
+[comment The kind of value of a type, or the empty string for no type. /]
+[query public kindOfType(t : OclAny) : String =
+  if t.oclIsUndefined() then ''
+  else if t.oclIsKindOf(BooleanType) then 'boolean'
+  else if t.oclIsKindOf(IntegerType) then 'integer'
+  else if t.oclIsKindOf(EnumerationType) then 'enumeration'
+  else if t.oclIsKindOf(ArrayType) then 'array'
+  else 'opaque' endif endif endif endif endif/]
+
+[comment The declared type of the value of a variable reference, a call or an opaque expression, if it has one. /]
+[query public declaredType(e : Expression) : OclAny =
+  if e.oclIsKindOf(EnumerationLiteral) then e.type
+  else if e.oclIsKindOf(VariableReference) then (if e.index.oclIsUndefined() then e.variable.type else scalarType(e.variable.type) endif)
+  else if e.oclIsKindOf(ConditionalExpression) then declaredType(e.whenTrue)
+  else if e.oclIsKindOf(CallExpression) then e.function.result
+  else if e.oclIsKindOf(OpaqueExpression) then e.type
+  else null endif endif endif endif endif/]
+
+[comment The kind of value of an expression: boolean, integer, enumeration, opaque, array, or empty when unknown. /]
+[query public valueKind(e : Expression) : String =
+  if e.oclIsKindOf(BooleanLiteral) or e.oclIsKindOf(InStateExpression) then 'boolean'
+  else if e.oclIsKindOf(IntegerLiteral) then 'integer'
+  else if e.oclIsKindOf(UnaryExpression) then (if e.operation.toString() = 'minus' then 'integer' else 'boolean' endif)
+  else if e.oclIsKindOf(BinaryExpression) then (if isArithmetic(e.operation.toString()) then 'integer' else 'boolean' endif)
+  else if e.oclIsKindOf(ConditionalExpression) then valueKind(e.whenTrue)
+  else kindOfType(declaredType(e)) endif endif endif endif endif/]
+
+[comment The name of the declared type of an enumeration or opaque value. /]
+[query public valueTypeName(e : Expression) : String = declaredType(e).name/]
+
+[comment The language that an element declares itself, or the empty string. /]
+[query public declaredLanguage(o : OclAny) : String = if o.language.oclIsUndefined() then '' else o.language endif/]
+
+[comment The language of opaque text or host declarations: its own, else its machine's, else the arrangement's. /]
+[query public effectiveLanguage(o : OclAny) : String =
+  if declaredLanguage(o) <> '' then declaredLanguage(o)
+  else if (not o.eContainer(Machine).oclIsUndefined()) and declaredLanguage(o.eContainer(Machine)) <> '' then declaredLanguage(o.eContainer(Machine))
+  else declaredLanguage(o.eContainer(Arrangement)) endif endif/]
+
+[comment Whether an element is an opaque node. /]
+[query public isOpaque(o : OclAny) : Boolean =
+  o.oclIsKindOf(OpaqueExpression) or o.oclIsKindOf(OpaqueStatement) or o.oclIsKindOf(OpaqueType)/]
+
+[comment The opaque nodes of an arrangement, in containment order. /]
+[query public opaqueNodes(a : Arrangement) : Sequence(OclAny) = a.eAllContents()->select(o | isOpaque(o))/]
+
+[comment The host declarations of an arrangement and its machines that apply to a language. /]
+[query public hostDeclarationsFor(a : Arrangement, language : String) : Sequence(HostDeclarations) =
+  a.eAllContents(HostDeclarations)->select(h | effectiveLanguage(h) = '' or effectiveLanguage(h) = language)/]
+
+[comment The problems of opaque nodes written for another language than the target's. /]
+[query public languageProblems(a : Arrangement, language : String) : Sequence(String) =
+  opaqueNodes(a)->select(o | effectiveLanguage(o) <> '' and effectiveLanguage(o) <> language)
+    ->collect(o | path(o) + ': opaque text for the language ' + effectiveLanguage(o) + ' cannot be generated for ' + language)/]
+
+[comment The problems of Print values that no printer can print. /]
+[query public printProblems(a : Arrangement) : Sequence(String) =
+  a.eAllContents(Print)->collect(p | p.values)->select(v | valueKind(v) = '')
+    ->collect(v | path(v) + ': the value has no declared type, so no printer can be chosen')
+  ->addAll(a.eAllContents(Print)->collect(p | p.values)->select(v | valueKind(v) = 'array')
+    ->collect(v | path(v) + ': an array cannot be printed; print its elements'))/]
+
+[comment The problems of local variables that hide a shared variable of the same name. /]
+[query public shadowProblems(a : Arrangement) : Sequence(String) =
+  a.machines->collect(m | m.variables)->select(v | a.variables->exists(s | s.name = v.name))
+    ->collect(v | path(v) + ': the local variable hides the shared variable ' + v.name)/]
+
+[comment Every problem that stops a code target for a language. /]
+[query public codeProblems(a : Arrangement, language : String) : Sequence(String) =
+  languageProblems(a, language)->addAll(printProblems(a))->addAll(shadowProblems(a))/]
+
+[comment Whether a statement text already ends a statement, so that no terminator is needed. /]
+[query public isTerminated(text : String) : Boolean = text.trim().endsWith(';') or text.trim().endsWith('}')/]

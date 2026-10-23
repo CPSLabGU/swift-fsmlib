@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kernel:Arrangement xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:kernel="http://cpslabgu.github.io/llfsm/kernel" name="HostTally" language="cpp">
+  <types xsi:type="kernel:BooleanType" name="Flag"/>
+  <types xsi:type="kernel:IntegerType" name="Count" upper="9"/>
+  <types xsi:type="kernel:OpaqueType" name="Tally" text="TallyCounter"/>
+  <variables name="tally" type="kernel:OpaqueType #//@types.2">
+    <initialValue xsi:type="kernel:OpaqueExpression" text="TallyCounter{}" type="kernel:OpaqueType #//@types.2"/>
+  </variables>
+  <functions name="isEven" pure="true" result="kernel:BooleanType #//@types.0">
+    <parameters name="n" type="kernel:IntegerType #//@types.1"/>
+  </functions>
+  <functions name="note">
+    <parameters name="n" type="kernel:IntegerType #//@types.1"/>
+  </functions>
+  <functions name="bump" receiverType="kernel:OpaqueType #//@types.2">
+    <parameters name="by" type="kernel:IntegerType #//@types.1"/>
+  </functions>
+  <functions name="sum" pure="true" result="kernel:IntegerType #//@types.1" receiverType="kernel:OpaqueType #//@types.2"/>
+  <hostDeclarations language="cpp" includes="#include &lt;iostream>" declarations="class TallyCounter {&#xA;public:&#xA;    void bump(Count by)&#xA;    {&#xA;        total += by;&#xA;    }&#xA;&#xA;    Count sum() const&#xA;    {&#xA;        return total;&#xA;    }&#xA;&#xA;private:&#xA;    Count total = 0;&#xA;};&#xA;&#xA;Flag isEven(Count n)&#xA;{&#xA;    return n % 2 == 0;&#xA;}&#xA;&#xA;void note(Count n)&#xA;{&#xA;    std::cout &lt;&lt; &quot;note &quot; &lt;&lt; n &lt;&lt; '\n';&#xA;}"/>
+  <machines name="Counter" initial="#//@machines.0/@states.0">
+    <variables name="n" type="kernel:IntegerType #//@types.1"/>
+    <states name="Start">
+      <actions xsi:type="kernel:OpaqueStatement" text="std::cout &lt;&lt; &quot;start\n&quot;;"/>
+      <transitions target="#//@machines.0/@states.1">
+        <label xsi:type="kernel:BooleanLiteral" value="true"/>
+      </transitions>
+    </states>
+    <states name="Work">
+      <actions xsi:type="kernel:CallStatement">
+        <call function="#//@functions.2">
+          <receiver xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+          <arguments xsi:type="kernel:VariableReference" variable="#//@machines.0/@variables.0"/>
+        </call>
+      </actions>
+      <actions xsi:type="kernel:CallStatement">
+        <call function="#//@functions.1">
+          <arguments xsi:type="kernel:VariableReference" variable="#//@machines.0/@variables.0"/>
+        </call>
+      </actions>
+      <actions xsi:type="kernel:Assignment">
+        <target variable="#//@machines.0/@variables.0"/>
+        <value xsi:type="kernel:BinaryExpression" operation="addition">
+          <left xsi:type="kernel:VariableReference" variable="#//@machines.0/@variables.0"/>
+          <right xsi:type="kernel:IntegerLiteral" value="1"/>
+        </value>
+      </actions>
+      <actions xsi:type="kernel:Print" text="sum">
+        <values xsi:type="kernel:CallExpression" function="#//@functions.3">
+          <receiver xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+        </values>
+      </actions>
+      <transitions target="#//@machines.0/@states.3">
+        <label xsi:type="kernel:OpaqueExpression" text="tally.sum() >= 6" type="kernel:BooleanType #//@types.0"/>
+      </transitions>
+      <transitions target="#//@machines.0/@states.2">
+        <label xsi:type="kernel:CallExpression" function="#//@functions.0">
+          <arguments xsi:type="kernel:VariableReference" variable="#//@machines.0/@variables.0"/>
+        </label>
+      </transitions>
+      <transitions target="#//@machines.0/@states.1">
+        <label xsi:type="kernel:BooleanLiteral" value="true"/>
+      </transitions>
+    </states>
+    <states name="Pause" passThrough="true">
+      <actions xsi:type="kernel:Print" text="pause">
+        <values xsi:type="kernel:VariableReference" variable="#//@machines.0/@variables.0"/>
+      </actions>
+      <transitions target="#//@machines.0/@states.1">
+        <label xsi:type="kernel:BooleanLiteral" value="true"/>
+      </transitions>
+    </states>
+    <states name="Done">
+      <actions xsi:type="kernel:OpaqueStatement" text="std::cout &lt;&lt; &quot;done\n&quot;;"/>
+    </states>
+  </machines>
+  <instances name="counter" machine="#//@machines.0"/>
+</kernel:Arrangement>

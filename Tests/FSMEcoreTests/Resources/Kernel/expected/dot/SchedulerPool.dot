@@ -1,0 +1,45 @@
+digraph "SchedulerPool" {
+  graph [rankdir=TB, fontname="Helvetica", fontsize=8, nodesep=0.3, ranksep=0.25, pad=0.03, margin=0];
+  node [fontname="Helvetica", fontsize=8, margin="0.03,0.02"];
+  edge [fontname="Helvetica", fontsize=7, arrowsize=0.6];
+  subgraph "cluster_gate" {
+    label=<<I>gate</I> : Scheduler>;
+    style="rounded,dashed"; color="#888888";
+    "gate.initial" [shape=circle, style=filled, fillcolor=black, label="", width=0.12, fixedsize=true];
+    "gate.Dispatch" [shape=ellipse, style=solid, label=<<B>Dispatch</B>>];
+    "gate.Advance" [shape=ellipse, style=dashed, label=<<B>Advance</B><BR/><FONT POINT-SIZE="6">current := ((current + 1) mod 3)</FONT>>];
+    "gate.initial" -> "gate.Dispatch";
+    "gate.Dispatch" -> "gate.Advance" [label=<1: done[current]>];
+    "gate.Advance" -> "gate.Dispatch" [label=<1: true>];
+  }
+  subgraph "cluster_first" {
+    label=<<I>first</I> : Worker>;
+    style="rounded,dashed"; color="#888888";
+    "first.initial" [shape=circle, style=filled, fillcolor=black, label="", width=0.12, fixedsize=true];
+    "first.Ready" [shape=ellipse, style=solid, label=<<B>Ready</B><BR/><FONT POINT-SIZE="6">done[id] := false</FONT>>];
+    "first.Working" [shape=ellipse, style=solid, label=<<B>Working</B><BR/><FONT POINT-SIZE="6">done[id] := true<BR/>print "work" id</FONT>>];
+    "first.initial" -> "first.Ready";
+    "first.Ready" -> "first.Working" [label=<1: (gate in Dispatch and (current = id))>];
+    "first.Working" -> "first.Ready" [label=<1: (current != id)>];
+  }
+  subgraph "cluster_second" {
+    label=<<I>second</I> : Worker>;
+    style="rounded,dashed"; color="#888888";
+    "second.initial" [shape=circle, style=filled, fillcolor=black, label="", width=0.12, fixedsize=true];
+    "second.Ready" [shape=ellipse, style=solid, label=<<B>Ready</B><BR/><FONT POINT-SIZE="6">done[id] := false</FONT>>];
+    "second.Working" [shape=ellipse, style=solid, label=<<B>Working</B><BR/><FONT POINT-SIZE="6">done[id] := true<BR/>print "work" id</FONT>>];
+    "second.initial" -> "second.Ready";
+    "second.Ready" -> "second.Working" [label=<1: (gate in Dispatch and (current = id))>];
+    "second.Working" -> "second.Ready" [label=<1: (current != id)>];
+  }
+  subgraph "cluster_third" {
+    label=<<I>third</I> : Worker>;
+    style="rounded,dashed"; color="#888888";
+    "third.initial" [shape=circle, style=filled, fillcolor=black, label="", width=0.12, fixedsize=true];
+    "third.Ready" [shape=ellipse, style=solid, label=<<B>Ready</B><BR/><FONT POINT-SIZE="6">done[id] := false</FONT>>];
+    "third.Working" [shape=ellipse, style=solid, label=<<B>Working</B><BR/><FONT POINT-SIZE="6">done[id] := true<BR/>print "work" id</FONT>>];
+    "third.initial" -> "third.Ready";
+    "third.Ready" -> "third.Working" [label=<1: (gate in Dispatch and (current = id))>];
+    "third.Working" -> "third.Ready" [label=<1: (current != id)>];
+  }
+}

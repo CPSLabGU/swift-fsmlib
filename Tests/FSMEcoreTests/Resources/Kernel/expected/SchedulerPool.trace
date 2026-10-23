@@ -1,0 +1,64 @@
+arrangement SchedulerPool
+R1 gate Dispatch
+R1 first Working
+R1 second Ready
+R1 third Ready
+R2 gate Dispatch
+work 0
+R2 first Working
+R2 second Ready
+R2 third Ready
+R3 gate Dispatch
+R3 first Ready
+R3 second Working
+R3 third Ready
+R4 gate Dispatch
+R4 first Ready
+work 1
+R4 second Working
+R4 third Ready
+R5 gate Dispatch
+R5 first Ready
+R5 second Ready
+R5 third Working
+R6 gate Dispatch
+R6 first Ready
+R6 second Ready
+work 2
+R6 third Working
+R7 gate Dispatch
+R7 first Working
+R7 second Ready
+R7 third Ready
+R8 gate Dispatch
+work 0
+R8 first Working
+R8 second Ready
+R8 third Ready
+R9 gate Dispatch
+R9 first Ready
+R9 second Working
+R9 third Ready
+R10 gate Dispatch
+R10 first Ready
+work 1
+R10 second Working
+R10 third Ready
+R11 gate Dispatch
+R11 first Ready
+R11 second Ready
+R11 third Working
+R12 gate Dispatch
+R12 first Ready
+R12 second Ready
+work 2
+R12 third Working
+R13 gate Dispatch
+R13 first Working
+R13 second Ready
+R13 third Ready
+R14 gate Dispatch
+work 0
+R14 first Working
+R14 second Ready
+R14 third Ready

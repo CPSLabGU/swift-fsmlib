@@ -1,0 +1,89 @@
+[comment]
+C11 rendering of kernel expressions and statements.
+
+Variables appear under their model names: shared variables are globals,
+and the ringlet of a machine works on copies of the local variables and
+of the snapshot of the external variables that carry the same names, so
+that opaque text can use them too. Generated support identifiers start
+with llfsm. An enumeration literal is <Type>_<literal>, a state
+<Machine>_<State>.
+[/comment]
+[module c('http://cpslabgu.github.io/llfsm/kernel')/]
+[import expressions::kernel/]
+
+[comment The language identifier of opaque text and host declarations that this target accepts. /]
+[query public targetLanguage() : String = 'c'/]
+
+[comment A C string literal body for arbitrary text. /]
+[query public cString(s : String) : String = s.replaceAll('\\\\', '\\\\\\\\').replaceAll('"', '\\\\"')/]
+
+[comment The C operator of a binary operation. /]
+[query public cBinary(operation : String) : String =
+  if operation = 'conjunction' then '&&'
+  else if operation = 'disjunction' then '||'
+  else if operation = 'addition' then '+'
+  else if operation = 'subtraction' then '-'
+  else if operation = 'multiplication' then '*'
+  else if operation = 'division' then '/'
+  else if operation = 'modulo' then '%'
+  else if operation = 'equal' then '=='
+  else if operation = 'notEqual' then '!='
+  else if operation = 'lessThan' then '<'
+  else if operation = 'lessOrEqual' then '<='
+  else if operation = 'greaterThan' then '>'
+  else '>=' endif endif endif endif endif endif endif endif endif endif endif endif/]
+
+[comment The C type of a kernel type: declared types are typedefs of the same name. /]
+[query public cType(t : Type) : String = t.name/]
+
+[comment The function that prints a value of the same type as an expression, without a leading space. /]
+[query public printer(e : Expression) : String =
+  if valueKind(e) = 'boolean' then 'llfsm_print_bool'
+  else if valueKind(e) = 'integer' then 'llfsm_print_int'
+  else if valueKind(e) = 'enumeration' then 'llfsm_print_' + valueTypeName(e)
+  else 'print_' + valueTypeName(e) endif endif endif/]
+
+[comment The default value of a scalar type. /]
+[template public defaultValue(t : Type)][if (t.oclIsKindOf(IntegerType))][t.oclAsType(IntegerType).lower/][elseif (t.oclIsKindOf(EnumerationType))][t.name/]_[t.oclAsType(EnumerationType).literals->first()/][else]false[/if][/template]
+
+[comment Expressions: one template per class, compound expressions fully parenthesised. /]
+[template public expr(e : BooleanLiteral)][if (e.value)]true[else]false[/if][/template]
+[template public expr(e : IntegerLiteral)][e.value/][/template]
+[template public expr(e : EnumerationLiteral)][e.type.name/]_[e.literal/][/template]
+[template public expr(e : VariableReference)][e.variable.name/][if (not e.index.oclIsUndefined())]['['/]llfsm_index([expr(e.index)/], [e.variable.type.oclAsType(ArrayType).size/], "[cString(e.variable.name)/]")[']'/][/if][/template]
+[template public expr(e : UnaryExpression)]([if (e.operation.toString() = 'negation')]![else]-[/if][expr(e.operand)/])[/template]
+[template public expr(e : BinaryExpression)]([expr(e.left)/] [cBinary(e.operation.toString())/] [expr(e.right)/])[/template]
+[template public expr(e : ConditionalExpression)]([expr(e.condition)/] ? [expr(e.whenTrue)/] : [expr(e.whenFalse)/])[/template]
+[template public expr(e : InStateExpression)](llfsm_instance_[e.instance.name/].llfsm_pc == [e.instance.machine.name/]_[e.state.name/])[/template]
+[template public expr(e : CallExpression)][if (not e.receiver.oclIsUndefined())][expr(e.receiver)/].[/if][e.function.name/]([for (x : Expression | e.arguments) separator(', ')][expr(x)/][/for])[/template]
+[template public expr(e : OpaqueExpression)]([e.text/])[/template]
+
+[comment A condition of an if statement: parenthesised expressions are used as they are, anything else is wrapped. /]
+[template public condition(e : Expression)][if (e.oclIsKindOf(BinaryExpression) or e.oclIsKindOf(UnaryExpression) or e.oclIsKindOf(ConditionalExpression) or e.oclIsKindOf(InStateExpression) or e.oclIsKindOf(OpaqueExpression))][expr(e)/][else]([expr(e)/])[/if][/template]
+
+[comment Statements: one template per class, each a complete line at the indentation of an action. /]
+[template public statement(s : Assignment)]
+[let t : Type = scalarType(s.target.variable.type)]
+[if (s.target.index.oclIsUndefined() and s.target.variable.type.oclIsKindOf(ArrayType))]
+                memcpy([expr(s.target)/], [expr(s.value)/], sizeof [expr(s.target)/]);
+[elseif (t.oclIsKindOf(IntegerType))]
+                [expr(s.target)/] = llfsm_check([expr(s.value)/], [t.oclAsType(IntegerType).lower/], [t.oclAsType(IntegerType).upper/], "[cString(s.target.variable.name)/]");
+[else]
+                [expr(s.target)/] = [expr(s.value)/];
+[/if]
+[/let]
+[/template]
+[template public statement(s : Print)]
+                fputs("[cString(s.text)/]", stdout);
+[for (v : Expression | s.values)]
+                fputs(" ", stdout);
+                [printer(v)/]([expr(v)/]);
+[/for]
+                putchar('\n');
+[/template]
+[template public statement(s : CallStatement)]
+                [expr(s.call)/];
+[/template]
+[template public statement(s : OpaqueStatement)]
+                [s.text/][if (not isTerminated(s.text))];[/if]
+[/template]

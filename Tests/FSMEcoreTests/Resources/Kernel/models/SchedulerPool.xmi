@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kernel:Arrangement xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:kernel="http://cpslabgu.github.io/llfsm/kernel" name="SchedulerPool">
+  <types xsi:type="kernel:BooleanType" name="Bool"/>
+  <types xsi:type="kernel:IntegerType" name="Slot" upper="2"/>
+  <types xsi:type="kernel:ArrayType" name="Flags" element="kernel:BooleanType #//@types.0" size="3"/>
+  <variables name="current" type="kernel:IntegerType #//@types.1"/>
+  <variables name="done" type="kernel:ArrayType #//@types.2"/>
+  <machines name="Scheduler" initial="#//@machines.0/@states.0">
+    <states name="Dispatch">
+      <transitions target="#//@machines.0/@states.1">
+        <label xsi:type="kernel:VariableReference" variable="#//@variables.1">
+          <index xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+        </label>
+      </transitions>
+    </states>
+    <states name="Advance" passThrough="true">
+      <actions xsi:type="kernel:Assignment">
+        <target variable="#//@variables.0"/>
+        <value xsi:type="kernel:BinaryExpression" operation="modulo">
+          <left xsi:type="kernel:BinaryExpression" operation="addition">
+            <left xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+            <right xsi:type="kernel:IntegerLiteral" value="1"/>
+          </left>
+          <right xsi:type="kernel:IntegerLiteral" value="3"/>
+        </value>
+      </actions>
+      <transitions target="#//@machines.0/@states.0">
+        <label xsi:type="kernel:BooleanLiteral" value="true"/>
+      </transitions>
+    </states>
+  </machines>
+  <machines name="Worker" initial="#//@machines.1/@states.0">
+    <variables name="id" type="kernel:IntegerType #//@types.1"/>
+    <states name="Ready">
+      <actions xsi:type="kernel:Assignment">
+        <target variable="#//@variables.1">
+          <index xsi:type="kernel:VariableReference" variable="#//@machines.1/@variables.0"/>
+        </target>
+        <value xsi:type="kernel:BooleanLiteral"/>
+      </actions>
+      <transitions target="#//@machines.1/@states.1">
+        <label xsi:type="kernel:BinaryExpression">
+          <left xsi:type="kernel:InStateExpression" instance="#//@instances.0" state="#//@machines.0/@states.0"/>
+          <right xsi:type="kernel:BinaryExpression" operation="equal">
+            <left xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+            <right xsi:type="kernel:VariableReference" variable="#//@machines.1/@variables.0"/>
+          </right>
+        </label>
+      </transitions>
+    </states>
+    <states name="Working">
+      <actions xsi:type="kernel:Assignment">
+        <target variable="#//@variables.1">
+          <index xsi:type="kernel:VariableReference" variable="#//@machines.1/@variables.0"/>
+        </target>
+        <value xsi:type="kernel:BooleanLiteral" value="true"/>
+      </actions>
+      <actions xsi:type="kernel:Print" text="work">
+        <values xsi:type="kernel:VariableReference" variable="#//@machines.1/@variables.0"/>
+      </actions>
+      <transitions target="#//@machines.1/@states.0">
+        <label xsi:type="kernel:BinaryExpression" operation="notEqual">
+          <left xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+          <right xsi:type="kernel:VariableReference" variable="#//@machines.1/@variables.0"/>
+        </label>
+      </transitions>
+    </states>
+  </machines>
+  <instances name="gate" machine="#//@machines.0"/>
+  <instances name="first" machine="#//@machines.1">
+    <bindings variable="#//@machines.1/@variables.0">
+      <value xsi:type="kernel:IntegerLiteral"/>
+    </bindings>
+  </instances>
+  <instances name="second" machine="#//@machines.1">
+    <bindings variable="#//@machines.1/@variables.0">
+      <value xsi:type="kernel:IntegerLiteral" value="1"/>
+    </bindings>
+  </instances>
+  <instances name="third" machine="#//@machines.1">
+    <bindings variable="#//@machines.1/@variables.0">
+      <value xsi:type="kernel:IntegerLiteral" value="2"/>
+    </bindings>
+  </instances>
+</kernel:Arrangement>

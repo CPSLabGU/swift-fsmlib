@@ -1,0 +1,96 @@
+[comment]
+Java 17 rendering of kernel expressions and statements.
+
+Variables appear under their model names: shared variables are static
+fields of the generated class, local variables are fields of the machine
+class whose method runs the ringlet, and the ringlet copies the snapshot
+of the external variables into final local variables of the same names,
+so that opaque text can use them too. Java has no free functions: a
+declared function f without a receiver is the static method
+<Arrangement>Host.f. Generated support identifiers start with llfsm or
+LLFSM. An enumeration literal is <Type>.<literal>, a state
+<Machine>_State.S_<State>.
+[/comment]
+[module java('http://cpslabgu.github.io/llfsm/kernel')/]
+[import expressions::kernel/]
+
+[comment The language identifier of opaque text and host declarations that this target accepts. /]
+[query public targetLanguage() : String = 'java'/]
+
+[comment A Java string literal body for arbitrary text. /]
+[query public javaString(s : String) : String = s.replaceAll('\\\\', '\\\\\\\\').replaceAll('"', '\\\\"')/]
+
+[comment The Java type of a kernel type. /]
+[query public javaType(t : Type) : String =
+  if t.oclIsKindOf(BooleanType) then 'boolean'
+  else if t.oclIsKindOf(IntegerType) then 'int'
+  else if t.oclIsKindOf(EnumerationType) then t.name
+  else if t.oclIsKindOf(ArrayType) then javaType(t.oclAsType(ArrayType).element) + '[]'
+  else t.oclAsType(OpaqueType).text endif endif endif endif/]
+
+[comment The boxed Java type of a scalar type. /]
+[query public javaBoxed(t : Type) : String =
+  if t.oclIsKindOf(BooleanType) then 'Boolean' else if t.oclIsKindOf(IntegerType) then 'Integer' else javaType(t) endif endif/]
+
+[comment The class whose static methods implement the free functions of an arrangement. /]
+[query public hostClass(f : FunctionDeclaration) : String = f.eContainer(Arrangement).name + 'Host'/]
+
+[comment The Java operator of a binary operation. /]
+[query public javaBinary(operation : String) : String =
+  if operation = 'conjunction' then '&&'
+  else if operation = 'disjunction' then '||'
+  else if operation = 'addition' then '+'
+  else if operation = 'subtraction' then '-'
+  else if operation = 'multiplication' then '*'
+  else if operation = 'division' then '/'
+  else if operation = 'modulo' then '%'
+  else if operation = 'equal' then '=='
+  else if operation = 'notEqual' then '!='
+  else if operation = 'lessThan' then '<'
+  else if operation = 'lessOrEqual' then '<='
+  else if operation = 'greaterThan' then '>'
+  else '>=' endif endif endif endif endif endif endif endif endif endif endif endif/]
+
+[comment The default value of a scalar type. /]
+[template public defaultValue(t : Type)][if (t.oclIsKindOf(IntegerType))][t.oclAsType(IntegerType).lower/][elseif (t.oclIsKindOf(EnumerationType))][t.name/].[t.oclAsType(EnumerationType).literals->first()/][else]false[/if][/template]
+
+[comment Expressions: one template per class, compound expressions fully parenthesised. /]
+[template public expr(e : BooleanLiteral)][if (e.value)]true[else]false[/if][/template]
+[template public expr(e : IntegerLiteral)][e.value/][/template]
+[template public expr(e : EnumerationLiteral)][e.type.name/].[e.literal/][/template]
+[template public expr(e : VariableReference)][e.variable.name/][if (not e.index.oclIsUndefined())]['['/]llfsmIndex([expr(e.index)/], [e.variable.type.oclAsType(ArrayType).size/], "[javaString(e.variable.name)/]")[']'/][/if][/template]
+[template public expr(e : UnaryExpression)]([if (e.operation.toString() = 'negation')]![else]-[/if][expr(e.operand)/])[/template]
+[template public expr(e : BinaryExpression)]([expr(e.left)/] [javaBinary(e.operation.toString())/] [expr(e.right)/])[/template]
+[template public expr(e : ConditionalExpression)]([expr(e.condition)/] ? [expr(e.whenTrue)/] : [expr(e.whenFalse)/])[/template]
+[template public expr(e : InStateExpression)](llfsmInstance_[e.instance.name/].llfsmState == [e.instance.machine.name/]_State.S_[e.state.name/])[/template]
+[template public expr(e : CallExpression)][if (not e.receiver.oclIsUndefined())][expr(e.receiver)/][else][hostClass(e.function)/][/if].[e.function.name/]([for (x : Expression | e.arguments) separator(', ')][expr(x)/][/for])[/template]
+[template public expr(e : OpaqueExpression)]([e.text/])[/template]
+
+[comment A condition of an if statement: parenthesised expressions are used as they are, anything else is wrapped. /]
+[template public condition(e : Expression)][if (e.oclIsKindOf(BinaryExpression) or e.oclIsKindOf(UnaryExpression) or e.oclIsKindOf(ConditionalExpression) or e.oclIsKindOf(InStateExpression) or e.oclIsKindOf(OpaqueExpression))][expr(e)/][else]([expr(e)/])[/if][/template]
+
+[comment Statements: one template per class, each a complete line at the indentation of an action. /]
+[template public statement(s : Assignment)]
+[let t : Type = scalarType(s.target.variable.type)]
+[if (s.target.index.oclIsUndefined() and s.target.variable.type.oclIsKindOf(ArrayType))]
+                        [expr(s.target)/] = [expr(s.value)/].clone();
+[elseif (t.oclIsKindOf(IntegerType))]
+                        [expr(s.target)/] = llfsmCheck([expr(s.value)/], [t.oclAsType(IntegerType).lower/], [t.oclAsType(IntegerType).upper/], "[javaString(s.target.variable.name)/]");
+[else]
+                        [expr(s.target)/] = [expr(s.value)/];
+[/if]
+[/let]
+[/template]
+[template public statement(s : Print)]
+                        System.out.print("[javaString(s.text)/]");
+[for (v : Expression | s.values)]
+                        System.out.print(" " + [expr(v)/]);
+[/for]
+                        System.out.print("\n");
+[/template]
+[template public statement(s : CallStatement)]
+                        [expr(s.call)/];
+[/template]
+[template public statement(s : OpaqueStatement)]
+                        [s.text/][if (not isTerminated(s.text))];[/if]
+[/template]

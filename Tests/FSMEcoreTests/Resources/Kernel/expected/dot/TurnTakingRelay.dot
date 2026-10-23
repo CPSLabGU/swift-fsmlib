@@ -1,0 +1,29 @@
+digraph "TurnTakingRelay" {
+  graph [rankdir=TB, fontname="Helvetica", fontsize=8, nodesep=0.3, ranksep=0.25, pad=0.03, margin=0];
+  node [fontname="Helvetica", fontsize=8, margin="0.03,0.02"];
+  edge [fontname="Helvetica", fontsize=7, arrowsize=0.6];
+  subgraph "cluster_leftHand" {
+    label=<<I>leftHand</I> : Relay>;
+    style="rounded,dashed"; color="#888888";
+    "leftHand.initial" [shape=circle, style=filled, fillcolor=black, label="", width=0.12, fixedsize=true];
+    "leftHand.Waiting" [shape=ellipse, style=solid, label=<<B>Waiting</B>>];
+    "leftHand.Holding" [shape=ellipse, style=solid, label=<<B>Holding</B><BR/><FONT POINT-SIZE="6">print "holding" me passes</FONT>>];
+    "leftHand.Passing" [shape=ellipse, style=dashed, label=<<B>Passing</B><BR/><FONT POINT-SIZE="6">turn := ((me = left) ? right : left)<BR/>passes := (passes + 1)</FONT>>];
+    "leftHand.initial" -> "leftHand.Waiting";
+    "leftHand.Waiting" -> "leftHand.Holding" [label=<1: (turn = me)>];
+    "leftHand.Holding" -> "leftHand.Passing" [label=<1: (passes &lt; 9)>];
+    "leftHand.Passing" -> "leftHand.Waiting" [label=<1: true>];
+  }
+  subgraph "cluster_rightHand" {
+    label=<<I>rightHand</I> : Relay>;
+    style="rounded,dashed"; color="#888888";
+    "rightHand.initial" [shape=circle, style=filled, fillcolor=black, label="", width=0.12, fixedsize=true];
+    "rightHand.Waiting" [shape=ellipse, style=solid, label=<<B>Waiting</B>>];
+    "rightHand.Holding" [shape=ellipse, style=solid, label=<<B>Holding</B><BR/><FONT POINT-SIZE="6">print "holding" me passes</FONT>>];
+    "rightHand.Passing" [shape=ellipse, style=dashed, label=<<B>Passing</B><BR/><FONT POINT-SIZE="6">turn := ((me = left) ? right : left)<BR/>passes := (passes + 1)</FONT>>];
+    "rightHand.initial" -> "rightHand.Waiting";
+    "rightHand.Waiting" -> "rightHand.Holding" [label=<1: (turn = me)>];
+    "rightHand.Holding" -> "rightHand.Passing" [label=<1: (passes &lt; 9)>];
+    "rightHand.Passing" -> "rightHand.Waiting" [label=<1: true>];
+  }
+}

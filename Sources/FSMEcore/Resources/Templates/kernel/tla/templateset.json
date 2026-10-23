@@ -1,0 +1,12 @@
+{
+  "name": "tla",
+  "summary": "TLA+ specification of a kernel arrangement with a TLC configuration",
+  "mainModule": "generate",
+  "mainTemplate": "generate",
+  "imports": [
+    "../../expressions"
+  ],
+  "options": {
+    "lineDelimiter": "\n"
+  }
+}

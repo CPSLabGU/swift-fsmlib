@@ -1,0 +1,50 @@
+[comment]
+Graphviz drawing of kernel arrangements.
+
+One cluster is drawn per machine instance. Each state is a node with its
+name in bold, the sectioned element it encodes (its origin role and
+state) in italics when it records one, and the statements of its action
+below in a smaller font. An accepting state has a double outline and a
+pass-through state a dashed one. A small black dot marks the initial
+state, and every transition is an edge labelled <index>: <label>, where
+the index gives the evaluation order among the state's transitions.
+[/comment]
+[module generate('http://cpslabgu.github.io/llfsm/kernel')/]
+[import expressions::kernel/]
+[import expressions::dot/]
+
+[comment The node identifier of a state of an instance. /]
+[query public nodeId(i : Instance, s : State) : String = i.name + '.' + s.name/]
+
+[comment The description of the sectioned element that a state encodes. /]
+[template public origin(s : State)][s.origin.role/][if (not s.origin.state.oclIsUndefined())] of [html(s.origin.state)/][/if][if (not s.origin.transition.oclIsUndefined())], transition [s.origin.transition/][/if][/template]
+
+[comment The label of a state: its name, its origin and its actions. /]
+[template public stateLabel(s : State)]<<B>[html(s.name)/]</B>[if (not s.origin.oclIsUndefined())]<BR/><I>[origin(s)/]</I>[/if][if (s.actions->notEmpty())]<BR/><FONT POINT-SIZE="6">[for (act : Statement | s.actions) separator('<BR/>')][statement(act)/][/for]</FONT>[/if]>[/template]
+
+[template public generate(a : Arrangement)]
+[comment @main /]
+[file (a.name + '.dot', false)]
+digraph "[a.name/]" {
+  graph ['['/]rankdir=TB, fontname="Helvetica", fontsize=8, nodesep=0.3, ranksep=0.25, pad=0.03, margin=0[']'/];
+  node ['['/]fontname="Helvetica", fontsize=8, margin="0.03,0.02"[']'/];
+  edge ['['/]fontname="Helvetica", fontsize=7, arrowsize=0.6[']'/];
+[for (inst : Instance | a.instances)]
+  subgraph "cluster_[inst.name/]" {
+    label=<<I>[html(inst.name)/]</I> : [html(inst.machine.name)/]>;
+    style="rounded,dashed"; color="#888888";
+    "[inst.name/].initial" ['['/]shape=circle, style=filled, fillcolor=black, label="", width=0.12, fixedsize=true[']'/];
+[for (s : State | inst.machine.states)]
+    "[nodeId(inst, s)/]" ['['/]shape=[if (isAccepting(s))]doublecircle[else]ellipse[/if], style=[if (s.passThrough)]dashed[else]solid[/if], label=[stateLabel(s)/][']'/];
+[/for]
+    "[inst.name/].initial" -> "[nodeId(inst, inst.machine.initial)/]";
+[for (s : State | inst.machine.states)]
+[for (t : Transition | s.transitions)]
+    "[nodeId(inst, s)/]" -> "[nodeId(inst, t.target)/]" ['['/]label=<[i/]: [expr(t.label)/]>[']'/];
+[/for]
+[/for]
+  }
+[/for]
+}
+[/file]
+[/template]

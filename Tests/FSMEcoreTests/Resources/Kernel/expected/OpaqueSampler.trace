@@ -1,0 +1,13 @@
+arrangement OpaqueSampler
+R1 probe Wait
+R2 probe Sample
+sample 20
+R3 probe Wait
+R4 probe Wait
+R5 probe Sample
+sample 40
+R6 probe Wait
+R7 probe Wait
+R8 probe Sample
+sample 60
+R9 probe Wait

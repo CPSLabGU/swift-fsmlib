@@ -1,0 +1,73 @@
+[comment]
+TLA+ rendering of kernel expressions.
+
+Shared and external variables keep their model names, local variables
+are <instance>_<name>, and the control state of an instance is pc_<name>
+and entered_<name>; _tla is appended to names that are reserved words or
+that could clash with generated names. Enumeration literals and state
+names are strings. The table of a pure function is the variable
+fn_<name>, a function from its argument tuple, chosen once in the
+initial state. With opaque=havoc an opaque expression, or a call that
+cannot be tabulated, is a variable opaque<k> bound by an existential
+quantifier around each action of its state.
+[/comment]
+[module tla('http://cpslabgu.github.io/llfsm/kernel')/]
+[import expressions::kernel/]
+[import expressions::verification/]
+
+[comment The reserved words of TLA+ and the standard modules, and the names of the generated elements. /]
+[query public reservedWords() : Sequence(String) = Sequence{'ASSUME', 'ASSUMPTION', 'AXIOM', 'BOOLEAN', 'CASE', 'CHOOSE', 'CONSTANT', 'CONSTANTS', 'DOMAIN', 'ELSE', 'ENABLED', 'EXCEPT', 'EXTENDS', 'FALSE', 'IF', 'IN', 'INSTANCE', 'LET', 'LOCAL', 'MODULE', 'OTHER', 'STRING', 'SUBSET', 'THEN', 'THEOREM', 'TRUE', 'UNCHANGED', 'UNION', 'VARIABLE', 'VARIABLES', 'WITH', 'Nat', 'Int', 'turn', 'round', 'vars', 'functions', 'TypeOK', 'Init', 'Next', 'Spec', 'Halted', 'Halt', 'MaxRounds'}/]
+
+[comment The prefixes of generated names. /]
+[query public generatedPrefixes() : Sequence(String) = Sequence{'pc_', 'entered_', 'fn_', 'opaque', 'Run_', 'Finish_', 'Fire', 'Chain', 'Yield_', 'Step_', 'Range_', 'Sanity_', 'WF_', 'SF_'}/]
+
+[comment The identifier of a model name. /]
+[query public tlaId(name : String) : String =
+  if reservedWords()->includes(name) or name.endsWith('_tla') or generatedPrefixes()->exists(p | name.startsWith(p)) then name + '_tla' else name endif/]
+
+[comment The identifier of a variable as seen by an instance. /]
+[query public variableName(v : Variable, inst : Instance) : String = if isLocal(v) then tlaId(inst.name + '_' + v.name) else tlaId(v.name) endif/]
+
+[comment The identifier of the table of a function. /]
+[query public tableName(f : FunctionDeclaration) : String = 'fn_' + tableBaseName(f)/]
+
+[comment The TLA+ operator of a binary operation. /]
+[query public tlaOperator(operation : String) : String =
+  if operation = 'conjunction' then '/\\'
+  else if operation = 'disjunction' then '\\/'
+  else if operation = 'addition' then '+'
+  else if operation = 'subtraction' then '-'
+  else if operation = 'multiplication' then '*'
+  else if operation = 'division' then '\\div'
+  else if operation = 'modulo' then '%'
+  else if operation = 'equal' then '='
+  else if operation = 'notEqual' then '#'
+  else if operation = 'lessThan' then '<'
+  else if operation = 'lessOrEqual' then '<='
+  else if operation = 'greaterThan' then '>'
+  else '>=' endif endif endif endif endif endif endif endif endif endif endif endif/]
+
+[comment Sets of values and default values of types. /]
+[template public valueSet(t : BooleanType)]BOOLEAN[/template]
+[template public valueSet(t : IntegerType)][t.lower/]..[t.upper/][/template]
+[template public valueSet(t : EnumerationType)]{[for (l : String | t.literals) separator(', ')]"[l/]"[/for]}[/template]
+[template public valueSet(t : ArrayType)]['['/]0..[t.size - 1/] -> [valueSet(t.element)/][']'/][/template]
+[template public defaultValue(t : BooleanType)]FALSE[/template]
+[template public defaultValue(t : IntegerType)][if (t.lower < 0)]([t.lower/])[else][t.lower/][/if][/template]
+[template public defaultValue(t : EnumerationType)]"[t.literals->first()/]"[/template]
+[template public defaultValue(t : ArrayType)]['['/]k \in 0..[t.size - 1/] |-> [defaultValue(t.element)/][']'/][/template]
+
+[comment The set of the functions that a table can be: from the argument tuples to the results. /]
+[template public tableSet(f : FunctionDeclaration)][if (domain(f)->isEmpty())][valueSet(f.result)/][else]['['/][for (t : Type | domain(f)) separator(' \\X ')][valueSet(t)/][/for] -> [valueSet(f.result)/][']'/][/if][/template]
+
+[comment Expressions, as seen by an instance: one template per class, compound expressions fully parenthesised. /]
+[template public expr(e : BooleanLiteral, inst : Instance)][if (e.value)]TRUE[else]FALSE[/if][/template]
+[template public expr(e : IntegerLiteral, inst : Instance)][if (e.value < 0)]([e.value/])[else][e.value/][/if][/template]
+[template public expr(e : EnumerationLiteral, inst : Instance)]"[e.literal/]"[/template]
+[template public expr(e : VariableReference, inst : Instance)][variableName(e.variable, inst)/][if (not e.index.oclIsUndefined())]['['/][expr(e.index, inst)/][']'/][/if][/template]
+[template public expr(e : UnaryExpression, inst : Instance)]([if (e.operation.toString() = 'negation')]~[else]-[/if][expr(e.operand, inst)/])[/template]
+[template public expr(e : BinaryExpression, inst : Instance)]([expr(e.left, inst)/] [tlaOperator(e.operation.toString())/] [expr(e.right, inst)/])[/template]
+[template public expr(e : ConditionalExpression, inst : Instance)](IF [expr(e.condition, inst)/] THEN [expr(e.whenTrue, inst)/] ELSE [expr(e.whenFalse, inst)/])[/template]
+[template public expr(e : InStateExpression, inst : Instance)](pc_[e.instance.name/] = "[e.state.name/]")[/template]
+[template public expr(e : CallExpression, inst : Instance)][if (isHavocked(e))][havocName(e)/][else][tableName(e.function)/][let arguments = (if e.receiver.oclIsUndefined() then Sequence{} else Sequence{e.receiver} endif)->addAll(e.arguments)][if (arguments->size() = 1)]['['/][expr(arguments->first(), inst)/][']'/][elseif (arguments->size() > 1)]['['/]<<[for (x : Expression | arguments) separator(', ')][expr(x, inst)/][/for]>>[']'/][/if][/let][/if][/template]
+[template public expr(e : OpaqueExpression, inst : Instance)][havocName(e)/][/template]
