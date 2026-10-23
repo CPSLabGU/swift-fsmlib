@@ -3,7 +3,7 @@
   <types xsi:type="kernel:BooleanType" name="Bool"/>
   <types xsi:type="kernel:OpaqueType" name="Reading" text="struct reading"/>
   <variables name="latest" type="kernel:OpaqueType #//@types.1"/>
-  <hostDeclarations language="c" includes="#include &lt;stdio.h>" declarations=""/>
+  <hostDeclarations language="c" includes="#include &lt;stdio.h>" declarations="struct reading {&#xA;    int value;&#xA;};&#xA;&#xA;int sensor_polls = 0;&#xA;&#xA;bool sensor_ready(void)&#xA;{&#xA;    sensor_polls++;&#xA;    return sensor_polls % 2 == 0;&#xA;}&#xA;&#xA;void read_sensor(struct reading *out)&#xA;{&#xA;    out->value = 10 * sensor_polls;&#xA;}&#xA;&#xA;void print_Reading(struct reading value)&#xA;{&#xA;    printf(&quot;%d&quot;, value.value);&#xA;}"/>
   <machines name="Sampler" initial="#//@machines.0/@states.0">
     <states name="Wait">
       <transitions target="#//@machines.0/@states.1">

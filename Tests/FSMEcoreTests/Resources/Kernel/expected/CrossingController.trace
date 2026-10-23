@@ -1,0 +1,24 @@
+arrangement CrossingController
+go
+R1 main Go
+R2 main Go
+clearing
+R3 main Amber
+amber
+R4 main Amber
+R5 main Amber
+R6 main Amber
+R7 main Stop
+stop
+R8 main Stop
+R9 main Stop
+R10 main Stop
+R11 main Stop
+R12 main Stop
+R13 main Go
+go
+clearing
+R14 main Amber
+amber
+R15 main Amber
+R16 main Amber

@@ -212,7 +212,8 @@ enum KernelFixture: String, CaseIterable, Sendable {
         b.set(system, .language, "c")
         let flag = b.booleanType(in: system)
         let reading = b.opaqueType("Reading", text: "struct reading", in: system)
-        b.hostDeclarations(in: system, language: "c", includes: "#include <stdio.h>")
+        b.hostDeclarations(in: system, language: "c", includes: "#include <stdio.h>",
+                           declarations: opaqueSamplerDeclarations)
         let latest = b.variable("latest", reading, in: system)
         let sampler = b.machine("Sampler", in: system)
         let wait = b.state("Wait", in: sampler)
@@ -223,6 +224,35 @@ enum KernelFixture: String, CaseIterable, Sendable {
         b.transition(from: sample, to: wait, when: b.bool(true))
         b.instance("probe", of: sampler, in: system)
     }
+
+    /// The C declarations that give OpaqueSampler a deterministic sensor.
+    ///
+    /// Every call of `sensor_ready()` counts one poll and holds on every
+    /// second poll; `read_sensor` stores ten times the number of polls, and
+    /// `print_Reading` is the printer of the opaque type `Reading`.
+    private static let opaqueSamplerDeclarations = """
+        struct reading {
+            int value;
+        };
+
+        int sensor_polls = 0;
+
+        bool sensor_ready(void)
+        {
+            sensor_polls++;
+            return sensor_polls % 2 == 0;
+        }
+
+        void read_sensor(struct reading *out)
+        {
+            out->value = 10 * sensor_polls;
+        }
+
+        void print_Reading(struct reading value)
+        {
+            printf("%d", value.value);
+        }
+        """
 
     // MARK: - Sectioned Fixtures
 
