@@ -1,0 +1,189 @@
+-- structural2sectioned.atl
+--
+-- Transforms structural LLFSM machines and arrangements into the sectioned
+-- level.
+--
+-- Every non-empty section of a state becomes one opaque statement and every
+-- transition label one opaque expression, each carrying the host-language
+-- text and the language of its machine. The machine boilerplate becomes host
+-- declarations: the includes and variables of the machine first, then its
+-- functions, then the includes, variables and functions of each state. The
+-- first state of a machine is its initial state. A structural arrangement
+-- holds one copy of a machine per instance; the sectioned arrangement holds
+-- one machine per machine name, which all instances of that name share. A
+-- single structural machine becomes an arrangement with one instance of the
+-- same name.
+--
+-- The transformation does not read the host-language text: typing it is a
+-- separate pass.
+--
+-- @nsURI Structural=http://cpslabgu.github.io/LLFSMStructural
+-- @nsURI Sectioned=http://cpslabgu.github.io/llfsm/sectioned
+-- @nsURI Kernel=http://cpslabgu.github.io/llfsm/kernel
+-- @param arrangementName : String
+module structural2sectioned;
+create OUT : Sectioned, KOUT : Kernel from IN : Structural;
+
+-- Machines
+
+helper def : hasArrangement : Boolean = Structural!Arrangement.allInstancesFrom('IN')->notEmpty();
+
+-- The machine that defines the sectioned machine of a machine name.
+helper context Structural!Machine def : definition : Structural!Machine =
+    Structural!Machine.allInstancesFrom('IN')->select(m | m.name = self.name)->first();
+
+helper context Structural!Machine def : isDefinition : Boolean = self.definition = self;
+
+helper context Structural!State def : machine : Structural!Machine =
+    self.refImmediateComposite().refImmediateComposite();
+
+helper context Structural!Transition def : machine : Structural!Machine =
+    self.refImmediateComposite().refImmediateComposite();
+
+-- Text
+
+helper def : isPresent(text : String) : Boolean =
+    not text.oclIsUndefined() and text.trim() <> '';
+
+-- The section of a state as one opaque statement, or no statement if it is empty.
+helper context Structural!State def : section(feature : String) : Sequence(OclAny) =
+    if self.activities.oclIsUndefined() then Sequence{}
+    else
+        let text : String = self.activities.refGetValue(feature) in
+        if thisModule.isPresent(text) then
+            Sequence{thisModule.NewOpaqueStatement(text, self.machine.language)}
+        else Sequence{} endif
+    endif;
+
+-- The host declarations of the includes and variables, then the functions, of a boilerplate.
+helper def : declarations(boilerplate : Structural!Boilerplate, language : String) : Sequence(OclAny) =
+    if boilerplate.oclIsUndefined() then Sequence{}
+    else
+        (if thisModule.isPresent(boilerplate.includes) or thisModule.isPresent(boilerplate.variables) then
+            Sequence{thisModule.NewHostDeclarations(language, boilerplate.includes, boilerplate.variables)}
+        else Sequence{} endif)
+        ->union(if thisModule.isPresent(boilerplate.functions) then
+            Sequence{thisModule.NewHostDeclarations(language, OclUndefined, boilerplate.functions)}
+        else Sequence{} endif)
+    endif;
+
+helper context Structural!Machine def : hostDeclarations : Sequence(OclAny) =
+    thisModule.declarations(self.boilerplate, self.language)
+        ->union(self.stateBoilerplates->collect(e | thisModule.declarations(e.boilerplate, self.language))
+            ->flatten());
+
+-- Arrangements and instances
+
+rule Arrangement {
+    from
+        a : Structural!Arrangement
+    to
+        k : Sectioned!Arrangement (
+            name <- thisModule.arrangementName,
+            machines <- a.instances->collect(i | i.machine.definition)->asOrderedSet(),
+            instances <- a.instances
+        )
+}
+
+rule Instance {
+    from
+        i : Structural!Instance
+    to
+        k : Sectioned!Instance (
+            name <- i.name,
+            machine <- i.machine.definition
+        )
+}
+
+-- A machine without an arrangement becomes an arrangement with one instance.
+rule StandaloneMachine {
+    from
+        l : Structural!LLFSM (
+            not thisModule.hasArrangement
+        )
+    to
+        k : Sectioned!Arrangement (
+            name <- l.refImmediateComposite().name,
+            language <- l.refImmediateComposite().language,
+            machines <- Sequence{l.refImmediateComposite()},
+            instances <- Sequence{i}
+        ),
+        i : Sectioned!Instance (
+            name <- l.refImmediateComposite().name,
+            machine <- l.refImmediateComposite()
+        )
+}
+
+rule Machine {
+    from
+        m : Structural!Machine (
+            m.isDefinition
+        )
+    to
+        k : Sectioned!Machine (
+            name <- m.name,
+            language <- m.language,
+            hostDeclarations <- m.hostDeclarations,
+            states <- m.llfsm.states,
+            initial <- m.llfsm.states->first(),
+            suspendState <- m.llfsm.suspendState
+        )
+}
+
+-- States and transitions
+
+rule State {
+    from
+        s : Structural!State (
+            s.machine.isDefinition
+        )
+    to
+        k : Sectioned!State (
+            name <- s.name,
+            onEntry <- s.section('onEntry'),
+            onExit <- s.section('onExit'),
+            internal <- s.section('internal'),
+            onSuspend <- s.section('onSuspend'),
+            onResume <- s.section('onResume'),
+            transitions <- s.machine.llfsm.transitions->select(t | t.source = s)
+        )
+}
+
+rule Transition {
+    from
+        t : Structural!Transition (
+            t.machine.isDefinition
+        )
+    to
+        k : Sectioned!Transition (
+            label <- thisModule.NewOpaqueExpression(t.label, t.machine.language),
+            target <- t.target
+        )
+}
+
+-- New kernel nodes
+
+rule NewOpaqueStatement(aText : String, aLanguage : String) {
+    to
+        k : Kernel!OpaqueStatement (
+            text <- aText,
+            language <- aLanguage
+        )
+}
+
+rule NewOpaqueExpression(aText : String, aLanguage : String) {
+    to
+        k : Kernel!OpaqueExpression (
+            text <- aText,
+            language <- aLanguage
+        )
+}
+
+rule NewHostDeclarations(aLanguage : String, anIncludes : String, aDeclarations : String) {
+    to
+        k : Kernel!HostDeclarations (
+            language <- aLanguage,
+            includes <- anIncludes,
+            declarations <- aDeclarations
+        )
+}
