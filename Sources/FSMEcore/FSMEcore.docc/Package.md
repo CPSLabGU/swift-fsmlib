@@ -14,6 +14,8 @@ Bundled MTL templates generate machine, SCXML, CMake, and layout artefacts from 
 
 The sectioned and kernel metamodels describe LLFSMs with typed, language-neutral expressions and statements. The sectioned level is the traditional view with code sections; the kernel level is the sectionless core into which sectioned models are encoded, and ``KernelValidator`` checks kernel models against its well-formedness rules.
 
+``KernelTemplateGenerator`` generates C, C++, Swift and Java programs that run a kernel arrangement and print its canonical trace, nuXmv and TLA+ models for model checking, and Graphviz drawings.
+
 ## Topics
 
 ### Essentials
@@ -22,6 +24,7 @@ The sectioned and kernel metamodels describe LLFSMs with typed, language-neutral
 - <doc:StructuralModels>
 - <doc:MetamodelLevels>
 - <doc:SectionedSemantics>
+- <doc:KernelTargets>
 
 ### Structural Models
 
@@ -48,6 +51,16 @@ The sectioned and kernel metamodels describe LLFSMs with typed, language-neutral
 - ``KernelRule``
 - ``KernelDiagnostic``
 
+### Kernel Targets
+
+- ``KernelTemplateGenerator``
+- ``KernelTarget``
+- ``KernelTemplateSet``
+- ``KernelTemplateParameter``
+- ``KernelEntryMode``
+- ``KernelOpaqueTreatment``
+- ``GeneratedFileDescriptor``
+
 ### Origins
 
 - ``OriginAnnotations``
@@ -60,6 +73,7 @@ The sectioned and kernel metamodels describe LLFSMs with typed, language-neutral
 - ``LLFSMMetamodelsError``
 - ``OriginAnnotationsError``
 - ``StructuralTemplateGeneratorError``
+- ``KernelTemplateGeneratorError``
 
 ### Tutorials
 

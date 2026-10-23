@@ -50,6 +50,8 @@ Run the test suite:
 swift test
 ```
 
+Some tests compile and run generated programs or check generated models, and run only when the tools they need are installed; `Tests.md` lists them, together with the environment variables that control the tests.
+
 ## Installation
 
 Add `swift-fsmlib` as a dependency in your `Package.swift`:
@@ -157,6 +159,25 @@ for diagnostic in await validator.validate(resource) {
 ```
 
 Kernel documents use the namespace `http://cpslabgu.github.io/llfsm/kernel` and sectioned documents `http://cpslabgu.github.io/llfsm/sectioned`; a sectioned document contains kernel statements and expressions under the kernel namespace. The strict profile admits only typed kernel nodes; the relaxed profile also admits opaque host-language expressions, statements, types and host declarations. Each diagnostic names its rule (`STRUCT`, `W1` to `W9`, `W7?` or `STRICT`), its severity, the path of the offending object and a message. The `MetamodelLevels` and `SectionedSemantics` articles in the `FSMEcore` documentation describe the levels, the rules and the execution semantics.
+
+### Kernel Targets
+
+`KernelTemplateGenerator` generates programs, verification models and drawings from a kernel model with the bundled MTL template sets:
+
+| target | output |
+|---|---|
+| `kernel-c`, `kernel-cpp`, `kernel-swift`, `kernel-java` | a C11, C++20, Swift 6 or Java 17 program that runs the arrangement and prints its canonical trace |
+| `smv` | a nuXmv or NuSMV model with range invariants |
+| `tla` | a TLA+ specification with a TLC configuration |
+| `dot` | a Graphviz drawing of the instances, states and transitions |
+
+```swift
+let generator = KernelTemplateGenerator(metamodel: metamodels.kernel)
+let files = try await generator.generate(.smv, resource: resource,
+                                         parameters: ["maxRounds": "20"], to: outputDirectory)
+```
+
+The model is validated first: the verification targets require the strict profile, the other targets the relaxed one. A generated program takes the number of rounds and an optional inputs file whose lines `<round> name=value` set external variables, and prints `arrangement <name>`, one line per `Print`, `R<round> <instance> <state>` after every ringlet and `halt R<round>` when the arrangement halts. The verification targets take the parameters `maxRounds`, `entry=ringlet|fused`, `sanity=true` and `opaque=reject|havoc`. The `KernelTargets` article in the `FSMEcore` documentation describes the targets, their parameters, the treatment of opaque host-language text and how to check the generated models with nuXmv and TLC.
 
 ## Command-Line Usage
 
