@@ -1,0 +1,207 @@
+-- sectioned2structural.atl
+--
+-- Transforms sectioned LLFSM arrangements back into structural machines and
+-- arrangements, inverting structural2sectioned.
+--
+-- A sectioned arrangement whose language is set and whose single instance
+-- and single machine carry its name becomes a single structural machine;
+-- any other arrangement becomes a structural arrangement that holds one copy
+-- of a machine per instance, typed by the file <Machine>.machine. The
+-- initial state of a machine comes first, followed by the other states in
+-- order. Every section and label becomes host-language text in the language
+-- of its machine, else of its arrangement, else the default language: the
+-- native helpers renderExpression and renderStatements keep opaque text as
+-- written and render typed nodes through the host queries of the expression
+-- modules.
+--
+-- The host declarations of a machine become its boilerplate: the includes
+-- of all of them, one after the other; the declarations of those with
+-- includes as the variables, with the declarations of the machine variables,
+-- rendered by the native helper renderDeclarations, after the first of them;
+-- and the declarations of those without includes as the functions. Every
+-- state receives an empty state boilerplate. Include paths, layouts and the
+-- declarations of the arrangement have no counterpart and are left out.
+--
+-- @nsURI Structural=http://cpslabgu.github.io/LLFSMStructural
+-- @nsURI Sectioned=http://cpslabgu.github.io/llfsm/sectioned
+-- @nsURI Kernel=http://cpslabgu.github.io/llfsm/kernel
+-- @param defaultLanguage : String
+-- @param machineFileSuffix : String
+module sectioned2structural;
+create OUT : Structural from IN : Sectioned, KIN : Kernel;
+
+-- Text
+
+helper def : isPresent(text : String) : Boolean =
+    not text.oclIsUndefined() and text <> '';
+
+helper def : orEmpty(text : String) : String =
+    if text.oclIsUndefined() then '' else text endif;
+
+-- Two texts one after the other, on separate lines unless the first ends a line.
+helper def : joined(first : String, second : String) : String =
+    if first = '' then second
+    else if second = '' or first.endsWith('\n') then first + second
+    else first + '\n' + second endif endif;
+
+helper def : joinedAll(texts : Sequence(String)) : String =
+    texts->iterate(t; text : String = '' | thisModule.joined(text, t));
+
+-- Arrangements and machines
+
+-- Whether an arrangement holds a single machine that structural2sectioned made from a structural machine.
+helper context Sectioned!Arrangement def : isStandalone : Boolean =
+    thisModule.isPresent(self.language) and self.instances->size() = 1 and self.machines->size() = 1
+        and self.instances->first().name = self.name and self.machines->first().name = self.name;
+
+helper context Sectioned!Machine def : arrangement : Sectioned!Arrangement = self.refImmediateComposite();
+
+helper context Sectioned!Machine def : hostLanguage : String =
+    if thisModule.isPresent(self.language) then self.language
+    else if thisModule.isPresent(self.arrangement.language) then self.arrangement.language
+    else thisModule.defaultLanguage endif endif;
+
+-- The states of a machine with its initial state first.
+helper context Sectioned!Machine def : orderedStates : Sequence(Sectioned!State) =
+    if self.initial.oclIsUndefined() then self.states
+    else Sequence{self.initial}->union(self.states->excluding(self.initial)) endif;
+
+-- Boilerplate
+
+helper context Kernel!HostDeclarations def : holdsVariables : Boolean = not self.includes.oclIsUndefined();
+
+helper context Sectioned!Machine def : variableHosts : Sequence(Kernel!HostDeclarations) =
+    self.hostDeclarations->select(h | h.holdsVariables);
+
+helper context Sectioned!Machine def : functionHosts : Sequence(Kernel!HostDeclarations) =
+    self.hostDeclarations->reject(h | h.holdsVariables);
+
+helper context Sectioned!Machine def : includesText : String =
+    thisModule.joinedAll(self.hostDeclarations->collect(h | thisModule.orEmpty(h.includes)));
+
+helper context Sectioned!Machine def : declaredVariables : String =
+    thisModule.renderDeclarations(self.variables, self.hostLanguage);
+
+helper context Sectioned!Machine def : variablesText : String =
+    let hosts : Sequence(Kernel!HostDeclarations) = self.variableHosts in
+    if hosts->isEmpty() then self.declaredVariables
+    else thisModule.joinedAll(Sequence{thisModule.orEmpty(hosts->first().declarations), self.declaredVariables}
+        ->union(hosts->excluding(hosts->first())->collect(h | thisModule.orEmpty(h.declarations))))
+    endif;
+
+helper context Sectioned!Machine def : functionsText : String =
+    thisModule.joinedAll(self.functionHosts->collect(h | thisModule.orEmpty(h.declarations)));
+
+-- Sections and labels
+
+helper def : section(statements : Sequence(OclAny), language : String) : String =
+    if statements->isEmpty() then OclUndefined else thisModule.renderStatements(statements, language) endif;
+
+-- Rules
+
+rule Arrangement {
+    from
+        a : Sectioned!Arrangement (
+            not a.isStandalone
+        )
+    to
+        k : Structural!Arrangement (
+            instances <- a.instances->collect(i | thisModule.NewInstance(i))
+        )
+}
+
+-- A standalone arrangement becomes the structural machine of its only machine.
+entrypoint rule StandaloneMachines() {
+    do {
+        for (a in Sectioned!Arrangement.allInstancesFrom('IN')->select(x | x.isStandalone)) {
+            thisModule.NewMachine(a.machines->first());
+        }
+    }
+}
+
+rule NewInstance(anInstance : Sectioned!Instance) {
+    to
+        k : Structural!Instance (
+            name <- anInstance.name,
+            typeFile <- anInstance.machine.name + thisModule.machineFileSuffix,
+            machine <- thisModule.NewMachine(anInstance.machine)
+        )
+    do {
+        k;
+    }
+}
+
+rule NewMachine(aMachine : Sectioned!Machine) {
+    using {
+        lang : String = aMachine.hostLanguage;
+        sources : Sequence(Sectioned!State) = aMachine.orderedStates;
+        copies : Sequence(Structural!State) = sources->collect(s | thisModule.NewState(s, lang));
+    }
+    to
+        k : Structural!Machine (
+            name <- aMachine.name,
+            language <- lang,
+            llfsm <- l,
+            boilerplate <- b,
+            stateBoilerplates <- copies->collect(s | thisModule.NewStateBoilerplate(s))
+        ),
+        l : Structural!LLFSM (
+            states <- copies,
+            transitions <- sources->collect(s | s.transitions->collect(t |
+                thisModule.NewTransition(t, copies->at(sources->indexOf(s)), copies->at(sources->indexOf(t.target)), lang)))
+                ->flatten(),
+            suspendState <- if aMachine.suspendState.oclIsUndefined() then OclUndefined
+                            else copies->at(sources->indexOf(aMachine.suspendState)) endif
+        ),
+        b : Structural!Boilerplate (
+            includes <- aMachine.includesText,
+            variables <- aMachine.variablesText,
+            functions <- aMachine.functionsText
+        )
+    do {
+        k;
+    }
+}
+
+rule NewState(aState : Sectioned!State, aLanguage : String) {
+    to
+        k : Structural!State (
+            name <- aState.name,
+            activities <- a
+        ),
+        a : Structural!StateActivities (
+            onEntry <- thisModule.section(aState.onEntry, aLanguage),
+            onExit <- thisModule.section(aState.onExit, aLanguage),
+            internal <- thisModule.section(aState.internal, aLanguage),
+            onSuspend <- thisModule.section(aState.onSuspend, aLanguage),
+            onResume <- thisModule.section(aState.onResume, aLanguage)
+        )
+    do {
+        k;
+    }
+}
+
+rule NewTransition(aTransition : Sectioned!Transition, aSource : Structural!State, aTarget : Structural!State,
+                   aLanguage : String) {
+    to
+        k : Structural!Transition (
+            label <- thisModule.renderExpression(aTransition.label, aLanguage),
+            source <- aSource,
+            target <- aTarget
+        )
+    do {
+        k;
+    }
+}
+
+rule NewStateBoilerplate(aState : Structural!State) {
+    to
+        k : Structural!StateBoilerplateEntry (
+            state <- aState,
+            boilerplate <- b
+        ),
+        b : Structural!Boilerplate
+    do {
+        k;
+    }
+}

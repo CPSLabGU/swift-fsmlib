@@ -148,6 +148,88 @@ public struct LLFSMTransformations {
         return TransformationResult(resource: target, diagnostics: diagnostics)
     }
 
+    /// Transform a sectioned arrangement back into a structural machine or arrangement.
+    ///
+    /// The transformation inverts ``structuralToSectioned(_:arrangementName:uri:)``.
+    /// An arrangement whose language is set and whose only instance and only
+    /// machine carry its name becomes a single structural machine; any other
+    /// arrangement becomes a structural arrangement that holds one copy of a
+    /// machine per instance. The initial state of each machine comes first.
+    ///
+    /// Every section and label becomes host-language text in the language of
+    /// its machine, else of its arrangement, else
+    /// ``LLFSMTransformations/defaultLanguage``. Opaque text is kept byte for
+    /// byte. Typed nodes are written in the form that ``ExpressionTyper``
+    /// reads back: a comparison of the state time with `after(…)`,
+    /// `after_ms(…)` or `timeout(…)`, a line of output with the print call of
+    /// the language, and operators with only the parentheses they need.
+    /// The host declarations of a machine become its boilerplate, and its
+    /// variables are declared again in the variables text.
+    ///
+    /// Some structural information cannot be recovered and is reported as
+    /// ``TransformationWarning/Kind/notRecovered(_:owner:)``: include paths
+    /// and layouts are not kept by the sectioned level; the boilerplate of
+    /// states was merged into the host declarations of their machine and
+    /// stays in the machine boilerplate; recognised variable declarations
+    /// are written in canonical form without their comments; and shared
+    /// declarations, instance bindings and machines without instances have
+    /// no place in structural models. Sections and labels that held only
+    /// white space come back empty.
+    ///
+    /// - Parameters:
+    ///   - source: The resource whose root is a sectioned arrangement.
+    ///   - uri: The URI of the resource to create.
+    /// - Returns: The structural model and the warnings of the transformation.
+    /// - Throws: ``LLFSMTransformationError`` if the source has no sectioned
+    ///   arrangement, or if the transformation cannot be loaded or fails, for
+    ///   example because a typed node belongs to a language that no bundled
+    ///   module writes.
+    public func sectionedToStructural(
+        _ source: Resource,
+        uri: String = LLFSMTransformations.defaultStructuralURI
+    ) async throws -> TransformationResult {
+        let index = await KernelModelIndex(resource: source)
+        let arrangementClass = metamodels.sectioned.arrangementClass
+        guard index.roots.compactMap(index.object).contains(where: {
+            StructuralDeclarations.matches($0.eClass, arrangementClass)
+        }) else {
+            throw LLFSMTransformationError.missingRoot(arrangementClass.name)
+        }
+        let renderer = try await HostTextRenderer(resource: source)
+        let target = await makeTarget(uri: uri)
+        try await run(
+            .sectionedToStructural,
+            sources: [Alias.source: source, Alias.kernelSource: source],
+            targets: [Alias.target: target],
+            parameters: LLFSMTransformationNames.parameters(),
+            nativeHelpers: renderer.nativeHelpers)
+        let diagnostics = await StructuralRecoveryDiagnostics(metamodels: metamodels).diagnose(source)
+        return TransformationResult(resource: target, diagnostics: diagnostics)
+    }
+
+    /// Transform a kernel arrangement into a structural machine or arrangement.
+    ///
+    /// The kernel model is first rebuilt as a sectioned model with
+    /// ``kernelToSectioned(_:uri:)`` and then transformed with
+    /// ``sectionedToStructural(_:uri:)``. The warnings of both steps are
+    /// reported, those of the first step first.
+    ///
+    /// - Parameters:
+    ///   - source: The resource whose root is a kernel arrangement.
+    ///   - uri: The URI of the resource to create.
+    /// - Returns: The structural model and the warnings of both steps.
+    /// - Throws: ``LLFSMTransformationError`` if a step cannot be loaded or fails.
+    public func kernelToStructural(
+        _ source: Resource,
+        uri: String = LLFSMTransformations.defaultStructuralURI
+    ) async throws -> TransformationResult {
+        let sectioned = try await kernelToSectioned(source)
+        let structural = try await sectionedToStructural(sectioned.resource, uri: uri)
+        var diagnostics = sectioned.diagnostics
+        diagnostics.merge(structural.diagnostics)
+        return TransformationResult(resource: structural.resource, diagnostics: diagnostics)
+    }
+
     // MARK: - Running Modules
 
     /// The name given to a sectioned arrangement made from a structural arrangement by default.
@@ -158,6 +240,12 @@ public struct LLFSMTransformations {
 
     /// The URI given to sectioned models by default.
     public nonisolated static let defaultSectionedURI = "memory:/sectioned.xmi"
+
+    /// The URI given to structural models by default.
+    public nonisolated static let defaultStructuralURI = "memory:/structural.xmi"
+
+    /// The language of structural machines made from sectioned machines that name none.
+    public nonisolated static let defaultLanguage = LLFSMTransformationNames.defaultLanguage
 
     /// The model aliases of the transformation headers.
     private typealias Alias = LLFSMTransformationNames.Alias

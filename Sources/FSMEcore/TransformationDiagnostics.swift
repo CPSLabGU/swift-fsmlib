@@ -55,6 +55,31 @@ public struct TransformationWarning: Sendable, Hashable, CustomStringConvertible
         ///   - section: The name of the section that held the text.
         ///   - owner: The name of the machine or state that held the section.
         case droppedText(section: String, owner: String)
+
+        /// Structural information that the source level does not keep could not be recovered.
+        ///
+        /// - Parameters:
+        ///   - information: What could not be recovered.
+        ///   - owner: The name of the machine, arrangement or instance concerned.
+        case notRecovered(StructuralInformation, owner: String)
+    }
+
+    /// The information of structural models that the sectioned and kernel levels do not keep.
+    public enum StructuralInformation: String, CaseIterable, Sendable, Hashable {
+        /// The include path of a machine.
+        case includePath
+        /// The layout of the states and transitions of a machine and the window layout of its editor.
+        case layout
+        /// The boilerplate of the states of a machine, which became host declarations of the machine.
+        case stateBoilerplate
+        /// The layout and comments of the variable declarations that the typing pass recognised.
+        case declarationFormatting
+        /// The shared types, variables, functions and host declarations of an arrangement.
+        case sharedDeclarations
+        /// The instance-specific initial values of an instance.
+        case instanceBindings
+        /// A machine without instances, which a structural arrangement cannot hold.
+        case uninstantiatedMachine
     }
 
     /// What was lost.
@@ -80,11 +105,33 @@ public struct TransformationWarning: Sendable, Hashable, CustomStringConvertible
             return "The \(operation) control of instance '\(instance)' cannot be encoded and was dropped"
         case .droppedText(let section, let owner):
             return "The \(section) text of '\(owner)' has no place at the target level and was left out"
+        case .notRecovered(let information, let owner):
+            return Self.message(notRecovering: information, owner: owner)
         }
     }
 
     /// The ``message`` of the warning.
     public var description: String { message }
+
+    /// The sentence for structural information that could not be recovered.
+    private static func message(notRecovering information: StructuralInformation, owner: String) -> String {
+        switch information {
+        case .includePath:
+            return "The include path of '\(owner)' is not kept by the source level and was left empty"
+        case .layout:
+            return "The layout of '\(owner)' is not kept by the source level and was left out"
+        case .stateBoilerplate:
+            return "The state boilerplate of '\(owner)' was merged into its machine boilerplate"
+        case .declarationFormatting:
+            return "The variable declarations of '\(owner)' are written in canonical form without their comments"
+        case .sharedDeclarations:
+            return "The shared declarations of '\(owner)' have no place in structural models and were left out"
+        case .instanceBindings:
+            return "The bindings of instance '\(owner)' have no place in structural models and were left out"
+        case .uninstantiatedMachine:
+            return "Machine '\(owner)' has no instance and has no place in a structural arrangement"
+        }
+    }
 }
 
 /// The warnings collected while a transformation ran.
@@ -110,6 +157,13 @@ public struct TransformationDiagnostics: Sendable, Equatable {
         let warning = TransformationWarning(kind)
         guard recorded.insert(warning).inserted else { return }
         warnings.append(warning)
+    }
+
+    /// Record the warnings of another collection that have not been recorded before.
+    ///
+    /// - Parameter other: The warnings to add, in their order.
+    mutating func merge(_ other: TransformationDiagnostics) {
+        for warning in other.warnings { record(warning.kind) }
     }
 }
 
