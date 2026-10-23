@@ -129,11 +129,20 @@ public struct KernelTemplateGenerator {
     /// The kernel metamodel that types the generated models.
     public let metamodel: KernelMetamodel
 
+    /// The settings with which the templates run.
+    ///
+    /// Parameters given to a generation run take precedence over parameters of
+    /// the same name in the settings.
+    public var settings: TemplateSettings
+
     /// Create a generator.
     ///
-    /// - Parameter metamodel: The kernel metamodel that types the models to generate.
-    public init(metamodel: KernelMetamodel) {
+    /// - Parameters:
+    ///   - metamodel: The kernel metamodel that types the models to generate.
+    ///   - settings: The settings with which the templates run (default settings).
+    public init(metamodel: KernelMetamodel, settings: TemplateSettings = TemplateSettings()) {
         self.metamodel = metamodel
+        self.settings = settings
     }
 
     /// The bundled directory that holds the kernel template sets and the shared modules.
@@ -218,6 +227,7 @@ public struct KernelTemplateGenerator {
             throw KernelTemplateGeneratorError.missingTemplateSet(target)
         }
         let arrangement = try await arrangement(in: resource)
+        let parameters = settings.parameters.merging(parameters) { _, given in given }
         if validating {
             let profile = target.validationProfile(parameters: parameters)
             let diagnostics = await KernelValidator(metamodel: metamodel, profile: profile).validate(resource)
@@ -228,11 +238,12 @@ public struct KernelTemplateGenerator {
         let moduleURL = directory
             .appendingPathComponent(templateSet.mainModule)
             .appendingPathExtension(MTLSyntax.moduleFileExtension)
-        let module = try await MTLParser(searchPaths: [templates]).parse(moduleURL)
+        let module = try await MTLParser(searchPaths: settings.searchPaths + [templates]).parse(moduleURL)
         var options = MTLGeneratorOptions()
         if let delimiter = templateSet.options?.lineDelimiter { options.lineDelimiter = delimiter }
         let strategy = MTLInMemoryStrategy(options: options)
-        let generator = MTLGenerator(module: module, generationStrategy: strategy)
+        let generator = MTLGenerator(
+            module: module, generationStrategy: strategy, unsetFeatureReads: settings.unsetFeatureReads)
         let services = try MTLParameterServices(parameters: parameters)
         services.bind(to: generator)
         generator.register(services)

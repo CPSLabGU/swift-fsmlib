@@ -246,7 +246,34 @@ fsmconvert Example.machine \
   --output Example.scxml
 ```
 
-The `--transform` option accepts `structural2machine`, `structural2scxml`, `structural2cmake`, and `structural2layout`, and requires `--metamodel structural`. The value `--metamodel executable` is deprecated: it maps to the planned `sectioned` level, prints a deprecation warning, and exits with an error because that level is not yet available.
+The `--transform` option accepts `structural2machine`, `structural2scxml`, `structural2cmake`, and `structural2layout`, and requires `--metamodel structural`.
+
+Native formats are written by the bundled templates, byte for byte as the Swift language bindings write them; `--generator swift` writes them with the Swift language bindings instead.
+
+### Levels and Kernel Targets
+
+`fsmconvert` reads XMI and JSON models at the structural, sectioned and kernel levels, recognising the level by the namespace of the root element, and transforms a model along the shortest chain of levels to the one that `--format` needs. `--format` accepts the native formats, `xmi` and `json` (at the level that `--metamodel` names, or at the level of the input), `structural-xmi`, `sectioned-xmi` and `kernel-xmi`, and the kernel targets `kernel-c`, `kernel-cpp`, `kernel-swift`, `kernel-java`, `smv`, `tla` and `dot`, whose files are written into the `--output` directory. With `--metamodel kernel`, `c`, `cpp`, `swift` and `java` name the kernel targets of those languages. The value `--metamodel executable` is a deprecated name of `sectioned` and prints a deprecation warning.
+
+Write a machine as a kernel model, with self transitions that re-enter their state:
+
+```bash
+fsmconvert Example.machine --format kernel-xmi --semantics selfLoop=reentry --output Example.xmi
+```
+
+Generate a nuXmv model with a bounded round counter, and a C program:
+
+```bash
+fsmconvert Example.xmi --format smv --max-rounds 20 --output Verification
+fsmconvert ExampleC.machine --metamodel kernel --format c --output Program
+```
+
+Validate the kernel model of a machine; each diagnostic is printed on standard error and the exit status is 1 if any is an error:
+
+```bash
+fsmconvert Example.machine --validate --profile strict
+```
+
+`--semantics option=value` sets the options of the encoding into the kernel (`selfLoop`, `elideEmptySections`, `suspension`, `resumeFallback`, `time`, `inState`). The verification targets take `--max-rounds N`, `--entry ringlet|fused`, `--sanity` and `--opaque reject|havoc`; `--param name=value` and `--template-path` pass parameters and module directories to the templates, `--reference-style plain` writes XMI as the Eclipse Modeling Framework does, and `--unset-features undefined` reads unset features as undefined. Warnings are printed on standard error, and a progress bar is shown when standard error is a terminal; `--quiet` hides both. Native formats are not yet written from sectioned or kernel models. The `fsmconvert` documentation describes every option and target.
 
 Create an arrangement from multiple machines:
 

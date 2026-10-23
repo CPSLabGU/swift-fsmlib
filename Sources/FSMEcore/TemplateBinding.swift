@@ -97,6 +97,7 @@ public struct TemplateBinding: OutputLanguage {
     ///   - name: The name of the machine, which is also the name of the bundle without extension.
     ///   - format: The output format.
     ///   - isSuspensible: The suspensibility of the variant that ``files`` holds.
+    ///   - settings: The settings with which the templates run (default settings).
     /// - Returns: A binding holding the rendered files of both suspensibility variants.
     /// - Throws: ``StructuralTemplateGeneratorError/unsupportedFormat(_:)`` if no template set
     ///   writes the format, or an error if the templates fail.
@@ -105,9 +106,10 @@ public struct TemplateBinding: OutputLanguage {
         for machine: Machine,
         named name: String,
         format: Format,
-        isSuspensible: Bool
+        isSuspensible: Bool,
+        settings: TemplateSettings = TemplateSettings()
     ) async throws -> TemplateBinding {
-        let engine = try StructuralTemplateEngine()
+        let engine = try StructuralTemplateEngine(settings: settings)
         let (set, files) = try await engine.renderMachine(
             machine, named: name, format: format, isSuspensible: isSuspensible)
         var variants = [isSuspensible: files]
@@ -127,6 +129,7 @@ public struct TemplateBinding: OutputLanguage {
     ///   - name: The name of the arrangement, which is also the name of the bundle without extension.
     ///   - format: The output format.
     ///   - isSuspensible: Whether to render the suspensible variant of the files.
+    ///   - settings: The settings with which the templates run (default settings).
     /// - Returns: A binding holding the rendered files of the arrangement and its machines.
     /// - Throws: ``StructuralTemplateGeneratorError/unsupportedFormat(_:)`` if no template set
     ///   writes arrangements in the format, or an error if the templates fail.
@@ -135,9 +138,10 @@ public struct TemplateBinding: OutputLanguage {
         for arrangement: Arrangement,
         named name: String,
         format: Format,
-        isSuspensible: Bool
+        isSuspensible: Bool,
+        settings: TemplateSettings = TemplateSettings()
     ) async throws -> TemplateBinding {
-        let engine = try StructuralTemplateEngine()
+        let engine = try StructuralTemplateEngine(settings: settings)
         let (set, files) = try await engine.renderArrangement(
             arrangement, named: name, format: format, isSuspensible: isSuspensible)
         let suffix = MachineDirectoryWrapper.dottedSuffix
@@ -147,6 +151,18 @@ public struct TemplateBinding: OutputLanguage {
         return TemplateBinding(
             name: set.language, format: format, bundleName: name, files: files,
             isSingleFile: set.isSingleFile, machineDirectories: directories)
+    }
+
+    /// Tell whether the bundled templates write a format.
+    ///
+    /// - Parameters:
+    ///   - format: The output format.
+    ///   - arrangements: Whether the templates must also write arrangements in the format.
+    /// - Returns: `true` if a bundled template set writes the format, and arrangements if asked for.
+    @MainActor
+    public static func supports(_ format: Format, arrangements: Bool = false) -> Bool {
+        guard let root = StructuralTemplateEngine.bundledRoot else { return false }
+        return StructuralTemplateEngine(root: root).writes(format, arrangements: arrangements)
     }
 
     /// The content of the single file that a single-file binding writes.

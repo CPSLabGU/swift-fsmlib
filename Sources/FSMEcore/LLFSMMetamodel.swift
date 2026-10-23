@@ -21,6 +21,11 @@ import Foundation
 /// used by `swift-fsmlib`, such as machines, states, transitions, layout
 /// entries, and arrangement instances.
 public struct LLFSMMetamodel: Sendable {
+    /// The namespace URI of the structural metamodel.
+    ///
+    /// Structural model documents qualify their elements with this namespace.
+    public static let namespaceURI = "http://cpslabgu.github.io/LLFSMStructural"
+
     /// Loaded package for the LLFSMStructural metamodel.
     ///
     /// This package contains every classifier declared by the structural

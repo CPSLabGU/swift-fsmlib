@@ -100,24 +100,34 @@ struct StructuralTemplateEngine {
     /// The directory that holds the template sets.
     let root: URL
 
+    /// The settings with which the templates run.
+    let settings: TemplateSettings
+
     /// Create an engine for the bundled template sets.
     ///
+    /// - Parameter settings: The settings with which the templates run (default settings).
     /// - Throws: ``StructuralTemplateGeneratorError/missingTemplate(_:)`` if the
     ///   bundled template root cannot be found.
-    init() throws {
-        guard let root = Bundle.module.url(
-            forResource: Self.rootName, withExtension: nil, subdirectory: Self.resourceDirectory
-        ) else {
+    init(settings: TemplateSettings = TemplateSettings()) throws {
+        guard let root = Self.bundledRoot else {
             throw StructuralTemplateGeneratorError.missingTemplate(Self.rootName)
         }
-        self.init(root: root)
+        self.init(root: root, settings: settings)
     }
 
     /// Create an engine for the template sets below a directory.
     ///
-    /// - Parameter root: The directory whose subdirectories hold the template sets.
-    init(root: URL) {
+    /// - Parameters:
+    ///   - root: The directory whose subdirectories hold the template sets.
+    ///   - settings: The settings with which the templates run (default settings).
+    init(root: URL, settings: TemplateSettings = TemplateSettings()) {
         self.root = root
+        self.settings = settings
+    }
+
+    /// The bundled directory that holds the structural template sets, if it is present.
+    static var bundledRoot: URL? {
+        Bundle.module.url(forResource: rootName, withExtension: nil, subdirectory: resourceDirectory)
     }
 
     /// Read the manifests of all template sets.
@@ -141,6 +151,17 @@ struct StructuralTemplateEngine {
             }
         }
         return sets
+    }
+
+    /// Tell whether a template set writes a format.
+    ///
+    /// - Parameters:
+    ///   - format: The output format.
+    ///   - arrangements: Whether the set must also write arrangements.
+    /// - Returns: `true` if a set writes the format, and arrangements if asked for.
+    func writes(_ format: Format, arrangements: Bool = false) -> Bool {
+        guard let match = try? templateSet(for: format) else { return false }
+        return !arrangements || match.set.arrangementTemplate != nil
     }
 
     /// Find the template set that writes a format.
@@ -232,8 +253,9 @@ struct StructuralTemplateEngine {
     ) async throws -> [String: Data] {
         let moduleURL = directory.appendingPathComponent(set.mainModule)
             .appendingPathExtension(Self.moduleExtension)
-        let parser = MTLParser(searchPaths: [root])
+        let parser = MTLParser(searchPaths: settings.searchPaths + [root])
         let module = try await parser.parse(moduleURL)
+        let parameters = try MTLParameterServices(parameters: settings.parameters)
         let output = FileManager.default.temporaryDirectory
             .appendingPathComponent("fsmecore-templates-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
@@ -242,8 +264,11 @@ struct StructuralTemplateEngine {
         let generator = MTLGenerator(
             module: module,
             generationStrategy: strategy,
-            serviceProviders: [StructuralTemplateServices(), MTLResourceServices(roots: [directory])]
+            serviceProviders: [StructuralTemplateServices(), MTLResourceServices(roots: [directory])],
+            unsetFeatureReads: settings.unsetFeatureReads
         )
+        parameters.bind(to: generator)
+        generator.register(parameters)
         try await generator.generate(
             mainTemplate: template, arguments: arguments, models: [Self.modelAlias: resource])
         return try Self.files(below: output)
