@@ -10,7 +10,7 @@
 
 The module keeps the native Swift readers and writers as the production boundary while exposing metamodel-backed workflows for testing, analysis, and transformation. Structural models mirror the in-memory `swift-fsmlib` types so current file formats can round-trip without semantic drift.
 
-Bundled MTL templates generate machine, SCXML, CMake, and layout artefacts from structural models, and the results match those produced by the native Swift code.
+Bundled MTL templates write C, Objective-C++ and SCXML machine and arrangement bundles from structural models, byte for byte as the native Swift language bindings write them, so that ``TemplateBinding`` can take the place of a Swift language binding.
 
 ## Topics
 
@@ -18,6 +18,7 @@ Bundled MTL templates generate machine, SCXML, CMake, and layout artefacts from 
 
 - <doc:Background>
 - <doc:StructuralModels>
+- <doc:TemplateGeneration>
 
 ### Structural Models
 
@@ -25,12 +26,22 @@ Bundled MTL templates generate machine, SCXML, CMake, and layout artefacts from 
 - ``MachineEcoreCodec``
 - ``ArrangementEcoreCodec``
 - ``XMIRoundTrip``
+
+### Template Generation
+
+- ``TemplateBinding``
+- ``TemplateFileStorage``
 - ``StructuralTemplateGenerator``
+- ``StructuralTemplateSet``
+- ``StructuralTemplateServices``
+- ``StructuralTemplateServiceName``
 
 ### Errors
 
 - ``LLFSMMetamodelError``
 - ``StructuralTemplateGeneratorError``
+- ``TemplateBindingError``
+- ``StructuralTemplateServicesError``
 
 ### Tutorials
 

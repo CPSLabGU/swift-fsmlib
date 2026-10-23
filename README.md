@@ -119,7 +119,7 @@ let roundTrip = XMIRoundTrip(metamodel: metamodel)
 try await roundTrip.write(machine: machine, name: "Example", to: URL(fileURLWithPath: "Example.xmi"))
 ```
 
-Generate an SCXML file through a bundled MTL template (the bundled templates are `structural2machine`, `structural2scxml`, `structural2cmake`, and `structural2layout`):
+Generate an SCXML file through the bundled MTL templates:
 
 ```swift
 import FSM
@@ -133,6 +133,23 @@ try await generator.generateSCXML(
     to: URL(fileURLWithPath: "Example.scxml")
 )
 ```
+
+## Template Engine
+
+`FSMEcore` bundles MTL templates for every output format that has a Swift language binding: C, Objective-C++ and SCXML. They read a machine or an arrangement in the structural metamodel and write every file of the bundle byte for byte as the Swift bindings do, from the generated code and CMake files to the layout files and the Objective-C++ infrastructure headers. `TemplateBinding` turns their output into an output language, so the templates can take the place of a Swift language binding:
+
+```swift
+import FSM
+import FSMEcore
+import Foundation
+
+let binding = try await TemplateBinding.make(for: machine, named: "Example", format: .c, isSuspensible: true)
+try machine.write(to: URL(fileURLWithPath: "Example.machine"), language: binding, isSuspensible: true)
+```
+
+`TemplateBinding.make(for:named:format:isSuspensible:)` also renders an arrangement together with the bundles of its machines, which an `ArrangementWrapper` using the binding as its language then writes. The files are rendered for the given name and format, so write the bundle with the same name; machines are rendered in both suspensibility variants, and each bundle receives the variant that the Swift binding would write.
+
+Each template set has its own directory with a `templateset.json` manifest below `Sources/FSMEcore/Resources/Templates/structural`, alongside shared modules for the files every machine bundle holds; files emitted verbatim, such as the infrastructure headers, are kept as plain resource files. Where the Swift arrangement code lists machine types in an unspecified order, the templates use the order of the first instance of each type.
 
 ## Command-Line Usage
 

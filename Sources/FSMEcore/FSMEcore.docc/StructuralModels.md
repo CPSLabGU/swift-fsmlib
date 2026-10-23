@@ -28,7 +28,7 @@ Use ``XMIRoundTrip/loadResource(from:diagnostics:)`` when you need the parsed ob
 
 ## Generating Artefacts
 
-``StructuralTemplateGenerator`` runs the bundled model-to-text templates (`structural2machine`, `structural2scxml`, `structural2cmake`, and `structural2layout`) to generate machine bundles, SCXML, CMake files, and layout files.
+``StructuralTemplateGenerator`` and ``TemplateBinding`` run the bundled model-to-text templates, which write C, Objective-C++ and SCXML bundles exactly as the Swift language bindings do. See <doc:TemplateGeneration>.
 
 ```swift
 let generator = StructuralTemplateGenerator()
@@ -38,6 +38,8 @@ try await generator.generateSCXML(
     to: outputURL
 )
 ```
+
+Additional state layout properties, such as editor colours, are kept as typed property list entries, so that every value keeps its property list type.
 
 ## Future Levels
 

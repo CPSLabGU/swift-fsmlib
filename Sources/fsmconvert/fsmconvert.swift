@@ -78,9 +78,10 @@ struct FSMConvert: AsyncParsableCommand {
 
     /// The MTL template to apply after metamodel loading.
     ///
-    /// This option selects one of the bundled structural templates
+    /// This option selects one of the structural template transforms
     /// (`structural2machine`, `structural2scxml`, `structural2cmake`, or
-    /// `structural2layout`) and requires `--metamodel structural`.
+    /// `structural2layout`), which run the bundled template sets, and
+    /// requires `--metamodel structural`.
     @Option(name: .long, help: "Apply a bundled structural MTL template after metamodel loading.")
     var transform: String?
 

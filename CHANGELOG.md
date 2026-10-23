@@ -6,13 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Structural Template Generation**: `StructuralTemplateGenerator` now renders machines through the bundled template sets instead of copying files written by the Swift bindings, and gains the `unsupportedFormat` and `invalidTemplateSet` errors. Boilerplate sections and state activities that a machine does not have are no longer stored as empty strings in structural models.
+
 ### Removed
+
+- **Pass-Through Templates**: Removed `GeneratedFileDescriptor` and the `structural2machine`, `structural2scxml`, `structural2cmake` and `structural2layout` template files; the `fsmconvert --transform` values of the same names now run the bundled template sets.
 
 - **Executable and Formal Metamodel Levels**: Removed the executable and formal LLFSM metamodels together with `ExecutableLLFSMMetamodel`, `ExecutableMachineCodec`, `ExecutableArrangementCodec`, `ExecutableXMIRoundTrip`, `ExecutableTemplateGenerator`, `FormalLLFSMMetamodel`, `LLFSMATLTransformer` and their error types, the bundled `llfsm2*` MTL templates, the bundled ATL transforms and the executable artefact tutorial. `FSMEcore` now provides the structural level only; a `sectioned` level and a `kernel` level are planned.
 
 - **fsmconvert ATL Options**: Removed the `--atl` and `--metamodel-path` options. The value `--metamodel executable` is deprecated: it maps to the planned `sectioned` level, prints a deprecation warning and exits with an error, as does `--metamodel sectioned`, because that level is not yet available in this release.
 
 ### Added
+
+- **Template Engine**: Bundled MTL template sets for C, Objective-C++ and SCXML write machine and arrangement bundles from structural models byte for byte as the Swift language bindings do, including CMake files, layout files and the Objective-C++ infrastructure headers. `TemplateBinding` is an `OutputLanguage` that holds the rendered files and places them into the bundles that `Machine.write(to:language:isSuspensible:)` and `ArrangementWrapper` write; `TemplateBinding.make(for:named:format:isSuspensible:)` renders a machine or an arrangement. `TemplateFileStorage` writes single-file formats such as SCXML. `StructuralTemplateSet` describes the `templateset.json` manifest of a template set, and `StructuralTemplateServices` offers the template services `formatted`, `base64Decoded` and `eIsSet`.
+
+- **Typed Layout Properties**: The structural metamodel stores additional state layout properties as typed `PropertyListEntry` and `PropertyListValue` objects, so that real, integer, Boolean, string, data, date, array and dictionary values keep their property list types; `LLFSMMetamodel` exposes the new classes. Documents that store these properties as JSON text are still read.
 
 - **XMI Conversion Diagnostics**: `XMIRoundTrip` gains `readMachine(from:diagnostics:)`, `readArrangement(from:diagnostics:)`, `write(machine:name:to:diagnostics:)` and `write(arrangement:to:diagnostics:)`, which collect the `ConversionDiagnostics` reported by the XMI parser and serialiser, and `loadResource(from:diagnostics:)`, which returns the parsed structural object graph. The existing methods are unchanged.
 
