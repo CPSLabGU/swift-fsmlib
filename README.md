@@ -158,6 +158,31 @@ for diagnostic in await validator.validate(resource) {
 
 Kernel documents use the namespace `http://cpslabgu.github.io/llfsm/kernel` and sectioned documents `http://cpslabgu.github.io/llfsm/sectioned`; a sectioned document contains kernel statements and expressions under the kernel namespace. The strict profile admits only typed kernel nodes; the relaxed profile also admits opaque host-language expressions, statements, types and host declarations. Each diagnostic names its rule (`STRUCT`, `W1` to `W9`, `W7?` or `STRICT`), its severity, the path of the offending object and a message. The `MetamodelLevels` and `SectionedSemantics` articles in the `FSMEcore` documentation describe the levels, the rules and the execution semantics.
 
+### Transformations
+
+Transform a structural machine into the sectioned level, encode it into the kernel and rebuild the sectioned model from the encoding:
+
+```swift
+import ECore
+import FSM
+import FSMEcore
+
+let structural = try await LLFSMMetamodel()
+let source = Resource(uri: "memory:/structural.xmi")
+_ = await MachineEcoreCodec(metamodel: structural).encode(machine, name: "Lights", into: source)
+
+let transformations = try await LLFSMTransformations()
+let sectioned = try await transformations.structuralToSectioned(source)
+let options = try SectionedToKernelOptions(keyValues: ["selfLoop=reentry", "time=clock"])
+let kernel = try await transformations.sectionedToKernel(sectioned.resource, options: options)
+let rebuilt = try await transformations.kernelToSectioned(kernel.resource)
+for warning in sectioned.diagnostics.warnings + kernel.diagnostics.warnings + rebuilt.diagnostics.warnings {
+    print(warning)
+}
+```
+
+The structural transformation keeps every section and label as opaque host-language text in the language of the machine, and the boilerplate as host declarations. A typing pass then declares the simple variables of each machine (`int`, `unsigned`, `bool` and arrays of these) and replaces each label and section that lies completely in the typed subset by typed kernel expressions and statements, for example `after(60)` by a comparison of the time since the state was entered, or `printf("go\n");` by a print statement; everything else stays opaque with its exact text. The encoding into the kernel follows the traditional execution order by default; the options `selfLoop`, `elideEmptySections`, `suspension`, `resumeFallback`, `time` and `inState` select the alternatives described in the `SectionedSemantics` article, and every kernel state and transition it creates records its origin, so that the inverse transformation rebuilds the sectioned model exactly. A kernel model without origin records is mapped flatly, which the diagnostics report. The `Transformations` article in the `FSMEcore` documentation describes the typed subset, the names the encoding adds and the diagnostics.
+
 ## Template Engine
 
 `FSMEcore` bundles MTL templates for every output format that has a Swift language binding: C, Objective-C++ and SCXML. They read a machine or an arrangement in the structural metamodel and write every file of the bundle byte for byte as the Swift bindings do, from the generated code and CMake files to the layout files and the Objective-C++ infrastructure headers. `TemplateBinding` turns their output into an output language, so the templates can take the place of a Swift language binding:

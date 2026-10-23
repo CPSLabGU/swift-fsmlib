@@ -14,6 +14,8 @@ Bundled MTL templates write C, Objective-C++ and SCXML machine and arrangement b
 
 The sectioned and kernel metamodels describe LLFSMs with typed, language-neutral expressions and statements. The sectioned level is the traditional view with code sections; the kernel level is the sectionless core into which sectioned models are encoded, and ``KernelValidator`` checks kernel models against its well-formedness rules.
 
+``LLFSMTransformations`` transforms structural models into sectioned models, encodes sectioned models into the kernel under the semantic options of ``SectionedToKernelOptions``, and rebuilds sectioned models from kernel models. ``ExpressionTyper`` turns host-language labels and sections into typed kernel nodes where they lie in the typed subset.
+
 ## Topics
 
 ### Essentials
@@ -23,6 +25,7 @@ The sectioned and kernel metamodels describe LLFSMs with typed, language-neutral
 - <doc:TemplateGeneration>
 - <doc:MetamodelLevels>
 - <doc:SectionedSemantics>
+- <doc:Transformations>
 
 ### Structural Models
 
@@ -57,6 +60,20 @@ The sectioned and kernel metamodels describe LLFSMs with typed, language-neutral
 - ``KernelRule``
 - ``KernelDiagnostic``
 
+### Transformations
+
+- ``LLFSMTransformations``
+- ``TransformationResult``
+- ``SectionedToKernelOptions``
+- ``TransformationDiagnostics``
+- ``TransformationWarning``
+
+### Typing Host-Language Text
+
+- ``ExpressionTyper``
+- ``VariableDeclarationScanner``
+- ``ScannedType``
+
 ### Origins
 
 - ``OriginAnnotations``
@@ -68,6 +85,8 @@ The sectioned and kernel metamodels describe LLFSMs with typed, language-neutral
 - ``LLFSMMetamodelError``
 - ``LLFSMMetamodelsError``
 - ``OriginAnnotationsError``
+- ``LLFSMTransformationError``
+- ``SectionedToKernelOptionsError``
 - ``StructuralTemplateGeneratorError``
 - ``TemplateBindingError``
 - ``StructuralTemplateServicesError``
