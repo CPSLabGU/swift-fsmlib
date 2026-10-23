@@ -10,6 +10,8 @@ Language-neutral queries shared by every kernel target.
   effectiveLanguage(o)  the language of opaque text or host declarations: their own,
                         else their machine's, else the arrangement's
   printProblems(a)      the Print values that no printer can print
+  joinedText(texts)     the texts of a sequence written one after the other
+  verbatimExpression(e) the text of an opaque expression, or null for a typed one
 [/comment]
 [module kernel('http://cpslabgu.github.io/llfsm/kernel')/]
 
@@ -150,3 +152,42 @@ Language-neutral queries shared by every kernel target.
 
 [comment Whether a statement text already ends a statement, so that no terminator is needed. /]
 [query public isTerminated(text : String) : Boolean = text.trim().endsWith(';') or text.trim().endsWith('}')/]
+
+[comment The texts of a sequence written one after the other, or the empty string for none. /]
+[query public joinedText(texts : Sequence(String)) : String = if texts->isEmpty() then '' else texts->sum() endif/]
+
+[comment The operation that compares the operands of a binary operation in the opposite order. /]
+[query public mirroredOperation(operation : String) : String =
+  if operation = 'lessThan' then 'greaterThan'
+  else if operation = 'greaterThan' then 'lessThan'
+  else if operation = 'lessOrEqual' then 'greaterOrEqual'
+  else if operation = 'greaterOrEqual' then 'lessOrEqual'
+  else operation endif endif endif endif/]
+
+[comment The state-time operand of a comparison with a state time on exactly one side, or null. /]
+[query public stateTimeOperand(e : BinaryExpression) : OclAny =
+  if e.left.oclIsKindOf(StateTimeExpression) and not e.right.oclIsKindOf(StateTimeExpression) then e.left
+  else if e.right.oclIsKindOf(StateTimeExpression) and not e.left.oclIsKindOf(StateTimeExpression) then e.right
+  else null endif endif/]
+
+[comment The operand that a state time is compared with, for a comparison with a state time on exactly one side. /]
+[query public timeLimit(e : BinaryExpression) : OclAny = if e.left.oclIsKindOf(StateTimeExpression) then e.right else e.left endif/]
+
+[comment The comparison of a state time with its limit, with the state time on the left. /]
+[query public timeComparison(e : BinaryExpression) : String =
+  if e.left.oclIsKindOf(StateTimeExpression) then e.operation.toString() else mirroredOperation(e.operation.toString()) endif/]
+
+[comment The position of an instance in its arrangement, counted from zero. /]
+[query public instanceIndex(i : Instance) : Integer = i.eContainer().instances->indexOf(i) - 1/]
+
+[comment The text of an opaque expression, or null for a typed expression, which needs a host language. /]
+[query public verbatimExpression(e : OclAny) : String = if e.oclIsKindOf(OpaqueExpression) then e.text else null endif/]
+
+[comment The text of a section of opaque statements, or null if a statement is typed, which needs a host language. /]
+[query public verbatimStatements(ss : Sequence(OclAny)) : String =
+  if ss->forAll(s | s.oclIsKindOf(OpaqueStatement)) then
+    (if ss->size() = 1 then ss->first().text else joinedText(ss->collect(s | if s.text.endsWith('\n') then s.text else s.text + '\n' endif)) endif)
+  else null endif/]
+
+[comment The declarations of variables, which need a host language: null unless there are none. /]
+[query public verbatimDeclarations(vs : Sequence(OclAny)) : String = if vs->isEmpty() then '' else null endif/]

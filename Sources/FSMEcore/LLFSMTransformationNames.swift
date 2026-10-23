@@ -22,6 +22,8 @@ enum LLFSMTransformationNames {
         case sectionedToKernel = "sectioned2kernel"
         /// The inverse of the encoding, and the flat mapping of kernel models.
         case kernelToSectioned = "kernel2sectioned"
+        /// Sectioned models back to structural machines and arrangements.
+        case sectionedToStructural = "sectioned2structural"
     }
 
     /// The file extension of the bundled transformations.
@@ -50,6 +52,7 @@ enum LLFSMTransformationNames {
         case internalSuffix, waitSuffix, exitSuffix, suspendSuffix, resumeSuffix, dispatchSuffix
         case timeUpper, millisecondFactor, secondFactor, tickFactor
         case arrangementName
+        case defaultLanguage, machineFileSuffix
     }
 
     /// The shared variable that holds the current time.
@@ -117,6 +120,22 @@ enum LLFSMTransformationNames {
     /// The name given to the arrangement of a single structural machine.
     static let defaultArrangementName = "Arrangement"
 
+    /// The language of structural machines made from sectioned machines that name none.
+    static let defaultLanguage = "c"
+
+    /// The suffix that turns a machine name into the type file of a structural instance.
+    static let machineFileSuffix = ".machine"
+
+    /// The helpers implemented in Swift that the transformations call.
+    enum NativeHelper {
+        /// Renders an expression as host-language text: `renderExpression(e, language)`.
+        static let renderExpression = "renderExpression"
+        /// Renders a section as host-language text: `renderStatements(statements, language)`.
+        static let renderStatements = "renderStatements"
+        /// Renders variable declarations as host-language text: `renderDeclarations(variables, language)`.
+        static let renderDeclarations = "renderDeclarations"
+    }
+
     /// The values of the module parameters that carry the shared names.
     ///
     /// - Parameter arrangementName: The name of the arrangement to create from structural models.
@@ -146,6 +165,8 @@ enum LLFSMTransformationNames {
             case .secondFactor: values[parameter.rawValue] = secondFactor
             case .tickFactor: values[parameter.rawValue] = tickFactor
             case .arrangementName: values[parameter.rawValue] = arrangementName
+            case .defaultLanguage: values[parameter.rawValue] = defaultLanguage
+            case .machineFileSuffix: values[parameter.rawValue] = machineFileSuffix
             }
         }
         return values

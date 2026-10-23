@@ -10,6 +10,16 @@ declared function f without a receiver is the static method
 <Arrangement>Host.f. Generated support identifiers start with llfsm or
 LLFSM. An enumeration literal is <Type>.<literal>, a state
 <Machine>_State.S_<State>.
+
+The host queries render typed nodes as the text of a structural machine
+in Java, in the form that the expression typer reads back: operators with
+Java precedence and only the parentheses it needs, a comparison of the
+state time with after, after_ms or timeout, a line of output with
+System.out.println, and suspend, resume and restart for the control of
+an instance. Opaque text is kept as written. Declarations are written as
+<type> <name>;. A state time outside such a comparison is
+stateTimeMicroseconds(), stateTimeMilliseconds(), stateTimeSeconds() or
+stateTicks(), and an in-state observation inState(<instance>, <State>).
 [/comment]
 [module java('http://cpslabgu.github.io/llfsm/kernel')/]
 [import expressions::kernel/]
@@ -94,3 +104,118 @@ LLFSM. An enumeration literal is <Type>.<literal>, a state
 [template public statement(s : OpaqueStatement)]
                         [s.text/][if (not isTerminated(s.text))];[/if]
 [/template]
+
+[comment Host text: the machine languages whose text these queries render. /]
+[query public hostLanguages() : Sequence(String) = Sequence{'java'}/]
+
+[comment The time helper that holds once the state time in a unit exceeds its argument, or the empty string. /]
+[query public hostTimeHelper(unit : String) : String =
+  if unit = 'seconds' then 'after'
+  else if unit = 'milliseconds' then 'after_ms'
+  else if unit = 'microseconds' then 'timeout'
+  else '' endif endif endif/]
+
+[comment A state time outside a comparison that a time helper expresses. /]
+[query public hostStateTime(unit : String) : String =
+  if unit = 'seconds' then 'stateTimeSeconds()'
+  else if unit = 'milliseconds' then 'stateTimeMilliseconds()'
+  else if unit = 'microseconds' then 'stateTimeMicroseconds()'
+  else 'stateTicks()' endif endif endif/]
+
+[comment The precedence of a binary operation, from 1 for the loosest to 6 for the tightest binding. /]
+[query public hostPrecedence(operation : String) : Integer =
+  if operation = 'disjunction' then 1
+  else if operation = 'conjunction' then 2
+  else if operation = 'equal' or operation = 'notEqual' then 3
+  else if operation = 'lessThan' or operation = 'lessOrEqual' or operation = 'greaterThan' or operation = 'greaterOrEqual' then 4
+  else if operation = 'addition' or operation = 'subtraction' then 5
+  else 6 endif endif endif endif endif/]
+
+[comment The binding strength of an expression: 0 for opaque and conditional expressions, the precedence of a binary operation, 7 for a prefix operation and 8 for an expression that never needs parentheses. /]
+[query public hostStrength(e : OclAny) : Integer =
+  if e.oclIsKindOf(OpaqueExpression) or e.oclIsKindOf(ConditionalExpression) then 0
+  else if e.oclIsKindOf(BinaryExpression) then
+    (if hostTimeCall(e) = '' then hostPrecedence(e.operation.toString()) else if hostTimeCall(e).startsWith('!') then 7 else 8 endif endif)
+  else if e.oclIsKindOf(UnaryExpression) then 7
+  else if e.oclIsKindOf(IntegerLiteral) then (if e.value < 0 then 7 else 8 endif)
+  else 8 endif endif endif endif/]
+
+[comment An operand, in parentheses if it binds less tightly than required. /]
+[query public hostOperand(e : OclAny, strength : Integer) : String =
+  if hostStrength(e) < strength then '(' + hostExpression(e) + ')' else hostExpression(e) endif/]
+
+[comment The arguments of a call, separated by commas. /]
+[query public hostArguments(arguments : Sequence(OclAny)) : String =
+  joinedText(arguments->collect(a | hostOperand(a, 1))->sep(', '))/]
+
+[comment The limit of a comparison less one. /]
+[query public hostPredecessor(limit : OclAny) : String =
+  if limit.oclIsKindOf(IntegerLiteral) then (limit.value - 1).toString()
+  else hostOperand(limit, hostPrecedence('subtraction')) + ' - 1' endif/]
+
+[comment A comparison of the state time with a limit as a call of a time helper, or the empty string. /]
+[query public hostTimeCall(e : BinaryExpression) : String =
+  if stateTimeOperand(e).oclIsUndefined() then '' else
+    hostTimeHelperCall(hostTimeHelper(stateTimeOperand(e).unit.toString()), timeComparison(e), timeLimit(e)) endif/]
+
+[comment The call of a time helper for a comparison with the state time on the left, or the empty string. /]
+[query public hostTimeHelperCall(helper : String, comparison : String, limit : OclAny) : String =
+  if helper = '' then ''
+  else if comparison = 'greaterThan' then helper + '(' + hostOperand(limit, 1) + ')'
+  else if comparison = 'greaterOrEqual' then helper + '(' + hostPredecessor(limit) + ')'
+  else if comparison = 'lessThan' then '!' + helper + '(' + hostPredecessor(limit) + ')'
+  else if comparison = 'lessOrEqual' then '!' + helper + '(' + hostOperand(limit, 1) + ')'
+  else '' endif endif endif endif endif/]
+
+[comment A binary operation, with its left operand grouped first. /]
+[query public hostBinary(e : BinaryExpression) : String =
+  if hostTimeCall(e) <> '' then hostTimeCall(e)
+  else hostOperand(e.left, hostPrecedence(e.operation.toString())) + ' ' + javaBinary(e.operation.toString()) + ' '
+    + hostOperand(e.right, hostPrecedence(e.operation.toString()) + 1) endif/]
+
+[comment The host text of an expression; opaque text is kept as written. /]
+[query public hostExpression(e : OclAny) : String =
+  if e.oclIsKindOf(OpaqueExpression) then e.text
+  else if e.oclIsKindOf(BooleanLiteral) then (if e.value then 'true' else 'false' endif)
+  else if e.oclIsKindOf(IntegerLiteral) then e.value.toString()
+  else if e.oclIsKindOf(EnumerationLiteral) then e.type.name + '.' + e.literal
+  else if e.oclIsKindOf(VariableReference) then
+    e.variable.name + (if e.index.oclIsUndefined() then '' else '[' + hostExpression(e.index) + ']' endif)
+  else if e.oclIsKindOf(UnaryExpression) then
+    (if e.operation.toString() = 'negation' then '!' else '-' endif) + hostOperand(e.operand, 8)
+  else if e.oclIsKindOf(BinaryExpression) then hostBinary(e)
+  else if e.oclIsKindOf(ConditionalExpression) then
+    hostOperand(e.condition, 1) + ' ? ' + hostOperand(e.whenTrue, 0) + ' : ' + hostOperand(e.whenFalse, 0)
+  else if e.oclIsKindOf(CallExpression) then
+    (if e.receiver.oclIsUndefined() then '' else hostOperand(e.receiver, 8) + '.' endif)
+    + e.function.name + '(' + hostArguments(e.arguments) + ')'
+  else if e.oclIsKindOf(InStateExpression) then 'inState(' + e.instance.name + ', ' + e.state.name + ')'
+  else hostStateTime(e.unit.toString()) endif endif endif endif endif endif endif endif endif endif/]
+
+[comment A printed value, preceded by the space that separates it from the text. /]
+[query public hostPrintValue(v : Expression) : String = ' + " " + ' + hostOperand(v, hostPrecedence('addition') + 1)/]
+
+[comment A Java string literal body for host text, with line breaks as escapes. /]
+[query public hostString(s : String) : String = javaString(s).replaceAll('\n', '\\\\n')/]
+
+[comment The host text of a statement, without a line break; opaque text is kept as written. /]
+[query public hostStatement(s : OclAny) : String =
+  if s.oclIsKindOf(OpaqueStatement) then s.text
+  else if s.oclIsKindOf(Assignment) then hostExpression(s.target) + ' = ' + hostOperand(s.value, 0) + ';'
+  else if s.oclIsKindOf(CallStatement) then hostExpression(s.call) + ';'
+  else if s.oclIsKindOf(Print) then
+    'System.out.println("' + hostString(s.text) + '"' + joinedText(s.values->collect(v | hostPrintValue(v))) + ');'
+  else s.operation.toString() + '(' + s.instance.name + ');' endif endif endif endif/]
+
+[comment The host text of a section: one line per typed statement; a single opaque statement is kept as written. /]
+[query public hostStatements(ss : Sequence(OclAny)) : String =
+  if ss->size() = 1 and ss->first().oclIsKindOf(OpaqueStatement) then ss->first().text
+  else joinedText(ss->collect(s | if s.oclIsKindOf(OpaqueStatement) and s.text.endsWith('\n') then s.text else hostStatement(s) + '\n' endif)) endif/]
+
+[comment The declaration of a variable on one line, without a line break. /]
+[query public hostDeclaration(v : Variable) : String =
+  javaType(v.type) + ' ' + v.name
+  + (if v.initialValue.oclIsUndefined() then '' else ' = ' + hostOperand(v.initialValue, 1) endif) + ';'/]
+
+[comment The declarations of variables, one per line. /]
+[query public hostDeclarations(vs : Sequence(OclAny)) : String = joinedText(vs->collect(v | hostDeclaration(v) + '\n'))/]
