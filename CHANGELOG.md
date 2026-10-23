@@ -97,6 +97,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Platform Requirements**: The package requires Swift tools version 6.0, with the platform minimums listed above.
 
 ### Fixed
+- Arrangement code, static arrangement code and CMake files now list machine
+  types in the order in which their first instances appear, instead of an
+  order that varied between runs. `machineTypeNames` and
+  `firstInstancesByType` on sequences of `Instance` expose that order.
 
 - **Const Correctness**: Added missing `const` qualifiers to arrangement validation functions and test methods, ensuring proper const-correctness in generated C/C++ code.
 

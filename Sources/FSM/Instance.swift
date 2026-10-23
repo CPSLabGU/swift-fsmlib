@@ -81,3 +81,33 @@ public extension Instance {
         lhs.machine.llfsm == rhs.machine.llfsm
     }
 }
+
+/// Order-preserving views over the machine types of a sequence of instances.
+///
+/// Arrangement code lists each machine type once. These helpers return the
+/// distinct types in the order in which they first appear among the
+/// instances, so that generated files are stable from one run to the next.
+extension Sequence where Element == Instance {
+    /// The distinct machine type names of the instances, in order of first appearance.
+    ///
+    /// Each type name is the instance's ``Instance/typeName``, that is the
+    /// type file without its extension. A type that several instances share
+    /// appears once, at the position of the first such instance.
+    ///
+    /// - Returns: The distinct type names, in order of first appearance.
+    public var machineTypeNames: [Substring] {
+        var seen = Set<Substring>()
+        return compactMap { seen.insert($0.typeName).inserted ? $0.typeName : nil }
+    }
+
+    /// The first instance of each machine type, in order of first appearance.
+    ///
+    /// This pairs each distinct ``Instance/typeName`` with the first instance
+    /// of that type, preserving the order of the instances.
+    ///
+    /// - Returns: The type names and their first instances, in order of first appearance.
+    public var firstInstancesByType: [(typeName: Substring, instance: Instance)] {
+        var seen = Set<Substring>()
+        return compactMap { seen.insert($0.typeName).inserted ? ($0.typeName, $0) : nil }
+    }
+}

@@ -73,7 +73,7 @@ public func cArrangementInterface(for instances: [Instance], named name: String,
 public func cArrangementCode(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
     let upperName = name.uppercased()
     let lowerName = name.lowercased()
-    let machineTypes = Array(Set(instances.map(\.typeName)))
+    let machineTypes: [Substring] = instances.machineTypeNames
     return """
     //
     // Arrangement_\(name).c
@@ -135,7 +135,7 @@ public func cArrangementCode(for instances: [Instance], named name: String, isSu
 public func cStaticArrangementInterface(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
     let upperName = name.uppercased()
     let lowerName = name.lowercased()
-    let machineTypes = Array(Set(instances.map(\.typeName)))
+    let machineTypes: [Substring] = instances.machineTypeNames
     return """
     //
     // Static_Arrangement.h
@@ -189,7 +189,7 @@ public func cStaticArrangementInterface(for instances: [Instance], named name: S
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The LLFSM arrangement interface code.
 public func cStaticArrangementCode(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
-    let machines = Dictionary(instances.map { ($0.typeName, $0) }, uniquingKeysWith: { a,_ in a })
+    let machines: [(typeName: Substring, instance: Instance)] = instances.firstInstancesByType
     return """
     //
     // Static_Arrangement_\(name).c
@@ -715,7 +715,7 @@ public func cStaticArrangementMainCode(for instances: [Instance], named name: St
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The CMakeLists.txt code.
 public func cArrangementCMakeFragment(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
-    let machines = Array(Set(instances.map(\.typeName)))
+    let machines: [Substring] = instances.machineTypeNames
     return .block {
         "# Sources for the \(name) LLFSM arrangement."
         "set(\(name)_ARRANGEMENT_SOURCES"
@@ -786,7 +786,7 @@ public func cArrangementCMakeFragment(for instances: [Instance], named name: Str
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The CMakeLists.txt code.
 public func cArrangementCMakeLists(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
-    let machines = Array(Set(instances.map(\.typeName)))
+    let machines: [Substring] = instances.machineTypeNames
     return .block {
         "cmake_minimum_required(VERSION 3.21)"
         ""
@@ -812,7 +812,7 @@ public func cArrangementCMakeLists(for instances: [Instance], named name: String
         "  ${\(name)_ARRANGEMENT_INCDIRS}"
         "  ${\(name)_ARRANGEMENT_INSTALL_INCDIRS}"
         ")"
-        Code.forEach(Array(Set(instances.map(\.typeName)))) { machine in
+        Code.forEach(machines) { machine in
             "add_subdirectory(" + machine + ".machine)"
         }
         "target_link_libraries(run_\(name)_arrangement"

@@ -18,7 +18,7 @@ public func objcppArrangementHeader(for instances: [Instance], named name: Strin
     let lowerName = name.lowercased()
 
     // Build machine class forward declarations
-    let machineDeclarations = Array(Set(instances.map { $0.typeName })).sorted().map { machine in
+    let machineDeclarations = instances.machineTypeNames.sorted().map { machine in
         "            class \(machine);"
     }.joined(separator: "\n")
 
@@ -232,7 +232,7 @@ public func objcppArrangementHeader(for instances: [Instance], named name: Strin
 public func objcppArrangementImplementation(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
     let upperName = name.uppercased()
     let lowerName = name.lowercased()
-    let machineTypes = Array(Set(instances.map { $0.typeName }))
+    let machineTypes = instances.machineTypeNames
     var includes = ""
     for machine in machineTypes {
         includes += "#include \"\(machine).machine/\(machine).h\"\n"

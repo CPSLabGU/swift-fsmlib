@@ -374,7 +374,7 @@ public func objcppCMakeLists(for fsm: LLFSM, named name: String, boilerplate: an
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The CMakeLists.txt code fragment.
 public func objcppArrangementCMakeFragment(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
-    let machines = Array(Set(instances.map(\.typeName)))
+    let machines: [Substring] = instances.machineTypeNames
     return .block {
         "# Sources for the \(name) Objective-C++ FSM arrangement."
         "set(\(name)_ARRANGEMENT_SOURCES"
@@ -414,7 +414,7 @@ public func objcppArrangementCMakeFragment(for instances: [Instance], named name
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The CMakeLists.txt code.
 public func objcppArrangementCMakeLists(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
-    let machines = Array(Set(instances.map(\.typeName)))
+    let machines: [Substring] = instances.machineTypeNames
     return .block {
         "cmake_minimum_required(VERSION 3.21)"
         ""
@@ -462,7 +462,7 @@ public func objcppArrangementCMakeLists(for instances: [Instance], named name: S
 public func objcppStaticArrangementInterface(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
     let upperName = name.uppercased()
     let lowerName = name.lowercased()
-    let machineTypes = Array(Set(instances.map { $0.typeName }))
+    let machineTypes: [Substring] = instances.machineTypeNames
     let machineIncludes = machineTypes.map { machine in
         "#include \"\(machine).machine/\(machine).h\""
     }.joined(separator: "\n")
@@ -512,7 +512,7 @@ public func objcppStaticArrangementInterface(for instances: [Instance], named na
 public func objcppStaticArrangementCode(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
     let lowerName = name.lowercased()
     let upperName = name.uppercased()
-    let machines = Dictionary(instances.map { ($0.typeName, $0) }, uniquingKeysWith: { a,_ in a })
+    let machines: [Substring] = instances.machineTypeNames
 
     return """
     //
@@ -523,7 +523,7 @@ public func objcppStaticArrangementCode(for instances: [Instance], named name: S
     #include <cstddef>
     #include "Static_Arrangement.h"
     #include "StateMachineVector.h"
-    """ + "\n" + machines.keys.sorted().map { machine in
+    """ + "\n" + machines.sorted().map { machine in
         "#include \"\(machine).machine/\(machine).h\""
     }.joined(separator: "\n") + """
 
@@ -643,7 +643,7 @@ int main(int argc, char *argv[])
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The CMakeLists.txt code fragment.
 public func objcppStaticArrangementCMakeFragment(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
-    let machineTypes = Array(Set(instances.map { $0.typeName }))
+    let machineTypes: [Substring] = instances.machineTypeNames
     return .block {
         "# Sources for the \(name) Objective-C++ static arrangement."
         "set(\(name)_STATIC_ARRANGEMENT_SOURCES"
@@ -683,7 +683,7 @@ public func objcppStaticArrangementCMakeFragment(for instances: [Instance], name
 ///   - isSuspensible: Indicates whether code for suspensible machines should be generated.
 /// - Returns: The CMakeLists.txt code.
 public func objcppStaticArrangementCMakeLists(for instances: [Instance], named name: String, isSuspensible: Bool) -> Code {
-    let machineTypes = Array(Set(instances.map { $0.typeName }))
+    let machineTypes: [Substring] = instances.machineTypeNames
     return .block {
         "cmake_minimum_required(VERSION 3.21)"
         ""
