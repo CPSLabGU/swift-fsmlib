@@ -42,6 +42,26 @@ their namespace URIs, so a parsed document is typed by the classes of the
 kernel and sectioned packages, and a serialised document declares one
 namespace per package it uses.
 
+## Host Text and Declarations
+
+Host declarations and variables carry what a faithful round trip of a
+structural model needs, as optional attributes that typed models can leave
+unset:
+
+| element | attribute | holds |
+|---|---|---|
+| kernel `HostDeclarations` | `includePaths` | the directories that a build searches for included files, one per line, as written; kernel code templates do not use them |
+| kernel `HostDeclarations` | `includes` | include or import directives |
+| kernel `HostDeclarations` | `declarations` | declarations such as variables, prototypes and type definitions |
+| kernel `HostDeclarations` | `functions` | functions such as helper functions, written by code targets after the declarations |
+| kernel `Variable` | `documentation` | the text of the documentation comment of a declaration recognised in host text, such as `Bean counter` for `///< Bean counter` |
+| kernel `Variable` | `declarationText` | the line that declared the variable, as written and without its line break |
+| kernel `Variable` | `declarationLine` | the zero-based index of that line among the lines of the host declarations that held it |
+| sectioned `State` | `hostDeclarations` | host declarations of the state itself, such as state-local variables and functions; the encoding into the kernel adds them to those of the machine |
+
+Sections, labels and host texts that hold only white space are kept as
+written, as opaque nodes or host text.
+
 ## Validation Profiles
 
 ``KernelValidator`` checks a kernel model under a ``ValidationProfile``:

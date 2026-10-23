@@ -13,7 +13,8 @@ three levels described in <doc:MetamodelLevels>:
 | ``LLFSMTransformations/structuralToSectioned(_:arrangementName:uri:)`` | structural machine or arrangement | sectioned arrangement | states, sections, labels, suspend state, boilerplate, instances; typed where the text lies in the typed subset |
 | ``LLFSMTransformations/sectionedToKernel(_:options:uri:)`` | sectioned arrangement | kernel arrangement | the execution semantics of <doc:SectionedSemantics>, with origin records |
 | ``LLFSMTransformations/kernelToSectioned(_:uri:)`` | kernel arrangement | sectioned arrangement | the encoded sectioned model exactly, or a flat mapping |
-| ``LLFSMTransformations/sectionedToStructural(_:uri:)`` | sectioned arrangement | structural machine or arrangement | states, sections and labels as host-language text, suspend state, boilerplate, instances |
+| ``LLFSMTransformations/sectionedToStructural(_:uri:)`` | sectioned arrangement | structural machine or arrangement | states, sections and labels as host-language text, suspend state, boilerplate, instances; recognised declarations as written |
+| ``LLFSMTransformations/restoreLayouts(into:from:)`` | original and rebuilt structural models | rebuilt structural model | the layouts of the original |
 | ``LLFSMTransformations/kernelToStructural(_:uri:)`` | kernel arrangement | structural machine or arrangement | as ``LLFSMTransformations/kernelToSectioned(_:uri:)`` followed by ``LLFSMTransformations/sectionedToStructural(_:uri:)`` |
 
 Each transformation reads the model held by a resource and returns a
@@ -41,12 +42,14 @@ serialised with `XMISerializer` directly.
 
 Every non-empty section of a state becomes an `OpaqueStatement` and every
 transition label an `OpaqueExpression`, each holding the exact host-language
-text and the language of its machine. The first state of a machine is its
-initial state, and its suspend state is kept. The machine boilerplate becomes
-`HostDeclarations` of the sectioned machine: the includes and variables of
-the machine first, then its functions, then the includes, variables and
-functions of each state. Include paths have no place at the sectioned level
-and are reported.
+text, even if it is only white space, and the language of its machine. The
+first state of a machine is its initial state, and its suspend state is kept.
+The boilerplate of a machine becomes one `HostDeclarations` element of the
+sectioned machine, whose `includePaths`, `includes`, `declarations` and
+`functions` hold the include path, includes, variables and functions as
+written. The boilerplate of a state becomes a `HostDeclarations` element of
+the sectioned state in the same way. Empty texts are left unset, and a
+boilerplate whose texts are all empty has no host declarations.
 
 A structural arrangement holds a copy of a machine for every instance. The
 sectioned arrangement holds one machine per machine name, which all
@@ -64,12 +67,21 @@ A typing pass then makes the model as typed as the text allows:
    conservative type: `int` and `signed` the 32-bit integer range,
    `unsigned` its non-negative part, `bool` the Boolean type, and arrays of
    these named after their element type and size, such as `intArray4`. The
-   recognised lines are removed from the host declarations; every other line
-   is kept verbatim.
+   variable records the line as written in `declarationText`, its zero-based
+   index among the lines of the variables in `declarationLine`, and the text
+   of its `///<` comment, if any, in `documentation`. The recognised lines
+   are removed from the host declarations; every other line is kept
+   verbatim.
 2. ``ExpressionTyper`` types every opaque label and section against the
    variables and functions of the machine and the arrangement. A label or
    section that types completely is replaced by typed kernel nodes; anything
-   else stays opaque with its exact text.
+   else stays opaque with its exact text. Sections that hold only white
+   space are not typed, so that their text is kept.
+
+A label that holds only white space stays an `OpaqueExpression` with that
+text. Such a label is valid under the relaxed profile, as any opaque label
+is; it is an error of the host language, which code generated from the
+model reports when it is compiled, not an error of the model.
 
 ## The Typed Subset
 
@@ -139,7 +151,14 @@ variable `resumeTo` of the enumeration `<Machine>States`, a Boolean type
 `Bool` when the model declares none, and, with `time=clock`, the machine
 `Clock` with the state `Tick` and the instance `clock`. Every kernel state
 and transition that the encoding creates records its origin (see
-``OriginAnnotations``). These names are reserved: a sectioned model should
+``OriginAnnotations``). Opaque statements that hold only white space have no
+effect and are left out, so a section that holds only such statements is
+empty, and `elideEmptySections` elides its states. The host declarations of
+the states of a machine are added to the host declarations of the kernel
+machine, after those of the machine, which the diagnostics report as
+``TransformationWarning/StructuralInformation/stateBoilerplate``; the kernel
+code templates write the includes of all host declarations, then their
+declarations and functions, and do not use their include paths. These names are reserved: a sectioned model should
 not use them for its own elements. Validate an encoding with
 ``KernelValidator`` under the strict profile when the sectioned model holds
 no opaque nodes and no host declarations, and under the relaxed profile
@@ -190,38 +209,58 @@ precedence of the language needs:
 | recognised variable | `<type>` tab `<name>;` | `var <name>: <Type>` | `<type> <name>;` |
 
 Each section holds one line per typed statement. The host declarations of a
-machine become its boilerplate: the includes of all of them one after the
-other; the declarations of those with includes as the variables, with the
-declarations of the machine variables after the first of them; and the
-declarations of those without includes as the functions. Typed nodes of a
-language that no bundled template writes stop the transformation with
+machine become its boilerplate, and those of a state the boilerplate of the
+state: the include paths, includes, declarations and functions of all of
+them, one after the other, become the include path, includes, variables and
+functions. The variables of the machine are declared in its variables. A
+variable with a `declarationText` is written as that text at its
+`declarationLine` among the lines of the declarations of the first host
+declarations of the machine, provided that their language is that of the
+machine (see ``VariableDeclarationScanner/merged(remainder:placements:)``);
+every other variable is declared in canonical form after them. Typed nodes
+of a language that no bundled template writes stop the transformation with
 ``HostTextRendererError/unsupportedLanguage(_:)``; opaque text of such a
 language is kept.
 
-Some information of a structural model is not kept by the sectioned level
-and cannot be recovered:
+A structural machine or arrangement taken to the sectioned level and back is
+written as the same bundle, byte for byte, except for its layouts: the
+sectioned level does not keep the layout of states and transitions or of the
+editor window. A caller that still has the original structural model can
+copy its layouts into the rebuilt model:
 
-- include paths, and the layout of states and transitions and of the editor
-  window;
-- the boilerplate of individual states, which the structural transformation
-  merged into the host declarations of the machine and which therefore
-  stays in the machine boilerplate;
-- the layout and comments of recognised variable declarations, which are
-  written in canonical form;
-- sections, labels and boilerplate that held only white space, which come
-  back empty, and redundant parentheses and spacing of typed text.
+```swift
+let sectioned = try await transformations.structuralToSectioned(original)
+let rebuilt = try await transformations.sectionedToStructural(sectioned.resource)
+await transformations.restoreLayouts(into: rebuilt.resource, from: original)
+```
 
-A structural model has no place for the shared declarations of an
-arrangement, for instance bindings, or for machines without instances.
-Apart from these losses, a structural machine or arrangement taken to the
-sectioned level and back is written as the same bundle, byte for byte.
+``LLFSMTransformations/restoreLayouts(into:from:)`` matches the machines of
+instances by instance name, states by name, and transitions by the name of
+their source state, their position among the transitions that leave it and
+the name of their target state. Only layouts are copied: a state that was
+renamed, a transition that was moved or retargeted, and a machine without a
+counterpart keep no layout. With the layouts restored, the bundle is the
+same as the original, byte for byte.
+
+Text that the typing pass typed is written back in canonical form: a label
+or section that was written with redundant parentheses or with other spacing
+or line breaks than the canonical form comes back in canonical form, so only
+the bundle of a machine whose typed text is canonical comes back byte for
+byte. A sectioned model that was not made from a structural model may also
+lack information that a structural model has: a machine without include paths gets an empty include path, several
+host declarations of one machine, as the encoding into the kernel leaves the
+boilerplate of states, are merged into the machine boilerplate, and
+variables without a declaration text in the language of the machine are
+declared in canonical form. A structural model has no place for the shared
+declarations of an arrangement, for instance bindings, or for machines
+without instances.
 
 ## Diagnostics
 
 ``TransformationWarning/Kind`` lists what a transformation can lose:
 
 - ``TransformationWarning/Kind/droppedText(section:owner:)``: host-language
-  text without a place at the target level, such as an include path;
+  text without a place at the target level;
 - ``TransformationWarning/Kind/suspensionOmitted(machine:)``: suspension was
   not encoded under `suspension=omit`;
 - ``TransformationWarning/Kind/sharedSuspension(machine:instances:)``:
