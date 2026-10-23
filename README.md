@@ -50,7 +50,7 @@ Run the test suite:
 swift test
 ```
 
-Some tests compile and run generated programs or check generated models, and run only when the tools they need are installed; `Tests.md` lists them, together with the environment variables that control the tests.
+Some tests compile and run generated programs or check generated models, and run only when the tools they need are installed; `TESTING.md` lists them, together with the environment variables that control the tests.
 
 ## Installation
 

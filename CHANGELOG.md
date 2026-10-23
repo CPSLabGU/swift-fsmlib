@@ -22,7 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - **Origin Records**: Kernel states and transitions have an optional `origin` that records the sectioned element they encode. `OriginAnnotations`, `OriginRecord` and `OriginRole` read and write these records and convert them to and from annotation details with the source `http://cpslabgu.github.io/llfsm/origin`.
 
-- **Test Build Path**: The command-line integration tests build `fsmconvert` in the scratch directory named by the environment variable `FSMCONVERT_BUILD_PATH` when it is set, so that the tool can be built against the same dependency checkouts as the tests. `Tests.md` describes the tests that need external tools and the environment variables that control the tests.
+- **Test Build Path**: The command-line integration tests build `fsmconvert` in the scratch directory named by the environment variable `FSMCONVERT_BUILD_PATH` when it is set, so that the tool can be built against the same dependency checkouts as the tests. `TESTING.md` describes the tests that need external tools and the environment variables that control the tests.
 
 - **Metamodel Documentation**: The `MetamodelLevels` article describes the structural, sectioned and kernel levels, the validation profiles and the well-formedness rules, and the `SectionedSemantics` article specifies the execution order of sectioned machines and their encoding into the kernel.
 
