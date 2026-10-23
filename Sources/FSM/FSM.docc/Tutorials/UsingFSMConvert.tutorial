@@ -1,9 +1,10 @@
 @Tutorial {
     @Intro(title: "Using fsmconvert") {
         Learn how to use the `fsmconvert` command-line tool to convert
-        machines between formats, create arrangements, and generate
-        build system files. This tutorial covers all major features
-        of the tool.
+        machines between formats, create arrangements, generate
+        build system files, and transform, validate and generate
+        machines at the structural, sectioned and kernel levels.
+        This tutorial covers all major features of the tool.
     }
 
     @Section(title: "Build fsmconvert") {
@@ -177,6 +178,112 @@
                 ```bash
                 swift run fsmconvert examples/Counter.machine -a -o /tmp/Counter.arrangement
                 cat /tmp/Counter.arrangement/CMakeLists.txt
+                ```
+            }
+        }
+    }
+
+    @Section(title: "Choose the Generator of Native Formats") {
+        @ContentAndMedia {
+            Native formats are written by the bundled templates by
+            default. The Swift language bindings write the same files.
+        }
+
+        @Steps {
+            @Step {
+                Write a machine with the templates and with the Swift
+                language bindings, into two directories.
+
+                ```bash
+                mkdir -p /tmp/mtl /tmp/swift
+                swift run fsmconvert examples/Counter.machine -f c -o /tmp/mtl/Counter.machine
+                swift run fsmconvert examples/Counter.machine -f c --generator swift -o /tmp/swift/Counter.machine
+                ```
+            }
+
+            @Step {
+                Compare the two bundles. They are identical.
+
+                ```bash
+                diff -r /tmp/mtl/Counter.machine /tmp/swift/Counter.machine
+                ```
+            }
+        }
+    }
+
+    @Section(title: "Work at the Sectioned and Kernel Levels") {
+        @ContentAndMedia {
+            `fsmconvert` transforms machines into the sectioned and
+            kernel levels and writes them as XMI or JSON models. It
+            recognises the level of a model document by its namespace.
+        }
+
+        @Steps {
+            @Step {
+                Write a machine as a kernel model. Warnings on standard
+                error name what the kernel level cannot keep.
+
+                ```bash
+                swift run fsmconvert examples/CounterC.machine --metamodel kernel -f xmi -o /tmp/CounterC.xmi
+                ```
+            }
+
+            @Step {
+                Choose another semantics for the encoding into the
+                kernel, for example self transitions that re-enter their
+                state.
+
+                ```bash
+                swift run fsmconvert examples/CounterC.machine -f kernel-xmi \
+                    --semantics selfLoop=reentry -o /tmp/CounterC-reentry.xmi
+                ```
+            }
+
+            @Step {
+                Validate the kernel model. Under the relaxed profile, the
+                opaque C code of the machine is admitted.
+
+                ```bash
+                swift run fsmconvert /tmp/CounterC.xmi --validate --profile relaxed
+                ```
+            }
+        }
+    }
+
+    @Section(title: "Generate Kernel Targets") {
+        @ContentAndMedia {
+            Kernel targets are programs, verification models and
+            drawings generated from the kernel model of a machine or
+            an arrangement. Their files are written into the output
+            directory.
+        }
+
+        @Steps {
+            @Step {
+                Generate a C program that runs the machine and prints its
+                trace. With `--metamodel kernel`, `-f c` names the
+                `kernel-c` target.
+
+                ```bash
+                swift run fsmconvert examples/CounterC.machine --metamodel kernel -f c -o /tmp/CounterProgram
+                ```
+            }
+
+            @Step {
+                Draw the kernel model with Graphviz.
+
+                ```bash
+                swift run fsmconvert examples/CounterC.machine -f dot -o /tmp/CounterDrawing
+                ```
+            }
+
+            @Step {
+                Generate a nuXmv model. Opaque C code is havocked, and the
+                round counter is bounded.
+
+                ```bash
+                swift run fsmconvert examples/CounterC.machine -f smv --opaque havoc \
+                    --max-rounds 20 -o /tmp/CounterVerification
                 ```
             }
         }

@@ -16,6 +16,11 @@ The tool converts between the following language formats:
 | `c++`, `cpp`, `cxx` | C++ | Objective-C++ machine code |
 | `objc` | Objective-C | Objective-C machine code |
 | `objc++`, `objcpp` | Objective-C++ | Objective-C++ machine code |
+| `scxml` | SCXML | A single SCXML document |
+
+The bundled templates write these formats by default; `--generator swift`
+writes them with the Swift language bindings, with the same result. Model
+documents and kernel targets are described in <doc:Levels>.
 
 ## Machines vs Arrangements
 
@@ -35,6 +40,10 @@ from the input machines rather than converting a single machine.
 3. If a different output format is specified with `-f`, the machine is
    converted by regenerating the code in the target language.
 4. The result is written to the output path.
+
+A model document is read at the level its namespace names, and a kernel
+target is generated after the model has been transformed to the kernel
+level (see <doc:Levels>).
 
 ## CMake Integration
 

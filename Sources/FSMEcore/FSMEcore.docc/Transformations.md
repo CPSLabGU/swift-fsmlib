@@ -35,6 +35,31 @@ The produced resources belong to resource sets in which the kernel,
 sectioned and structural metamodels are registered, so they can be
 serialised with `XMISerializer` directly.
 
+## Chains of Transformations
+
+``LevelTransformation`` names the transformations between the levels, and
+``LevelTransformation/chain(from:to:)`` finds the shortest chain from one
+level to another; a structural model reaches the kernel through the
+sectioned level. ``FSMPipeline`` runs these chains: it reads a native
+machine or arrangement, or an XMI or JSON document whose level it
+recognises by the namespace of the root element, transforms the model to
+the level of an ``OutputTarget`` and writes the target.
+
+```swift
+var options = FSMPipeline.Options()
+options.semantics = try SectionedToKernelOptions(keyValues: ["selfLoop=reentry"])
+let pipeline = try await FSMPipeline(options: options)
+let report = try await pipeline.convert([machineURL], to: .kernelXMI, output: kernelURL)
+for warning in report.warnings {
+    print(warning)
+}
+```
+
+The transformations from the sectioned and kernel levels to the structural
+level are not available in this release, so native formats are written from
+structural models only; ``FSMPipeline`` reports
+``FSMPipelineError/transformationUnavailable(from:to:)`` otherwise.
+
 ## Structural to Sectioned
 
 Every non-empty section of a state becomes an `OpaqueStatement` and every

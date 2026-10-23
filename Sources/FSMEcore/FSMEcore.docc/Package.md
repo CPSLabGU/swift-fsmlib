@@ -16,6 +16,7 @@ The sectioned and kernel metamodels describe LLFSMs with typed, language-neutral
 
 ``KernelTemplateGenerator`` generates C, C++, Swift and Java programs that run a kernel arrangement and print its canonical trace, nuXmv and TLA+ models for model checking, and Graphviz drawings.
 ``LLFSMTransformations`` transforms structural models into sectioned models, encodes sectioned models into the kernel under the semantic options of ``SectionedToKernelOptions``, and rebuilds sectioned models from kernel models. ``ExpressionTyper`` turns host-language labels and sections into typed kernel nodes where they lie in the typed subset.
+``FSMPipeline`` reads machines, arrangements and model documents of any level, transforms them along the shortest chain of levels to the one an ``OutputTarget`` needs, and writes the target, as `fsmconvert` does.
 
 ## Topics
 
@@ -80,6 +81,15 @@ The sectioned and kernel metamodels describe LLFSMs with typed, language-neutral
 - ``TransformationDiagnostics``
 - ``TransformationWarning``
 
+### Conversions
+
+- ``FSMPipeline``
+- ``OutputTarget``
+- ``LLFSMLevel``
+- ``LevelTransformation``
+- ``NativeGenerator``
+- ``TemplateSettings``
+
 ### Typing Host-Language Text
 
 - ``ExpressionTyper``
@@ -103,6 +113,7 @@ The sectioned and kernel metamodels describe LLFSMs with typed, language-neutral
 - ``TemplateBindingError``
 - ``StructuralTemplateServicesError``
 - ``KernelTemplateGeneratorError``
+- ``FSMPipelineError``
 
 ### Tutorials
 

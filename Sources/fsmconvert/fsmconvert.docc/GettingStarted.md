@@ -55,8 +55,26 @@ This creates `MySystem.arrangement` containing instances of both machines.
 | `-i`, `--introspectable` | Make generated code introspectable |
 | `-v`, `--verbose` | Enable verbose output |
 | `-o`, `--output` | Output file path (default: `fsm.out`) |
+| `--generator` | Write native formats with the bundled templates (`mtl`, the default) or the Swift language bindings (`swift`) |
+| `--metamodel` | Work at the `structural`, `sectioned` or `kernel` level |
+| `--validate` | Validate the kernel model of the input under `--profile` |
+| `-q`, `--quiet` | Show neither progress nor warnings |
+
+<doc:OptionReference> lists every option.
+
+### Generating a Kernel Target
+
+Generate a Graphviz drawing of a machine, or any other kernel target:
+
+```bash
+fsmconvert MyMachine.machine -f dot -o Drawing
+```
+
+The files are written into the `Drawing` directory. <doc:Levels> describes
+the levels and every target.
 
 ## Next Steps
 
 - Read <doc:Concepts> for details on supported formats and conversion.
+- Read <doc:Levels> for the levels, the kernel targets and validation.
 - Explore the `examples/` directory in the repository for sample machines.
