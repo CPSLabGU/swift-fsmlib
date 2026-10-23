@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sectioned:Arrangement xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:sectioned="http://cpslabgu.github.io/llfsm/sectioned" xmlns:kernel="http://cpslabgu.github.io/llfsm/kernel" name="SectionedCrossing">
+  <types xsi:type="kernel:BooleanType" name="Bool"/>
+  <variables name="request" type="kernel:BooleanType #//@types.0" external="true"/>
+  <machines name="Crossing" initial="#//@machines.0/@states.0">
+    <variables name="walkLit" type="kernel:BooleanType #//@types.0"/>
+    <states name="Go">
+      <onEntry xsi:type="kernel:Assignment">
+        <target variable="#//@machines.0/@variables.0"/>
+        <value xsi:type="kernel:BooleanLiteral"/>
+      </onEntry>
+      <onEntry xsi:type="kernel:Print" text="go"/>
+      <onExit xsi:type="kernel:Print" text="clearing"/>
+      <transitions target="#//@machines.0/@states.1">
+        <label xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+      </transitions>
+    </states>
+    <states name="Amber">
+      <onEntry xsi:type="kernel:Print" text="amber"/>
+      <transitions target="#//@machines.0/@states.2">
+        <label xsi:type="kernel:BinaryExpression" operation="greaterOrEqual">
+          <left xsi:type="sectioned:StateTimeExpression" unit="seconds"/>
+          <right xsi:type="kernel:IntegerLiteral" value="3"/>
+        </label>
+      </transitions>
+    </states>
+    <states name="Stop">
+      <onEntry xsi:type="kernel:Assignment">
+        <target variable="#//@machines.0/@variables.0"/>
+        <value xsi:type="kernel:BooleanLiteral" value="true"/>
+      </onEntry>
+      <onEntry xsi:type="kernel:Print" text="stop"/>
+      <internal xsi:type="kernel:Print" text="walking">
+        <values xsi:type="kernel:VariableReference" variable="#//@machines.0/@variables.0"/>
+      </internal>
+      <transitions target="#//@machines.0/@states.0">
+        <label xsi:type="kernel:BinaryExpression" operation="greaterOrEqual">
+          <left xsi:type="sectioned:StateTimeExpression" unit="seconds"/>
+          <right xsi:type="kernel:IntegerLiteral" value="5"/>
+        </label>
+      </transitions>
+    </states>
+  </machines>
+  <instances name="main" machine="#//@machines.0"/>
+</sectioned:Arrangement>

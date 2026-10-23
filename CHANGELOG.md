@@ -24,6 +24,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - **Typed Layout Properties**: The structural metamodel stores additional state layout properties as typed `PropertyListEntry` and `PropertyListValue` objects, so that real, integer, Boolean, string, data, date, array and dictionary values keep their property list types; `LLFSMMetamodel` exposes the new classes. Documents that store these properties as JSON text are still read.
 
+- **Kernel and Sectioned Metamodels**: The bundled `LLFSM.ecore` document defines the root package `llfsm` with the sectionless `kernel` subpackage (`http://cpslabgu.github.io/llfsm/kernel`) and the traditional `sectioned` subpackage (`http://cpslabgu.github.io/llfsm/sectioned`), which reuses the kernel's types, variables, functions, expressions and statements. `KernelMetamodel` and `SectionedMetamodel` provide typed handles for every class and enumeration, `LLFSMMetamodels` holds both levels, and `register(in:)` makes the root package and both subpackages known to a `ResourceSet`. `KernelUnaryOperation`, `KernelBinaryOperation`, `SectionedTimeUnit` and `SectionedControlOperation` name the enumeration literals.
+
+- **Kernel Validation**: `KernelValidator` checks kernel models under the `strict` or `relaxed` `ValidationProfile` against the structural rules and rules W1 to W9, and reports `KernelDiagnostic` values with the rule code, severity, object path and message.
+
+- **Origin Records**: Kernel states and transitions have an optional `origin` that records the sectioned element they encode. `OriginAnnotations`, `OriginRecord` and `OriginRole` read and write these records and convert them to and from annotation details with the source `http://cpslabgu.github.io/llfsm/origin`.
+
+- **Metamodel Documentation**: The `MetamodelLevels` article describes the structural, sectioned and kernel levels, the validation profiles and the well-formedness rules, and the `SectionedSemantics` article specifies the execution order of sectioned machines and their encoding into the kernel.
+
 - **XMI Conversion Diagnostics**: `XMIRoundTrip` gains `readMachine(from:diagnostics:)`, `readArrangement(from:diagnostics:)`, `write(machine:name:to:diagnostics:)` and `write(arrangement:to:diagnostics:)`, which collect the `ConversionDiagnostics` reported by the XMI parser and serialiser, and `loadResource(from:diagnostics:)`, which returns the parsed structural object graph. The existing methods are unchanged.
 
 - **Metamodel Registration**: `LLFSMMetamodel.register(in:)` registers the structural metamodel with a `ResourceSet`.

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kernel:Arrangement xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:kernel="http://cpslabgu.github.io/llfsm/kernel" name="DoorInterlock">
+  <types xsi:type="kernel:BooleanType" name="Bool"/>
+  <types xsi:type="kernel:IntegerType" name="Code" upper="15"/>
+  <variables name="doorClosed" type="kernel:BooleanType #//@types.0" external="true"/>
+  <variables name="motorOn" type="kernel:BooleanType #//@types.0">
+    <initialValue xsi:type="kernel:BooleanLiteral"/>
+  </variables>
+  <functions name="isSafe" pure="true" result="kernel:BooleanType #//@types.0">
+    <parameters name="closed" type="kernel:BooleanType #//@types.0"/>
+  </functions>
+  <functions name="logEvent">
+    <parameters name="event" type="kernel:IntegerType #//@types.1"/>
+  </functions>
+  <machines name="Interlock" initial="#//@machines.0/@states.0">
+    <states name="Idle">
+      <transitions target="#//@machines.0/@states.1">
+        <label xsi:type="kernel:CallExpression" function="#//@functions.0">
+          <arguments xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+        </label>
+      </transitions>
+    </states>
+    <states name="Running">
+      <actions xsi:type="kernel:Assignment">
+        <target variable="#//@variables.1"/>
+        <value xsi:type="kernel:BooleanLiteral" value="true"/>
+      </actions>
+      <actions xsi:type="kernel:CallStatement">
+        <call function="#//@functions.1">
+          <arguments xsi:type="kernel:IntegerLiteral" value="1"/>
+        </call>
+      </actions>
+      <transitions target="#//@machines.0/@states.2">
+        <label xsi:type="kernel:UnaryExpression">
+          <operand xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+        </label>
+      </transitions>
+    </states>
+    <states name="Halting" passThrough="true">
+      <actions xsi:type="kernel:Assignment">
+        <target variable="#//@variables.1"/>
+        <value xsi:type="kernel:BooleanLiteral"/>
+      </actions>
+      <actions xsi:type="kernel:CallStatement">
+        <call function="#//@functions.1">
+          <arguments xsi:type="kernel:IntegerLiteral" value="2"/>
+        </call>
+      </actions>
+      <transitions target="#//@machines.0/@states.0">
+        <label xsi:type="kernel:BooleanLiteral" value="true"/>
+      </transitions>
+    </states>
+  </machines>
+  <machines name="Monitor" initial="#//@machines.1/@states.0">
+    <states name="Quiet">
+      <transitions target="#//@machines.1/@states.1">
+        <label xsi:type="kernel:BinaryExpression">
+          <left xsi:type="kernel:InStateExpression" instance="#//@instances.0" state="#//@machines.0/@states.1"/>
+          <right xsi:type="kernel:UnaryExpression">
+            <operand xsi:type="kernel:VariableReference" variable="#//@variables.0"/>
+          </right>
+        </label>
+      </transitions>
+    </states>
+    <states name="Alarm">
+      <actions xsi:type="kernel:Print" text="alarm">
+        <values xsi:type="kernel:VariableReference" variable="#//@variables.1"/>
+      </actions>
+      <transitions target="#//@machines.1/@states.0">
+        <label xsi:type="kernel:InStateExpression" instance="#//@instances.0" state="#//@machines.0/@states.0"/>
+      </transitions>
+    </states>
+  </machines>
+  <instances name="lock" machine="#//@machines.0"/>
+  <instances name="watch" machine="#//@machines.1"/>
+</kernel:Arrangement>

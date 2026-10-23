@@ -1,0 +1,559 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="llfsm" nsURI="http://cpslabgu.github.io/llfsm"
+    nsPrefix="llfsm">
+  <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+    <details key="documentation" value="Metamodel family for logic-labelled finite-state machines (LLFSMs). The kernel subpackage is the sectionless core: one action per state, ordered Boolean labels, pass-through states and finite types, extended with calls to declared functions and with opaque host-language nodes for the relaxed profile. The sectioned subpackage is the traditional view with entry, exit, internal, suspend and resume sections and a suspend state, built on the kernel's types, variables, expressions and statements and encoded into the kernel by model transformation."/>
+  </eAnnotations>
+
+  <!-- ===================================================================== -->
+  <!-- Kernel                                                                -->
+  <!-- ===================================================================== -->
+  <eSubpackages name="kernel" nsURI="http://cpslabgu.github.io/llfsm/kernel" nsPrefix="kernel">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Canonical, sectionless kernel metamodel for arrangements of LLFSMs. Every state carries a single action that runs when the state is entered; transitions are an ordered sequence of Boolean labels. A pass-through state lets the ringlet continue without yielding, which is sufficient to encode entry, exit and internal sections, hierarchy, suspension, scheduling, events and time. The strict profile admits only the typed nodes; the relaxed profile also admits opaque host-language text."/>
+    </eAnnotations>
+
+    <!-- Structure -->
+    <eClassifiers xsi:type="ecore:EClass" name="Arrangement">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="A closed system: shared variables, declared functions, machine definitions and the ordered sequence of machine instances that the kernel executes round-robin, one ringlet per instance per round."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="language"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="The host programming language assumed for opaque text and host declarations that do not name their own language."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="types" upperBound="-1"
+          eType="#//kernel/Type" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="variables" upperBound="-1"
+          eType="#//kernel/Variable" containment="true">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Shared variables visible to every instance. External variables (sensors, clocks) may only be declared here."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="functions" upperBound="-1"
+          eType="#//kernel/FunctionDeclaration" containment="true">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Functions provided by the host environment that any instance may call."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="hostDeclarations" upperBound="-1"
+          eType="#//kernel/HostDeclarations" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="machines" upperBound="-1"
+          eType="#//kernel/Machine" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="instances" lowerBound="1"
+          upperBound="-1" eType="#//kernel/Instance" containment="true">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="The execution sequence. Order is semantically significant: a round executes one ringlet of every instance in this order."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="Machine">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="A machine definition: local variables, functions, states and the initial state. Instances of the same definition have separate local variables."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="language"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="The host programming language of this machine's opaque text, overriding the arrangement's language."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="variables" upperBound="-1"
+          eType="#//kernel/Variable" containment="true">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Local variables, invisible to other instances. They must not be external."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="functions" upperBound="-1"
+          eType="#//kernel/FunctionDeclaration" containment="true">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Functions available to this machine only, typically methods of the generated machine type."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="hostDeclarations" upperBound="-1"
+          eType="#//kernel/HostDeclarations" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="states" lowerBound="1"
+          upperBound="-1" eType="#//kernel/State" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="initial" lowerBound="1"
+          eType="#//kernel/State">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="The state an instance occupies before its first ringlet. It must be one of the machine's own states and must not be pass-through."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="Instance">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="A named occurrence of a machine definition in the execution sequence, with optional bindings that give its local variables instance-specific initial values."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="machine" lowerBound="1"
+          eType="#//kernel/Machine"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="bindings" upperBound="-1"
+          eType="#//kernel/Binding" containment="true"/>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="Binding">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Overrides the initial value of one local variable of the instance's machine with a literal."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="variable" lowerBound="1"
+          eType="#//kernel/Variable"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="value" lowerBound="1"
+          eType="#//kernel/Expression" containment="true"/>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="State">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="A state has one action, executed once at the start of the first ringlet after the state is entered, and an ordered sequence of labelled transitions. A state without transitions is accepting. A pass-through state does not end the ringlet: when a transition enters it, its action runs and its transitions are evaluated within the same ringlet. Pass-through states never appear as resting states."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="passThrough" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="false"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="actions" upperBound="-1"
+          eType="#//kernel/Statement" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="transitions" upperBound="-1"
+          eType="#//kernel/Transition" containment="true">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Evaluated in order; the first transition whose label holds fires. The sequence order is the only priority mechanism."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="origin" eType="#//kernel/Origin"
+          containment="true">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="The element of a sectioned model that this state encodes, recorded by the encoding transformation."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="Transition">
+      <eStructuralFeatures xsi:type="ecore:EReference" name="label" lowerBound="1"
+          eType="#//kernel/Expression" containment="true">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="A side-effect-free Boolean expression over variables (external variables are read from the ringlet snapshot), pure function calls and instance states."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="target" lowerBound="1"
+          eType="#//kernel/State"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="origin" eType="#//kernel/Origin"
+          containment="true">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="The element of a sectioned model that this transition encodes, recorded by the encoding transformation."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="Origin">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Records which element of a sectioned model a kernel state or transition encodes, so that the inverse transformation can rebuild the sectioned model exactly. The attributes correspond to the detail keys of the origin annotation source."/>
+      </eAnnotations>
+      <eAnnotations source="http://cpslabgu.github.io/llfsm/origin">
+        <details key="state" value="state"/>
+        <details key="role" value="role"/>
+        <details key="transition" value="transition"/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="state"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="The name of the sectioned state that was encoded; absent for elements that encode no sectioned state, such as those of a clock machine."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="role" lowerBound="1"
+          eType="#//kernel/OriginRole"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="transition"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EIntegerObject">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="The zero-based index of the sectioned transition that an exit state encodes; absent otherwise."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EEnum" name="OriginRole">
+      <eLiterals name="entry"/>
+      <eLiterals name="wait" value="1"/>
+      <eLiterals name="internal" value="2"/>
+      <eLiterals name="exit" value="3"/>
+      <eLiterals name="suspend" value="4"/>
+      <eLiterals name="resume" value="5"/>
+      <eLiterals name="dispatch" value="6"/>
+      <eLiterals name="clock" value="7"/>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="Variable">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="A typed variable. Without an initial value it starts at the default of its type (false, the lower bound, or the first literal; arrays element-wise). An external variable is written by the environment only: each ringlet reads one snapshot of it, and it is unconstrained in verification models."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="type" lowerBound="1"
+          eType="#//kernel/Type"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="external" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="false"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="initialValue" eType="#//kernel/Expression"
+          containment="true"/>
+    </eClassifiers>
+
+    <!-- Functions and host declarations -->
+    <eClassifiers xsi:type="ecore:EClass" name="FunctionDeclaration">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Declares a function or method implemented by the host environment. A pure function has no side effects and may be called in labels and initial values; any other function may only be called as a statement. A declaration with a receiver type declares a method of that type."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="pure" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="false"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="parameters" upperBound="-1"
+          eType="#//kernel/Parameter" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="result" eType="#//kernel/Type">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="The result type, absent for a function that returns nothing."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="receiverType" eType="#//kernel/Type">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="The type of the receiver when the declaration is a method; absent for a free function."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="Parameter">
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="type" lowerBound="1"
+          eType="#//kernel/Type"/>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="HostDeclarations">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Verbatim host-language preamble for code targets: include or import directives and declarations such as prototypes, type definitions and helper functions. Verification targets ignore host declarations."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="language"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="includes"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="declarations"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eClassifiers>
+
+    <!-- Types -->
+    <eClassifiers xsi:type="ecore:EClass" name="Type" abstract="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="A named type. The typed kernel types are finite so that every variable has a known bit width and verification models stay finite."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="BooleanType" eSuperTypes="#//kernel/Type"/>
+    <eClassifiers xsi:type="ecore:EClass" name="IntegerType" eSuperTypes="#//kernel/Type">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="A bounded integer range. Assignments outside the range are errors that verification exposes."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="lower" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="upper" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="EnumerationType" eSuperTypes="#//kernel/Type">
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="literals" lowerBound="1"
+          upperBound="-1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="ArrayType" eSuperTypes="#//kernel/Type">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="A fixed-size array of a scalar type, indexed from zero. Arrays are the only structured typed kernel type and suffice for bounded event queues."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="element" lowerBound="1"
+          eType="#//kernel/Type"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="size" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="OpaqueType" eSuperTypes="#//kernel/Type">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="A host-language type written verbatim, such as a struct, class or pointer type. Only the relaxed profile admits it; verification targets reject it."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="text" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="language"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eClassifiers>
+
+    <!-- Expressions -->
+    <eClassifiers xsi:type="ecore:EClass" name="Expression" abstract="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="A side-effect-free, statically typed expression. Typing rules are well-formedness constraints rather than separate class hierarchies, which keeps the metamodel small."/>
+      </eAnnotations>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="BooleanLiteral" eSuperTypes="#//kernel/Expression">
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="value" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="IntegerLiteral" eSuperTypes="#//kernel/Expression">
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="value" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="EnumerationLiteral" eSuperTypes="#//kernel/Expression">
+      <eStructuralFeatures xsi:type="ecore:EReference" name="type" lowerBound="1"
+          eType="#//kernel/EnumerationType"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="literal" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="VariableReference" eSuperTypes="#//kernel/Expression">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Reads a variable, or one element of an array variable when an index is given. Also used as the target of an assignment."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="variable" lowerBound="1"
+          eType="#//kernel/Variable"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="index" eType="#//kernel/Expression"
+          containment="true"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="UnaryExpression" eSuperTypes="#//kernel/Expression">
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="operation" lowerBound="1"
+          eType="#//kernel/UnaryOperation"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="operand" lowerBound="1"
+          eType="#//kernel/Expression" containment="true"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="BinaryExpression" eSuperTypes="#//kernel/Expression">
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="operation" lowerBound="1"
+          eType="#//kernel/BinaryOperation"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="left" lowerBound="1"
+          eType="#//kernel/Expression" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="right" lowerBound="1"
+          eType="#//kernel/Expression" containment="true"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="ConditionalExpression" eSuperTypes="#//kernel/Expression">
+      <eStructuralFeatures xsi:type="ecore:EReference" name="condition" lowerBound="1"
+          eType="#//kernel/Expression" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="whenTrue" lowerBound="1"
+          eType="#//kernel/Expression" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="whenFalse" lowerBound="1"
+          eType="#//kernel/Expression" containment="true"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="InStateExpression" eSuperTypes="#//kernel/Expression">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Holds when the given instance currently occupies the given state. This read-only observation of another machine's control state is what schedulers, suspension and hierarchy are built from."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="instance" lowerBound="1"
+          eType="#//kernel/Instance"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="state" lowerBound="1"
+          eType="#//kernel/State"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="CallExpression" eSuperTypes="#//kernel/Expression">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Calls a declared function with the given arguments, or a declared method when a receiver is given. In the strict profile a call in a label or an initial value must name a pure function."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="function" lowerBound="1"
+          eType="#//kernel/FunctionDeclaration"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="receiver" eType="#//kernel/Expression"
+          containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="arguments" upperBound="-1"
+          eType="#//kernel/Expression" containment="true"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="OpaqueExpression" eSuperTypes="#//kernel/Expression">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Host-language expression text emitted verbatim by code targets. Only the relaxed profile admits it; verification targets reject it unless told to treat it as unconstrained. The optional type records what the text is known to evaluate to."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="text" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="language"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="type" eType="#//kernel/Type"/>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EEnum" name="UnaryOperation">
+      <eLiterals name="negation"/>
+      <eLiterals name="minus" value="1"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EEnum" name="BinaryOperation">
+      <eLiterals name="conjunction"/>
+      <eLiterals name="disjunction" value="1"/>
+      <eLiterals name="addition" value="2"/>
+      <eLiterals name="subtraction" value="3"/>
+      <eLiterals name="multiplication" value="4"/>
+      <eLiterals name="division" value="5"/>
+      <eLiterals name="modulo" value="6"/>
+      <eLiterals name="equal" value="7"/>
+      <eLiterals name="notEqual" value="8"/>
+      <eLiterals name="lessThan" value="9"/>
+      <eLiterals name="lessOrEqual" value="10"/>
+      <eLiterals name="greaterThan" value="11"/>
+      <eLiterals name="greaterOrEqual" value="12"/>
+    </eClassifiers>
+
+    <!-- Statements -->
+    <eClassifiers xsi:type="ecore:EClass" name="Statement" abstract="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Actions are straight-line sequences of statements: no loops and no control flow, so every ringlet has a statically bounded execution time. Calls to declared functions are the only way to run host code."/>
+      </eAnnotations>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="Assignment" eSuperTypes="#//kernel/Statement">
+      <eStructuralFeatures xsi:type="ecore:EReference" name="target" lowerBound="1"
+          eType="#//kernel/VariableReference" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="value" lowerBound="1"
+          eType="#//kernel/Expression" containment="true"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="Print" eSuperTypes="#//kernel/Statement">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Emits one line of observable output: the text followed by the values. Execution targets print it; verification targets ignore it. The printed trace is the oracle for cross-language equivalence tests."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="text" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="values" upperBound="-1"
+          eType="#//kernel/Expression" containment="true"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="CallStatement" eSuperTypes="#//kernel/Statement">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Calls a declared function or method for its effect; any result is discarded."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="call" lowerBound="1"
+          eType="#//kernel/CallExpression" containment="true"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EClass" name="OpaqueStatement" eSuperTypes="#//kernel/Statement">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Host-language statement text emitted verbatim by code targets. Only the relaxed profile admits it; verification targets reject it unless told to treat it as a no-op."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="text" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="language"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eClassifiers>
+  </eSubpackages>
+
+  <!-- ===================================================================== -->
+  <!-- Sectioned                                                             -->
+  <!-- ===================================================================== -->
+  <eSubpackages name="sectioned" nsURI="http://cpslabgu.github.io/llfsm/sectioned" nsPrefix="sectioned">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="The traditional sectioned view of LLFSMs: states with entry, exit, internal, suspend and resume sections, a suspend state per machine, and time since state entry as an expression. Types, variables, functions, expressions and statements are the kernel's. The sectioned view is encoded into the kernel by a model transformation whose semantic options select between the traditional execution order and documented alternatives."/>
+    </eAnnotations>
+
+    <eClassifiers xsi:type="ecore:EClass" name="Arrangement">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="A closed system of sectioned machines: shared variables, declared functions, machine definitions and the ordered sequence of instances executed round-robin."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="language"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="types" upperBound="-1"
+          eType="#//kernel/Type" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="variables" upperBound="-1"
+          eType="#//kernel/Variable" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="functions" upperBound="-1"
+          eType="#//kernel/FunctionDeclaration" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="hostDeclarations" upperBound="-1"
+          eType="#//kernel/HostDeclarations" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="machines" upperBound="-1"
+          eType="#//sectioned/Machine" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="instances" lowerBound="1"
+          upperBound="-1" eType="#//sectioned/Instance" containment="true"/>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="Machine">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="A sectioned machine definition. The initial state is entered before the first ringlet. When a suspend state is given, suspending an instance moves it to that state and resuming returns it to the state it left."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="language"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="variables" upperBound="-1"
+          eType="#//kernel/Variable" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="functions" upperBound="-1"
+          eType="#//kernel/FunctionDeclaration" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="hostDeclarations" upperBound="-1"
+          eType="#//kernel/HostDeclarations" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="states" lowerBound="1"
+          upperBound="-1" eType="#//sectioned/State" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="initial" lowerBound="1"
+          eType="#//sectioned/State"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="suspendState" eType="#//sectioned/State">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="The state an instance occupies while suspended. Absent for a machine that cannot be suspended."/>
+        </eAnnotations>
+      </eStructuralFeatures>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="Instance">
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="machine" lowerBound="1"
+          eType="#//sectioned/Machine"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="bindings" upperBound="-1"
+          eType="#//kernel/Binding" containment="true"/>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="State">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="A sectioned state. In the traditional order a ringlet takes the snapshot, runs the entry section if the state was just entered, evaluates the transition labels in order, then runs the exit section when a transition fires or the internal section otherwise. The suspend and resume sections run when the instance is suspended from or resumed to this state."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+          eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="onEntry" upperBound="-1"
+          eType="#//kernel/Statement" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="onExit" upperBound="-1"
+          eType="#//kernel/Statement" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="internal" upperBound="-1"
+          eType="#//kernel/Statement" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="onSuspend" upperBound="-1"
+          eType="#//kernel/Statement" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="onResume" upperBound="-1"
+          eType="#//kernel/Statement" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="transitions" upperBound="-1"
+          eType="#//sectioned/Transition" containment="true"/>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="Transition">
+      <eStructuralFeatures xsi:type="ecore:EReference" name="label" lowerBound="1"
+          eType="#//kernel/Expression" containment="true"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="target" lowerBound="1"
+          eType="#//sectioned/State"/>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="StateTimeExpression" eSuperTypes="#//kernel/Expression">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="The time elapsed since the current state was entered, in the given unit, as read from the ringlet snapshot. This is the typed form of the traditional timeout and after helpers."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="unit" lowerBound="1"
+          eType="#//sectioned/TimeUnit" defaultValueLiteral="microseconds"/>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="InStateExpression" eSuperTypes="#//kernel/Expression">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Holds when the given instance currently occupies the given sectioned state."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="instance" lowerBound="1"
+          eType="#//sectioned/Instance"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="state" lowerBound="1"
+          eType="#//sectioned/State"/>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EClass" name="MachineControlStatement" eSuperTypes="#//kernel/Statement">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Suspends, resumes or restarts another instance. The request takes effect at the start of that instance's next ringlet."/>
+      </eAnnotations>
+      <eStructuralFeatures xsi:type="ecore:EAttribute" name="operation" lowerBound="1"
+          eType="#//sectioned/ControlOperation"/>
+      <eStructuralFeatures xsi:type="ecore:EReference" name="instance" lowerBound="1"
+          eType="#//sectioned/Instance"/>
+    </eClassifiers>
+
+    <eClassifiers xsi:type="ecore:EEnum" name="TimeUnit">
+      <eLiterals name="microseconds"/>
+      <eLiterals name="milliseconds" value="1"/>
+      <eLiterals name="seconds" value="2"/>
+      <eLiterals name="ticks" value="3"/>
+    </eClassifiers>
+    <eClassifiers xsi:type="ecore:EEnum" name="ControlOperation">
+      <eLiterals name="suspend"/>
+      <eLiterals name="resume" value="1"/>
+      <eLiterals name="restart" value="2"/>
+    </eClassifiers>
+  </eSubpackages>
+</ecore:EPackage>
