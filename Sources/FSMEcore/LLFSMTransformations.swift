@@ -32,6 +32,9 @@ public struct LLFSMTransformations {
     /// The structural metamodel that types structural models.
     public let structural: LLFSMMetamodel
 
+    /// How the transformations read features that a model does not set.
+    public var unsetFeatureReads: UnsetFeatureReads = .defaults
+
     /// Load the bundled metamodels.
     ///
     /// - Throws: An error if a bundled metamodel cannot be found or parsed.
@@ -225,7 +228,8 @@ public struct LLFSMTransformations {
         let parsed = try await load(module)
         let declared = Set(parsed.parameters.map(\.name))
         let passed = parameters.filter { declared.contains($0.key) }
-        let machine = ATLVirtualMachine(module: parsed, nativeHelpers: nativeHelpers)
+        let machine = ATLVirtualMachine(
+            module: parsed, unsetFeatureReads: unsetFeatureReads, nativeHelpers: nativeHelpers)
         do {
             try await machine.execute(
                 sources: .init(uniqueKeysWithValues: sources.sorted { $0.key < $1.key }),
