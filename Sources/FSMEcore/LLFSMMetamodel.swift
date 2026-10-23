@@ -73,6 +73,40 @@ public struct LLFSMMetamodel: Sendable {
     /// The `Point2D` EClass.
     public let point2DClass: EClass
 
+    /// The `PropertyListEntry` EClass.
+    ///
+    /// An entry pairs the key of an additional layout property with its typed value.
+    public let propertyListEntryClass: EClass
+
+    /// The abstract `PropertyListValue` EClass.
+    ///
+    /// Every typed property list value class inherits from this classifier.
+    public let propertyListValueClass: EClass
+
+    /// The `PropertyListReal` EClass for floating point values.
+    public let propertyListRealClass: EClass
+
+    /// The `PropertyListInteger` EClass for integral values.
+    public let propertyListIntegerClass: EClass
+
+    /// The `PropertyListBoolean` EClass for Boolean values.
+    public let propertyListBooleanClass: EClass
+
+    /// The `PropertyListString` EClass for text values.
+    public let propertyListStringClass: EClass
+
+    /// The `PropertyListData` EClass for binary values held as Base64 text.
+    public let propertyListDataClass: EClass
+
+    /// The `PropertyListDate` EClass for points in time held as ISO 8601 timestamps.
+    public let propertyListDateClass: EClass
+
+    /// The `PropertyListArray` EClass for ordered lists of values.
+    public let propertyListArrayClass: EClass
+
+    /// The `PropertyListDictionary` EClass for keyed values.
+    public let propertyListDictionaryClass: EClass
+
     /// Load the bundled structural metamodel.
     ///
     /// This initialiser resolves the packaged `.ecore` resource from the
@@ -116,7 +150,17 @@ public struct LLFSMMetamodel: Sendable {
               let stateLayout = package.getEClass("StateLayout"),
               let transitionLayoutEntry = package.getEClass("TransitionLayoutEntry"),
               let transitionLayout = package.getEClass("TransitionLayout"),
-              let point2D = package.getEClass("Point2D")
+              let point2D = package.getEClass("Point2D"),
+              let propertyListEntry = package.getEClass("PropertyListEntry"),
+              let propertyListValue = package.getEClass("PropertyListValue"),
+              let propertyListReal = package.getEClass("PropertyListReal"),
+              let propertyListInteger = package.getEClass("PropertyListInteger"),
+              let propertyListBoolean = package.getEClass("PropertyListBoolean"),
+              let propertyListString = package.getEClass("PropertyListString"),
+              let propertyListData = package.getEClass("PropertyListData"),
+              let propertyListDate = package.getEClass("PropertyListDate"),
+              let propertyListArray = package.getEClass("PropertyListArray"),
+              let propertyListDictionary = package.getEClass("PropertyListDictionary")
         else {
             throw LLFSMMetamodelError.missingClass
         }
@@ -135,6 +179,16 @@ public struct LLFSMMetamodel: Sendable {
         transitionLayoutEntryClass = transitionLayoutEntry
         transitionLayoutClass = transitionLayout
         point2DClass = point2D
+        propertyListEntryClass = propertyListEntry
+        propertyListValueClass = propertyListValue
+        propertyListRealClass = propertyListReal
+        propertyListIntegerClass = propertyListInteger
+        propertyListBooleanClass = propertyListBoolean
+        propertyListStringClass = propertyListString
+        propertyListDataClass = propertyListData
+        propertyListDateClass = propertyListDate
+        propertyListArrayClass = propertyListArray
+        propertyListDictionaryClass = propertyListDictionary
     }
 
     /// Register the structural metamodel with a resource set.

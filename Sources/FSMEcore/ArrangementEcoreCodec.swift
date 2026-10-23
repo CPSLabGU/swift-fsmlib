@@ -85,64 +85,16 @@ public struct ArrangementEcoreCodec {
     /// - Returns: Decoded arrangement value.
     /// - Throws: Throw an error if nested machine decoding fails.
     public func decode(_ arrangementObj: DynamicEObject, from resource: Resource) async throws -> Arrangement {
-        let instanceIDs = referenceIDs(from: await resource.eGet(objectId: arrangementObj.id, feature: "instances"))
+        let instanceIDs = ModelReferences.identifiers(from: await resource.eGet(objectId: arrangementObj.id, feature: "instances"))
         var instances = [Instance]()
         for instID in instanceIDs {
             let name = await resource.eGet(objectId: instID, feature: "name") as? String ?? ""
             let typeFile = await resource.eGet(objectId: instID, feature: "typeFile") as? String ?? ""
-            guard let machineID = referenceID(from: await resource.eGet(objectId: instID, feature: "machine")),
+            guard let machineID = ModelReferences.identifier(from: await resource.eGet(objectId: instID, feature: "machine")),
                   let machineObj = await resource.resolve(machineID) as? DynamicEObject else { continue }
             let (_, machine) = try await machineCodec.decode(machineObj, from: resource)
             instances.append(Instance(name: name, typeFile: typeFile, machine: machine))
         }
         return Arrangement(namedInstances: instances)
-    }
-}
-
-private func referenceID(from value: Any?) -> EUUID? {
-    /// Extract the first referenced object identifier from a reflective value.
-    ///
-    /// `swift-ecore` references can appear as identifiers, dynamic objects, or
-    /// small collections depending on how a feature was parsed or queried. This
-    /// helper normalises those cases for the codec layer.
-    switch value {
-    case let id as EUUID:
-        return id
-    case let object as DynamicEObject:
-        return object.id
-    case let objects as [DynamicEObject]:
-        return objects.first?.id
-    case let ids as [EUUID]:
-        return ids.first
-    case let values as [Any]:
-        for candidate in values {
-            if let reference = referenceID(from: candidate) {
-                return reference
-            }
-        }
-        return nil
-    default:
-        return nil
-    }
-}
-
-private func referenceIDs(from value: Any?) -> [EUUID] {
-    /// Extract every referenced object identifier from a reflective value.
-    ///
-    /// This helper flattens the different container shapes used by reflective
-    /// reference values into a consistent identifier array.
-    switch value {
-    case let ids as [EUUID]:
-        return ids
-    case let id as EUUID:
-        return [id]
-    case let objects as [DynamicEObject]:
-        return objects.map(\.id)
-    case let object as DynamicEObject:
-        return [object.id]
-    case let values as [Any]:
-        return values.compactMap { referenceID(from: $0) }
-    default:
-        return []
     }
 }

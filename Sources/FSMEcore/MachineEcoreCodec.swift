@@ -67,11 +67,9 @@ public struct MachineEcoreCodec {
             let sections = machine.stateActivities(for: stateID)
             if !sections.isEmpty {
                 var activitiesObj = DynamicEObject(eClass: metamodel.stateActivitiesClass)
-                activitiesObj.eSet("onEntry", value: sections[.onEntry] ?? "")
-                activitiesObj.eSet("onExit", value: sections[.onExit] ?? "")
-                activitiesObj.eSet("internal", value: sections[.internal] ?? "")
-                activitiesObj.eSet("onSuspend", value: sections[.onSuspend] ?? "")
-                activitiesObj.eSet("onResume", value: sections[.onResume] ?? "")
+                for (section, feature) in Self.activityFeatures {
+                    if let code = sections[section] { activitiesObj.eSet(feature, value: code) }
+                }
                 await resource.register(activitiesObj)
                 stateObj.eSet("activities", value: activitiesObj.id)
             }
@@ -118,11 +116,7 @@ public struct MachineEcoreCodec {
             guard let stateObj = stateObjects[stateID],
                   let bp = machine.stateBoilerplate[stateID] else { continue }
             let bpSections = machine.language.extractSections(from: bp)
-            var entryBpObj = DynamicEObject(eClass: metamodel.boilerplateClass)
-            entryBpObj.eSet("includePath", value: bpSections[.includePath] ?? "")
-            entryBpObj.eSet("includes", value: bpSections[.includes] ?? "")
-            entryBpObj.eSet("variables", value: bpSections[.variables] ?? "")
-            entryBpObj.eSet("functions", value: bpSections[.functions] ?? "")
+            let entryBpObj = boilerplateObject(for: bpSections)
             await resource.register(entryBpObj)
 
             var entryObj = DynamicEObject(eClass: metamodel.stateBoilerplateEntryClass)
@@ -136,7 +130,7 @@ public struct MachineEcoreCodec {
         var stateLayoutEntries = [EUUID]()
         for (stateID, layout) in machine.stateLayout {
             guard let stateObj = stateObjects[stateID] else { continue }
-            let layoutObj = encodeStateLayout(layout)
+            let layoutObj = await encodeStateLayout(layout, into: resource)
             await resource.register(layoutObj)
 
             var entryObj = DynamicEObject(eClass: metamodel.stateLayoutEntryClass)
@@ -215,14 +209,14 @@ public struct MachineEcoreCodec {
         let language: any LanguageBinding = languageBinding(for: languageName)
 
         // Decode LLFSM
-        guard let llfsmID = referenceID(
+        guard let llfsmID = ModelReferences.identifier(
             from: await resource.eGet(objectId: machineObj.id, feature: "llfsm")
         ) else {
             throw LLFSMMetamodelError.missingFeature("llfsm")
         }
 
         // Decode states
-        let stateIDs = referenceIDs(
+        let stateIDs = ModelReferences.identifiers(
             from: await resource.eGet(objectId: llfsmID, feature: "states")
         )
         guard !stateIDs.isEmpty else {
@@ -238,15 +232,15 @@ public struct MachineEcoreCodec {
         }
 
         // Decode transitions
-        let transIDs = referenceIDs(
+        let transIDs = ModelReferences.identifiers(
             from: await resource.eGet(objectId: llfsmID, feature: "transitions")
         )
         var eobjectToTransID = [EUUID: TransitionID]()
         var transitionArray = [Transition]()
         for eID in transIDs {
             let label = await stringValue(ofFeature: "label", for: eID, in: resource)
-            let srcEID = referenceID(from: await resource.eGet(objectId: eID, feature: "source"))
-            let tgtEID = referenceID(from: await resource.eGet(objectId: eID, feature: "target"))
+            let srcEID = ModelReferences.identifier(from: await resource.eGet(objectId: eID, feature: "source"))
+            let tgtEID = ModelReferences.identifier(from: await resource.eGet(objectId: eID, feature: "target"))
             let sourceID = srcEID.flatMap { eobjectToStateID[$0] } ?? StateID(uuid: UUID_NULL)
             let targetID = tgtEID.flatMap { eobjectToStateID[$0] } ?? StateID(uuid: UUID_NULL)
             let transition = Transition(label: label, source: sourceID, target: targetID)
@@ -255,13 +249,13 @@ public struct MachineEcoreCodec {
         }
 
         // Decode suspend state
-        let suspendEID = referenceID(from: await resource.eGet(objectId: llfsmID, feature: "suspendState"))
+        let suspendEID = ModelReferences.identifier(from: await resource.eGet(objectId: llfsmID, feature: "suspendState"))
         let suspendStateID = suspendEID.flatMap { eobjectToStateID[$0] }
 
         let llfsm = LLFSM(states: stateArray, transitions: transitionArray, suspendState: suspendStateID)
 
         // Decode machine boilerplate
-        let bpID = referenceID(from: await resource.eGet(objectId: machineObj.id, feature: "boilerplate"))
+        let bpID = ModelReferences.identifier(from: await resource.eGet(objectId: machineObj.id, feature: "boilerplate"))
         let boilerplate: any Boilerplate
         if let bpID = bpID {
             boilerplate = await decodeBoilerplate(bpID, from: resource, language: language)
@@ -271,13 +265,13 @@ public struct MachineEcoreCodec {
 
         // Decode state boilerplate entries
         var stateBoilerplate = [StateID: any Boilerplate]()
-        let sbpEntryIDs = referenceIDs(
+        let sbpEntryIDs = ModelReferences.identifiers(
             from: await resource.eGet(objectId: machineObj.id, feature: "stateBoilerplates")
         )
         for entryID in sbpEntryIDs {
-            guard let stateEID = referenceID(from: await resource.eGet(objectId: entryID, feature: "state")),
+            guard let stateEID = ModelReferences.identifier(from: await resource.eGet(objectId: entryID, feature: "state")),
                   let stateID = eobjectToStateID[stateEID],
-                  let entryBpID = referenceID(
+                  let entryBpID = ModelReferences.identifier(
                       from: await resource.eGet(objectId: entryID, feature: "boilerplate")
                   ) else { continue }
 
@@ -287,7 +281,7 @@ public struct MachineEcoreCodec {
 
             // Also get activities from the state object
             var allSections = bpSections
-            if let activitiesID = referenceID(from: await resource.eGet(objectId: stateEID, feature: "activities")) {
+            if let activitiesID = ModelReferences.identifier(from: await resource.eGet(objectId: stateEID, feature: "activities")) {
                 let onEntry = await resource.eGet(objectId: activitiesID, feature: "onEntry") as? String ?? ""
                 let onExit = await resource.eGet(objectId: activitiesID, feature: "onExit") as? String ?? ""
                 let internalCode = await resource.eGet(objectId: activitiesID, feature: "internal") as? String ?? ""
@@ -304,25 +298,25 @@ public struct MachineEcoreCodec {
 
         // Decode state layouts
         var stateLayouts = StateLayouts()
-        let slEntryIDs = referenceIDs(
+        let slEntryIDs = ModelReferences.identifiers(
             from: await resource.eGet(objectId: machineObj.id, feature: "stateLayouts")
         )
         for entryID in slEntryIDs {
-            guard let stateEID = referenceID(from: await resource.eGet(objectId: entryID, feature: "state")),
+            guard let stateEID = ModelReferences.identifier(from: await resource.eGet(objectId: entryID, feature: "state")),
                   let stateID = eobjectToStateID[stateEID],
-                  let layoutID = referenceID(from: await resource.eGet(objectId: entryID, feature: "layout")) else { continue }
+                  let layoutID = ModelReferences.identifier(from: await resource.eGet(objectId: entryID, feature: "layout")) else { continue }
             stateLayouts[stateID] = await decodeStateLayout(layoutID, from: resource)
         }
 
         // Decode transition layouts
         var transitionLayouts = TransitionLayouts()
-        let tlEntryIDs = referenceIDs(
+        let tlEntryIDs = ModelReferences.identifiers(
             from: await resource.eGet(objectId: machineObj.id, feature: "transitionLayouts")
         )
         for entryID in tlEntryIDs {
-            guard let transEID = referenceID(from: await resource.eGet(objectId: entryID, feature: "transition")),
+            guard let transEID = ModelReferences.identifier(from: await resource.eGet(objectId: entryID, feature: "transition")),
                   let transID = eobjectToTransID[transEID],
-                  let layoutID = referenceID(from: await resource.eGet(objectId: entryID, feature: "layout")) else { continue }
+                  let layoutID = ModelReferences.identifier(from: await resource.eGet(objectId: entryID, feature: "layout")) else { continue }
             transitionLayouts[transID] = await decodeTransitionLayout(layoutID, from: resource)
         }
 
@@ -358,12 +352,38 @@ public struct MachineEcoreCodec {
     ///   - language: Language binding used to extract normalised sections.
     /// - Returns: Dynamic object representing the boilerplate value.
     private func encodeBoilerplate(_ bp: any Boilerplate, language: any LanguageBinding) -> DynamicEObject {
-        let sections = language.extractSections(from: bp)
+        boilerplateObject(for: language.extractSections(from: bp))
+    }
+
+    /// The boilerplate sections and the features that hold them.
+    static let boilerplateFeatures: [(StandardBoilerplateSection, String)] = [
+        (.includePath, "includePath"),
+        (.includes, "includes"),
+        (.variables, "variables"),
+        (.functions, "functions"),
+    ]
+
+    /// The state activity sections and the features that hold them.
+    static let activityFeatures: [(StandardBoilerplateSection, String)] = [
+        (.onEntry, "onEntry"),
+        (.onExit, "onExit"),
+        (.internal, "internal"),
+        (.onSuspend, "onSuspend"),
+        (.onResume, "onResume"),
+    ]
+
+    /// Create a boilerplate object holding the given sections.
+    ///
+    /// Only the sections that are present are set, so that a section a
+    /// machine does not have remains distinguishable from an empty one.
+    ///
+    /// - Parameter sections: Boilerplate sections to store.
+    /// - Returns: Dynamic object representing the boilerplate value.
+    private func boilerplateObject(for sections: [StandardBoilerplateSection: String]) -> DynamicEObject {
         var obj = DynamicEObject(eClass: metamodel.boilerplateClass)
-        obj.eSet("includePath", value: sections[.includePath] ?? "")
-        obj.eSet("includes", value: sections[.includes] ?? "")
-        obj.eSet("variables", value: sections[.variables] ?? "")
-        obj.eSet("functions", value: sections[.functions] ?? "")
+        for (section, feature) in Self.boilerplateFeatures {
+            if let code = sections[section] { obj.eSet(feature, value: code) }
+        }
         return obj
     }
 
@@ -371,11 +391,13 @@ public struct MachineEcoreCodec {
     ///
     /// This helper copies all state geometry and section height values into the
     /// structural metamodel representation, including any preserved extra
-    /// properties.
+    /// properties, which keep their property list value types.
     ///
-    /// - Parameter layout: State layout value to encode.
+    /// - Parameters:
+    ///   - layout: State layout value to encode.
+    ///   - resource: Resource that will own the objects of the extra properties.
     /// - Returns: Dynamic object representing the state layout.
-    private func encodeStateLayout(_ layout: StateLayout) -> DynamicEObject {
+    private func encodeStateLayout(_ layout: StateLayout, into resource: Resource) async -> DynamicEObject {
         var obj = DynamicEObject(eClass: metamodel.stateLayoutClass)
         obj.eSet("isOpen", value: layout.isOpen)
         obj.eSet("closedX", value: layout.closedLayout.x)
@@ -396,10 +418,10 @@ public struct MachineEcoreCodec {
         obj.eSet("zoomedInternalHeight", value: layout.zoomedInternalHeight)
         obj.eSet("zoomedOnSuspendHeight", value: layout.zoomedOnSuspendHeight)
         obj.eSet("zoomedOnResumeHeight", value: layout.zoomedOnResumeHeight)
-        if !layout.extraProperties.isEmpty,
-           let jsonData = try? JSONSerialization.data(withJSONObject: layout.extraProperties),
-           let jsonString = String(data: jsonData, encoding: .utf8) {
-            obj.eSet("extraProperties", value: jsonString)
+        if !layout.extraProperties.isEmpty {
+            let entries = await PropertyListEcoreCodec(metamodel: metamodel)
+                .encodeEntries(layout.extraProperties, into: resource)
+            obj.eSet("properties", value: entries)
         }
         return obj
     }
@@ -473,7 +495,12 @@ public struct MachineEcoreCodec {
         let zOnResumeH = await resource.eGet(objectId: layoutID, feature: "zoomedOnResumeHeight") as? Double ?? 0
 
         var extraProps = [String: Any]()
-        if let extraStr = await resource.eGet(objectId: layoutID, feature: "extraProperties") as? String,
+        let propertyEntries = ModelReferences.identifiers(
+            from: await resource.eGet(objectId: layoutID, feature: "properties"))
+        if !propertyEntries.isEmpty {
+            extraProps = await PropertyListEcoreCodec(metamodel: metamodel)
+                .decodeEntries(propertyEntries, from: resource)
+        } else if let extraStr = await resource.eGet(objectId: layoutID, feature: "extraProperties") as? String,
            !extraStr.isEmpty,
            let data = extraStr.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -508,7 +535,7 @@ public struct MachineEcoreCodec {
     ///   - resource: Resource containing the encoded object.
     /// - Returns: Decoded transition layout value.
     private func decodeTransitionLayout(_ layoutID: EUUID, from resource: Resource) async -> TransitionLayout {
-        let pointIDs = referenceIDs(from: await resource.eGet(objectId: layoutID, feature: "points"))
+        let pointIDs = ModelReferences.identifiers(from: await resource.eGet(objectId: layoutID, feature: "points"))
         var points = [Point2D]()
         for pID in pointIDs {
             let x = await resource.eGet(objectId: pID, feature: "x") as? Double ?? 0
@@ -542,63 +569,6 @@ public struct MachineEcoreCodec {
             return String(double)
         default:
             return ""
-        }
-    }
-
-    /// Normalise a single reference value into an object identifier.
-    ///
-    /// Structural resources built in memory may keep single-valued references
-    /// as direct `DynamicEObject` values instead of stored UUIDs. This helper
-    /// accepts either representation so decode logic can treat parsed XMI and
-    /// in-memory models uniformly.
-    ///
-    /// - Parameter value: Stored reference value to normalise.
-    /// - Returns: Identifier of the referenced object, or `nil` if unavailable.
-    private func referenceID(from value: Any?) -> EUUID? {
-        switch value {
-        case let id as EUUID:
-            return id
-        case let object as DynamicEObject:
-            return object.id
-        case let objects as [DynamicEObject]:
-            return objects.first?.id
-        case let ids as [EUUID]:
-            return ids.first
-        case let values as [Any]:
-            for candidate in values {
-                if let reference = referenceID(from: candidate) {
-                    return reference
-                }
-            }
-            return nil
-        default:
-            return nil
-        }
-    }
-
-    /// Normalise a many-valued reference into object identifiers.
-    ///
-    /// Structural resources can represent many-valued references either as
-    /// UUID arrays or as arrays of direct `DynamicEObject` values. This helper
-    /// preserves ordering while converting those cases into IDs for the decode
-    /// path.
-    ///
-    /// - Parameter value: Stored reference value to normalise.
-    /// - Returns: Ordered identifiers for the referenced objects.
-    private func referenceIDs(from value: Any?) -> [EUUID] {
-        switch value {
-        case let ids as [EUUID]:
-            return ids
-        case let id as EUUID:
-            return [id]
-        case let objects as [DynamicEObject]:
-            return objects.map(\.id)
-        case let object as DynamicEObject:
-            return [object.id]
-        case let values as [Any]:
-            return values.compactMap { referenceID(from: $0) }
-        default:
-            return []
         }
     }
 }

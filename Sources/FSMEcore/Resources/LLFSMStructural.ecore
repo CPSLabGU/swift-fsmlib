@@ -154,6 +154,67 @@
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="extraProperties"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="properties"
+        upperBound="-1" eType="#//PropertyListEntry" containment="true"/>
+  </eClassifiers>
+
+  <!-- PropertyListEntry: a keyed value of an editor property list -->
+  <eClassifiers xsi:type="ecore:EClass" name="PropertyListEntry">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="key" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="value" lowerBound="1"
+        eType="#//PropertyListValue" containment="true"/>
+  </eClassifiers>
+
+  <!-- PropertyListValue: a typed property list value -->
+  <eClassifiers xsi:type="ecore:EClass" name="PropertyListValue" abstract="true"/>
+
+  <!-- PropertyListReal: a floating point property list value -->
+  <eClassifiers xsi:type="ecore:EClass" name="PropertyListReal" eSuperTypes="#//PropertyListValue">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+  </eClassifiers>
+
+  <!-- PropertyListInteger: an integral property list value -->
+  <eClassifiers xsi:type="ecore:EClass" name="PropertyListInteger" eSuperTypes="#//PropertyListValue">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong"/>
+  </eClassifiers>
+
+  <!-- PropertyListBoolean: a Boolean property list value -->
+  <eClassifiers xsi:type="ecore:EClass" name="PropertyListBoolean" eSuperTypes="#//PropertyListValue">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+  </eClassifiers>
+
+  <!-- PropertyListString: a text property list value -->
+  <eClassifiers xsi:type="ecore:EClass" name="PropertyListString" eSuperTypes="#//PropertyListValue">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- PropertyListData: a binary property list value in Base64 -->
+  <eClassifiers xsi:type="ecore:EClass" name="PropertyListData" eSuperTypes="#//PropertyListValue">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- PropertyListDate: a point in time as an ISO 8601 UTC timestamp -->
+  <eClassifiers xsi:type="ecore:EClass" name="PropertyListDate" eSuperTypes="#//PropertyListValue">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- PropertyListArray: an ordered list of property list values -->
+  <eClassifiers xsi:type="ecore:EClass" name="PropertyListArray" eSuperTypes="#//PropertyListValue">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="items"
+        upperBound="-1" eType="#//PropertyListValue" containment="true"/>
+  </eClassifiers>
+
+  <!-- PropertyListDictionary: keyed property list values -->
+  <eClassifiers xsi:type="ecore:EClass" name="PropertyListDictionary" eSuperTypes="#//PropertyListValue">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="entries"
+        upperBound="-1" eType="#//PropertyListEntry" containment="true"/>
   </eClassifiers>
 
   <!-- TransitionLayoutEntry: per-transition graphical layout -->
