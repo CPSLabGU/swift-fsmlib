@@ -1,0 +1,12 @@
+{
+  "name": "kernel-swift",
+  "summary": "Swift 6 program that runs a kernel arrangement and prints its canonical trace",
+  "mainModule": "generate",
+  "mainTemplate": "generate",
+  "imports": [
+    "../../expressions"
+  ],
+  "options": {
+    "lineDelimiter": "\n"
+  }
+}

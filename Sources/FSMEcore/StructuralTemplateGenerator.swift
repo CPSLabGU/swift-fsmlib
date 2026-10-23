@@ -323,7 +323,11 @@ public struct StructuralTemplateGenerator {
     }
 }
 
-/// Generated file descriptor exposed to the MTL runtime.
+/// A generated file: its path relative to an output directory and its text.
+///
+/// The structural templates receive descriptors as their input model, and
+/// ``KernelTemplateGenerator`` returns the files that the kernel templates
+/// generate as descriptors.
 public struct GeneratedFileDescriptor: Sendable, Equatable {
     /// Relative output path for the rendered file.
     public let path: String

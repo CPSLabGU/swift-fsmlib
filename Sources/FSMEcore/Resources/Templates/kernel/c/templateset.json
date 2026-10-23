@@ -1,0 +1,12 @@
+{
+  "name": "kernel-c",
+  "summary": "C11 program that runs a kernel arrangement and prints its canonical trace",
+  "mainModule": "generate",
+  "mainTemplate": "generate",
+  "imports": [
+    "../../expressions"
+  ],
+  "options": {
+    "lineDelimiter": "\n"
+  }
+}

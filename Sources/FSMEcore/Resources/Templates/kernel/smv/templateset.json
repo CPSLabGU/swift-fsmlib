@@ -1,0 +1,12 @@
+{
+  "name": "smv",
+  "summary": "nuXmv and NuSMV model of a kernel arrangement with one micro-step per Kripke step",
+  "mainModule": "generate",
+  "mainTemplate": "generate",
+  "imports": [
+    "../../expressions"
+  ],
+  "options": {
+    "lineDelimiter": "\n"
+  }
+}

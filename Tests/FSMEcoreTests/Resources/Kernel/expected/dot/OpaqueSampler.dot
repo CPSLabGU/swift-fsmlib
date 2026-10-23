@@ -1,0 +1,15 @@
+digraph "OpaqueSampler" {
+  graph [rankdir=TB, fontname="Helvetica", fontsize=8, nodesep=0.3, ranksep=0.25, pad=0.03, margin=0];
+  node [fontname="Helvetica", fontsize=8, margin="0.03,0.02"];
+  edge [fontname="Helvetica", fontsize=7, arrowsize=0.6];
+  subgraph "cluster_probe" {
+    label=<<I>probe</I> : Sampler>;
+    style="rounded,dashed"; color="#888888";
+    "probe.initial" [shape=circle, style=filled, fillcolor=black, label="", width=0.12, fixedsize=true];
+    "probe.Wait" [shape=ellipse, style=solid, label=<<B>Wait</B>>];
+    "probe.Sample" [shape=ellipse, style=solid, label=<<B>Sample</B><BR/><FONT POINT-SIZE="6"><I>read_sensor(&amp;latest);</I><BR/>print "sample" latest</FONT>>];
+    "probe.initial" -> "probe.Wait";
+    "probe.Wait" -> "probe.Sample" [label=<1: <I>sensor_ready()</I>>];
+    "probe.Sample" -> "probe.Wait" [label=<1: true>];
+  }
+}

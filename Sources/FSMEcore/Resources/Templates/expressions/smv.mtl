@@ -1,0 +1,71 @@
+[comment]
+nuXmv and NuSMV rendering of kernel expressions.
+
+Identifiers are the model names, with _smv appended to those that are
+reserved words of the input language or that could clash with generated
+names. The table of a pure function is a frozen array fn.<name>, indexed
+by its arguments. With opaque=havoc an opaque expression, or a call that
+cannot be tabulated, is an input variable opaque<k> of the machine
+module, unconstrained in every step.
+[/comment]
+[module smv('http://cpslabgu.github.io/llfsm/kernel')/]
+[import expressions::kernel/]
+[import expressions::verification/]
+
+[comment The reserved words of the input language and the names of the generated elements. /]
+[query public reservedWords() : Sequence(String) = Sequence{'MODULE', 'DEFINE', 'MDEFINE', 'CONSTANTS', 'VAR', 'IVAR', 'FROZENVAR', 'INIT', 'TRANS', 'INVAR', 'SPEC', 'CTLSPEC', 'LTLSPEC', 'PSLSPEC', 'INVARSPEC', 'COMPUTE', 'FAIRNESS', 'JUSTICE', 'COMPASSION', 'ISA', 'ASSIGN', 'CONSTRAINT', 'SIMPWFF', 'CTLWFF', 'LTLWFF', 'PSLWFF', 'COMPWFF', 'IN', 'MIN', 'MAX', 'MIRROR', 'PRED', 'PREDICATES', 'NAME', 'process', 'array', 'of', 'boolean', 'integer', 'real', 'word', 'word1', 'bool', 'signed', 'unsigned', 'extend', 'resize', 'sizeof', 'uwconst', 'swconst', 'EX', 'AX', 'EF', 'AF', 'EG', 'AG', 'E', 'A', 'F', 'G', 'X', 'Y', 'Z', 'H', 'O', 'S', 'T', 'U', 'V', 'BU', 'EBF', 'ABF', 'EBG', 'ABG', 'case', 'esac', 'mod', 'next', 'init', 'union', 'in', 'xor', 'xnor', 'self', 'TRUE', 'FALSE', 'count', 'abs', 'max', 'min', 'toint', 'floor', 'ceil', 'typeof', 'select', 'time', 'module', 'define', 'var', 'ivar', 'frozenvar', 'trans', 'invar', 'spec', 'ctlspec', 'ltlspec', 'invarspec', 'assign', 'fairness', 'justice', 'compassion', 'constraint', 'isa', 'pred', 'main', 'executing', 'pc', 'entered', 'advance', 'accepting', 'halted', 'turn', 'round', 'none', 'sch', 'env', 'shared', 'fn', 'RoundRobin', 'Environment', 'Shared', 'Functions'}/]
+
+[comment The prefixes of generated names. /]
+[query public generatedPrefixes() : Sequence(String) = Sequence{'t0', 't1', 't2', 't3', 't4', 't5', 't6', 't7', 't8', 't9', 'executing_', 'opaque'}/]
+
+[comment The identifier of a model name. /]
+[query public id(name : String) : String =
+  if reservedWords()->includes(name) or name.endsWith('_smv') or generatedPrefixes()->exists(p | name.startsWith(p)) then name + '_smv' else name endif/]
+
+[comment The name of the table of a function. /]
+[query public tableName(f : FunctionDeclaration) : String = id(tableBaseName(f))/]
+
+[comment The index into a function table of an argument of a finite type. /]
+[template public tableIndex(t : Type, x : Expression)][if (t.oclIsKindOf(BooleanType))]toint([ex(x)/])[elseif (t.oclIsKindOf(EnumerationType))](case [for (l : String | t.oclAsType(EnumerationType).literals)][ex(x)/] = [id(l)/] : [i - 1/]; [/for]TRUE : 0; esac)[else][ex(x)/][/if][/template]
+
+[comment The index range of a function table for an argument type. /]
+[template public tableRange(t : Type)][if (t.oclIsKindOf(BooleanType))]0..1[elseif (t.oclIsKindOf(EnumerationType))]0..[t.oclAsType(EnumerationType).literals->size() - 1/][else][t.oclAsType(IntegerType).lower/]..[t.oclAsType(IntegerType).upper/][/if][/template]
+
+[comment Types. /]
+[template public ty(t : BooleanType)]boolean[/template]
+[template public ty(t : IntegerType)][t.lower/]..[t.upper/][/template]
+[template public ty(t : EnumerationType)]{[for (l : String | t.literals) separator(', ')][id(l)/][/for]}[/template]
+[template public ty(t : ArrayType)]array 0..[t.size - 1/] of [ty(t.element)/][/template]
+
+[comment Default values of scalar types. /]
+[template public defaultValue(t : BooleanType)]FALSE[/template]
+[template public defaultValue(t : IntegerType)][if (t.lower < 0)]([t.lower/])[else][t.lower/][/if][/template]
+[template public defaultValue(t : EnumerationType)][id(t.literals->first())/][/template]
+
+[comment Operators. /]
+[query public smvOperator(operation : String) : String =
+  if operation = 'conjunction' then '&'
+  else if operation = 'disjunction' then '|'
+  else if operation = 'addition' then '+'
+  else if operation = 'subtraction' then '-'
+  else if operation = 'multiplication' then '*'
+  else if operation = 'division' then '/'
+  else if operation = 'modulo' then 'mod'
+  else if operation = 'equal' then '='
+  else if operation = 'notEqual' then '!='
+  else if operation = 'lessThan' then '<'
+  else if operation = 'lessOrEqual' then '<='
+  else if operation = 'greaterThan' then '>'
+  else '>=' endif endif endif endif endif endif endif endif endif endif endif endif/]
+
+[comment Expressions: one template per class, compound expressions fully parenthesised. /]
+[template public ex(e : BooleanLiteral)][if (e.value)]TRUE[else]FALSE[/if][/template]
+[template public ex(e : IntegerLiteral)][if (e.value < 0)]([e.value/])[else][e.value/][/if][/template]
+[template public ex(e : EnumerationLiteral)][id(e.literal)/][/template]
+[template public ex(e : VariableReference)][id(e.variable.name)/][if (not e.index.oclIsUndefined())]['['/][ex(e.index)/][']'/][/if][/template]
+[template public ex(e : UnaryExpression)][if (e.operation.toString() = 'negation')](![ex(e.operand)/])[else](-[ex(e.operand)/])[/if][/template]
+[template public ex(e : BinaryExpression)]([ex(e.left)/] [smvOperator(e.operation.toString())/] [ex(e.right)/])[/template]
+[template public ex(e : ConditionalExpression)](case [ex(e.condition)/] : [ex(e.whenTrue)/]; TRUE : [ex(e.whenFalse)/]; esac)[/template]
+[template public ex(e : InStateExpression)]([id(e.instance.name)/].pc = [id(e.state.name)/])[/template]
+[template public ex(e : CallExpression)][if (isHavocked(e))][havocName(e)/][else]fn.[tableName(e.function)/][let arguments = (if e.receiver.oclIsUndefined() then Sequence{} else Sequence{e.receiver} endif)->addAll(e.arguments)][for (x : Expression | arguments)]['['/][tableIndex(domain(e.function)->at(i), x)/][']'/][/for][/let][/if][/template]
+[template public ex(e : OpaqueExpression)][havocName(e)/][/template]

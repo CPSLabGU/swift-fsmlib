@@ -1,0 +1,44 @@
+[comment]
+Graphviz rendering of kernel expressions and statements for HTML-like
+labels: the text is escaped, operators are written as words or symbols,
+and opaque text is shown verbatim in italics.
+[/comment]
+[module dot('http://cpslabgu.github.io/llfsm/kernel')/]
+[import expressions::kernel/]
+
+[comment Text made safe for a Graphviz HTML-like label. /]
+[query public html(s : String) : String = s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')/]
+
+[comment The notation of a binary operation, escaped for an HTML-like label. /]
+[query public dotOperator(operation : String) : String =
+  if operation = 'conjunction' then 'and'
+  else if operation = 'disjunction' then 'or'
+  else if operation = 'addition' then '+'
+  else if operation = 'subtraction' then '-'
+  else if operation = 'multiplication' then '*'
+  else if operation = 'division' then '/'
+  else if operation = 'modulo' then 'mod'
+  else if operation = 'equal' then '='
+  else if operation = 'notEqual' then '!='
+  else if operation = 'lessThan' then '&lt;'
+  else if operation = 'lessOrEqual' then '&lt;='
+  else if operation = 'greaterThan' then '&gt;'
+  else '&gt;=' endif endif endif endif endif endif endif endif endif endif endif endif/]
+
+[comment Expressions: one template per class, compound expressions parenthesised. /]
+[template public expr(e : BooleanLiteral)][if (e.value)]true[else]false[/if][/template]
+[template public expr(e : IntegerLiteral)][e.value/][/template]
+[template public expr(e : EnumerationLiteral)][html(e.literal)/][/template]
+[template public expr(e : VariableReference)][html(e.variable.name)/][if (not e.index.oclIsUndefined())]['['/][expr(e.index)/][']'/][/if][/template]
+[template public expr(e : UnaryExpression)]([if (e.operation.toString() = 'negation')]not [else]-[/if][expr(e.operand)/])[/template]
+[template public expr(e : BinaryExpression)]([expr(e.left)/] [dotOperator(e.operation.toString())/] [expr(e.right)/])[/template]
+[template public expr(e : ConditionalExpression)]([expr(e.condition)/] ? [expr(e.whenTrue)/] : [expr(e.whenFalse)/])[/template]
+[template public expr(e : InStateExpression)][html(e.instance.name)/] in [html(e.state.name)/][/template]
+[template public expr(e : CallExpression)][if (not e.receiver.oclIsUndefined())][expr(e.receiver)/].[/if][html(e.function.name)/]([for (x : Expression | e.arguments) separator(', ')][expr(x)/][/for])[/template]
+[template public expr(e : OpaqueExpression)]<I>[html(e.text)/]</I>[/template]
+
+[comment Statements, each on one line of a label. /]
+[template public statement(s : Assignment)][expr(s.target)/] := [expr(s.value)/][/template]
+[template public statement(s : Print)]print "[html(s.text)/]"[for (v : Expression | s.values)] [expr(v)/][/for][/template]
+[template public statement(s : CallStatement)][expr(s.call)/][/template]
+[template public statement(s : OpaqueStatement)]<I>[html(s.text)/]</I>[/template]

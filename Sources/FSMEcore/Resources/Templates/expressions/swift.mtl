@@ -1,0 +1,73 @@
+[comment]
+Swift 6 rendering of kernel expressions and statements.
+
+Variables appear under their model names: shared variables are properties
+of the arrangement class, whose ringlet methods declare local computed
+variables for the local variables of the machine and constants for the
+snapshot of the external variables, so that opaque text can use them too.
+Calls pass their arguments without labels. Generated support identifiers
+start with llfsm or LLFSM. An enumeration literal is <Type>.`literal`, a
+state <Machine>_State.`State`.
+[/comment]
+[module swift('http://cpslabgu.github.io/llfsm/kernel')/]
+[import expressions::kernel/]
+
+[comment The language identifier of opaque text and host declarations that this target accepts. /]
+[query public targetLanguage() : String = 'swift'/]
+
+[comment A Swift string literal body for arbitrary text. /]
+[query public swiftString(s : String) : String = s.replaceAll('\\\\', '\\\\\\\\').replaceAll('"', '\\\\"')/]
+
+[comment The Swift operator of a binary operation. /]
+[query public swiftBinary(operation : String) : String =
+  if operation = 'conjunction' then '&&'
+  else if operation = 'disjunction' then '||'
+  else if operation = 'addition' then '+'
+  else if operation = 'subtraction' then '-'
+  else if operation = 'multiplication' then '*'
+  else if operation = 'division' then '/'
+  else if operation = 'modulo' then '%'
+  else if operation = 'equal' then '=='
+  else if operation = 'notEqual' then '!='
+  else if operation = 'lessThan' then '<'
+  else if operation = 'lessOrEqual' then '<='
+  else if operation = 'greaterThan' then '>'
+  else '>=' endif endif endif endif endif endif endif endif endif endif endif endif/]
+
+[comment The default value of a scalar type. /]
+[template public defaultValue(t : Type)][if (t.oclIsKindOf(IntegerType))][t.oclAsType(IntegerType).lower/][elseif (t.oclIsKindOf(EnumerationType))][t.name/].`[t.oclAsType(EnumerationType).literals->first()/]`[elseif (t.oclIsKindOf(OpaqueType))][t.name/]()[else]false[/if][/template]
+
+[comment The default value of any type: arrays are filled element by element. /]
+[template public defaultOfType(t : Type)][if (t.oclIsKindOf(ArrayType))]Array(repeating: [defaultValue(t.oclAsType(ArrayType).element)/], count: [t.oclAsType(ArrayType).size/])[else][defaultValue(t)/][/if][/template]
+
+[comment Expressions: one template per class, compound expressions fully parenthesised. /]
+[template public expr(e : BooleanLiteral)][if (e.value)]true[else]false[/if][/template]
+[template public expr(e : IntegerLiteral)][e.value/][/template]
+[template public expr(e : EnumerationLiteral)][e.type.name/].`[e.literal/]`[/template]
+[template public expr(e : VariableReference)][e.variable.name/][if (not e.index.oclIsUndefined())]['['/]llfsmIndex([expr(e.index)/], [e.variable.type.oclAsType(ArrayType).size/], "[swiftString(e.variable.name)/]")[']'/][/if][/template]
+[template public expr(e : UnaryExpression)]([if (e.operation.toString() = 'negation')]![else]-[/if][expr(e.operand)/])[/template]
+[template public expr(e : BinaryExpression)]([expr(e.left)/] [swiftBinary(e.operation.toString())/] [expr(e.right)/])[/template]
+[template public expr(e : ConditionalExpression)]([expr(e.condition)/] ? [expr(e.whenTrue)/] : [expr(e.whenFalse)/])[/template]
+[template public expr(e : InStateExpression)](llfsmInstance_[e.instance.name/].llfsmState == [e.instance.machine.name/]_State.`[e.state.name/]`)[/template]
+[template public expr(e : CallExpression)][if (not e.receiver.oclIsUndefined())][expr(e.receiver)/].[/if][e.function.name/]([for (x : Expression | e.arguments) separator(', ')][expr(x)/][/for])[/template]
+[template public expr(e : OpaqueExpression)]([e.text/])[/template]
+
+[comment Statements: one template per class, each a complete line at the indentation of an action. /]
+[template public statement(s : Assignment)]
+[let t : Type = scalarType(s.target.variable.type)]
+[if (t.oclIsKindOf(IntegerType) and not (s.target.index.oclIsUndefined() and s.target.variable.type.oclIsKindOf(ArrayType)))]
+                    [expr(s.target)/] = llfsmCheck([expr(s.value)/], [t.oclAsType(IntegerType).lower/], [t.oclAsType(IntegerType).upper/], "[swiftString(s.target.variable.name)/]")
+[else]
+                    [expr(s.target)/] = [expr(s.value)/]
+[/if]
+[/let]
+[/template]
+[template public statement(s : Print)]
+                    print("[swiftString(s.text)/]"[for (v : Expression | s.values)], [expr(v)/][/for])
+[/template]
+[template public statement(s : CallStatement)]
+                    [if (not s.call.function.result.oclIsUndefined())]_ = [/if][expr(s.call)/]
+[/template]
+[template public statement(s : OpaqueStatement)]
+                    [s.text/]
+[/template]
