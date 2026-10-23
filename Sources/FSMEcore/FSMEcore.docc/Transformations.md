@@ -13,6 +13,8 @@ three levels described in <doc:MetamodelLevels>:
 | ``LLFSMTransformations/structuralToSectioned(_:arrangementName:uri:)`` | structural machine or arrangement | sectioned arrangement | states, sections, labels, suspend state, boilerplate, instances; typed where the text lies in the typed subset |
 | ``LLFSMTransformations/sectionedToKernel(_:options:uri:)`` | sectioned arrangement | kernel arrangement | the execution semantics of <doc:SectionedSemantics>, with origin records |
 | ``LLFSMTransformations/kernelToSectioned(_:uri:)`` | kernel arrangement | sectioned arrangement | the encoded sectioned model exactly, or a flat mapping |
+| ``LLFSMTransformations/sectionedToStructural(_:uri:)`` | sectioned arrangement | structural machine or arrangement | states, sections and labels as host-language text, suspend state, boilerplate, instances |
+| ``LLFSMTransformations/kernelToStructural(_:uri:)`` | kernel arrangement | structural machine or arrangement | as ``LLFSMTransformations/kernelToSectioned(_:uri:)`` followed by ``LLFSMTransformations/sectionedToStructural(_:uri:)`` |
 
 Each transformation reads the model held by a resource and returns a
 ``TransformationResult``: a new resource with the transformed model and
@@ -161,6 +163,59 @@ pass-through states included, and the labels are copied. The execution
 semantics of the result differ from those of the kernel machine, which the
 diagnostics report.
 
+## Sectioned to Structural
+
+``LLFSMTransformations/sectionedToStructural(_:uri:)`` inverts the
+structural transformation. A sectioned arrangement whose language is set and
+whose only instance and only machine carry its name, as the structural
+transformation makes from a single machine, becomes a structural machine.
+Any other arrangement becomes a structural arrangement that holds a copy of
+the machine of every instance, with the type file `<Machine>.machine`. The
+initial state of each machine comes first, followed by the other states in
+their order, and the suspend state is kept.
+
+Every section and label is written as text in the language of its machine,
+else of its arrangement, else ``LLFSMTransformations/defaultLanguage``.
+Opaque text comes back byte for byte, including its white space. Typed
+nodes are written by the bundled expression templates in the form that
+``ExpressionTyper`` reads back, with only the parentheses that the
+precedence of the language needs:
+
+| typed node | C family | Swift | Java |
+|---|---|---|---|
+| state time compared with `e` | `after(e)`, `after_ms(e)`, `timeout(e)` for seconds, milliseconds and microseconds; `>=` and `<` compare with `e - 1` | same | same |
+| assignment | `x = e;` | `x = e` | `x = e;` |
+| output | `printf("text\n");`, or `puts("text");` for text with `%` | `print("text")` | `System.out.println("text");` |
+| machine control | `SUSPEND(&static_fsm_<instance>);` in C, `suspend_at(<position>);` in C++ and Objective-C++ | `suspend(<instance>)` | `suspend(<instance>);` |
+| recognised variable | `<type>` tab `<name>;` | `var <name>: <Type>` | `<type> <name>;` |
+
+Each section holds one line per typed statement. The host declarations of a
+machine become its boilerplate: the includes of all of them one after the
+other; the declarations of those with includes as the variables, with the
+declarations of the machine variables after the first of them; and the
+declarations of those without includes as the functions. Typed nodes of a
+language that no bundled template writes stop the transformation with
+``HostTextRendererError/unsupportedLanguage(_:)``; opaque text of such a
+language is kept.
+
+Some information of a structural model is not kept by the sectioned level
+and cannot be recovered:
+
+- include paths, and the layout of states and transitions and of the editor
+  window;
+- the boilerplate of individual states, which the structural transformation
+  merged into the host declarations of the machine and which therefore
+  stays in the machine boilerplate;
+- the layout and comments of recognised variable declarations, which are
+  written in canonical form;
+- sections, labels and boilerplate that held only white space, which come
+  back empty, and redundant parentheses and spacing of typed text.
+
+A structural model has no place for the shared declarations of an
+arrangement, for instance bindings, or for machines without instances.
+Apart from these losses, a structural machine or arrangement taken to the
+sectioned level and back is written as the same bundle, byte for byte.
+
 ## Diagnostics
 
 ``TransformationWarning/Kind`` lists what a transformation can lose:
@@ -176,6 +231,9 @@ diagnostics report.
   was dropped;
 - ``TransformationWarning/Kind/flatMapping(machine:)``: a kernel machine
   without origin records was mapped flatly.
+- ``TransformationWarning/Kind/notRecovered(_:owner:)``: structural
+  information that the source level does not keep, as listed by
+  ``TransformationWarning/StructuralInformation``, could not be recovered.
 
 ## Topics
 
@@ -196,4 +254,5 @@ diagnostics report.
 - ``TransformationDiagnostics``
 - ``TransformationWarning``
 - ``LLFSMTransformationError``
+- ``HostTextRendererError``
 - ``SectionedToKernelOptionsError``
