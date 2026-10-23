@@ -15,6 +15,7 @@ Bundled MTL templates write C, Objective-C++ and SCXML machine and arrangement b
 The sectioned and kernel metamodels describe LLFSMs with typed, language-neutral expressions and statements. The sectioned level is the traditional view with code sections; the kernel level is the sectionless core into which sectioned models are encoded, and ``KernelValidator`` checks kernel models against its well-formedness rules.
 
 ``KernelTemplateGenerator`` generates C, C++, Swift and Java programs that run a kernel arrangement and print its canonical trace, nuXmv and TLA+ models for model checking, and Graphviz drawings.
+``LLFSMTransformations`` transforms structural models into sectioned models, encodes sectioned models into the kernel under the semantic options of ``SectionedToKernelOptions``, and rebuilds sectioned models from kernel models. ``ExpressionTyper`` turns host-language labels and sections into typed kernel nodes where they lie in the typed subset.
 
 ## Topics
 
@@ -26,6 +27,7 @@ The sectioned and kernel metamodels describe LLFSMs with typed, language-neutral
 - <doc:MetamodelLevels>
 - <doc:SectionedSemantics>
 - <doc:KernelTargets>
+- <doc:Transformations>
 
 ### Structural Models
 
@@ -70,6 +72,20 @@ The sectioned and kernel metamodels describe LLFSMs with typed, language-neutral
 - ``KernelOpaqueTreatment``
 - ``GeneratedFileDescriptor``
 
+### Transformations
+
+- ``LLFSMTransformations``
+- ``TransformationResult``
+- ``SectionedToKernelOptions``
+- ``TransformationDiagnostics``
+- ``TransformationWarning``
+
+### Typing Host-Language Text
+
+- ``ExpressionTyper``
+- ``VariableDeclarationScanner``
+- ``ScannedType``
+
 ### Origins
 
 - ``OriginAnnotations``
@@ -81,6 +97,8 @@ The sectioned and kernel metamodels describe LLFSMs with typed, language-neutral
 - ``LLFSMMetamodelError``
 - ``LLFSMMetamodelsError``
 - ``OriginAnnotationsError``
+- ``LLFSMTransformationError``
+- ``SectionedToKernelOptionsError``
 - ``StructuralTemplateGeneratorError``
 - ``TemplateBindingError``
 - ``StructuralTemplateServicesError``

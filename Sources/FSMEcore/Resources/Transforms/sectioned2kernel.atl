@@ -1,0 +1,834 @@
+-- sectioned2kernel.atl
+--
+-- Encodes a sectioned LLFSM arrangement into the sectionless kernel.
+--
+-- Every sectioned state S becomes the kernel state S that runs the entry
+-- section, followed, as needed, by the pass-through state S_i that runs the
+-- internal section, the resting state S_w, and one pass-through state S_xk per
+-- transition that runs the exit section (rule E1). A machine with a suspend
+-- state gains a shared suspension request, a local record of the state to
+-- resume and the pass-through states that run the suspend and resume sections
+-- (rule E2). State-time expressions read the time elapsed since the entry of
+-- the current state, and in-state observations map onto the kernel states
+-- that encode the observed state. Every kernel state and transition created
+-- here records its origin.
+--
+-- The options are those of the sectioned semantics; the names of the elements
+-- that the encoding adds and the constants of the time encoding are passed as
+-- parameters, so that the inverse transformation recognises them.
+--
+-- @nsURI Sectioned=http://cpslabgu.github.io/llfsm/sectioned
+-- @nsURI Kernel=http://cpslabgu.github.io/llfsm/kernel
+-- @param selfLoop : String
+-- @param elideEmptySections : Boolean
+-- @param suspension : String
+-- @param resumeFallback : String
+-- @param time : String
+-- @param inState : String
+-- @param nowName : String
+-- @param enteredAtName : String
+-- @param resumeToName : String
+-- @param suspendPrefix : String
+-- @param timeTypeName : String
+-- @param booleanTypeName : String
+-- @param resumeTypeSuffix : String
+-- @param clockMachineName : String
+-- @param clockInstanceName : String
+-- @param clockStateName : String
+-- @param internalSuffix : String
+-- @param waitSuffix : String
+-- @param exitSuffix : String
+-- @param suspendSuffix : String
+-- @param resumeSuffix : String
+-- @param dispatchSuffix : String
+-- @param timeUpper : Integer
+-- @param millisecondFactor : Integer
+-- @param secondFactor : Integer
+-- @param tickFactor : Integer
+module sectioned2kernel;
+create OUT : Kernel from IN : Sectioned, KIN : Kernel;
+
+-- Options
+
+helper def : keepsStateOnSelfLoop : Boolean = thisModule.selfLoop = 'traditional';
+
+helper def : encodesSuspension : Boolean = thisModule.suspension = 'encode';
+
+helper def : recordsEveryEntry : Boolean = thisModule.resumeFallback = 'previous';
+
+helper def : hasClockMachine : Boolean = thisModule.time = 'clock';
+
+helper def : expandsInState : Boolean = thisModule.inState = 'expand';
+
+-- Model queries
+
+helper def : arrangement : Sectioned!Arrangement =
+    Sectioned!Arrangement.allInstancesFrom('IN')->first();
+
+helper def : usesTime : Boolean =
+    thisModule.arrangement.machines->exists(m | m.usesTime);
+
+helper def : needsBooleanType : Boolean =
+    thisModule.arrangement.machines->exists(m | m.suspends);
+
+helper def : declaredBooleanTypes : Sequence(Kernel!BooleanType) =
+    Kernel!BooleanType.allInstancesFrom('KIN');
+
+helper def : booleanType : OclAny =
+    if thisModule.declaredBooleanTypes->isEmpty() then
+        thisModule.CreatedBooleanType(thisModule.arrangement)
+    else
+        thisModule.declaredBooleanTypes->first()
+    endif;
+
+helper def : nowVariable : OclAny = thisModule.NowVariable(thisModule.arrangement);
+
+helper context OclAny def : owningMachine : Sectioned!Machine =
+    let owner : OclAny = self.refImmediateComposite() in
+    if owner.oclIsKindOf(Sectioned!Machine) then owner else owner.owningMachine endif;
+
+helper context Sectioned!Machine def : usesTime : Boolean =
+    self.states->exists(s | s.eAllContents()->exists(e | e.oclIsKindOf(Sectioned!StateTimeExpression)));
+
+helper context Sectioned!Machine def : suspends : Boolean =
+    thisModule.encodesSuspension and not self.suspendState.oclIsUndefined();
+
+helper context Sectioned!Machine def : workingStates : Sequence(Sectioned!State) =
+    self.states->select(s | s <> self.suspendState);
+
+helper context Sectioned!Machine def : isControlled : Boolean =
+    Sectioned!MachineControlStatement.allInstancesFrom('IN')->exists(c |
+        c.instance.machine = self and c.operation <> 'restart');
+
+helper context Sectioned!State def : owner : Sectioned!Machine = self.refImmediateComposite();
+
+helper context Sectioned!State def : hasInternalState : Boolean =
+    not thisModule.elideEmptySections or self.internal->notEmpty();
+
+helper context Sectioned!State def : hasExitStates : Boolean =
+    not thisModule.elideEmptySections or self.onExit->notEmpty();
+
+helper context Sectioned!State def : hasSelfLoop : Boolean =
+    self.transitions->exists(t | t.target = self);
+
+helper context Sectioned!State def : hasWaitState : Boolean =
+    self.hasInternalState or (thisModule.keepsStateOnSelfLoop and self.hasSelfLoop);
+
+helper context Sectioned!State def : isSuspendState : Boolean =
+    self.owner.suspends and self.owner.suspendState = self;
+
+helper context Sectioned!State def : isWorking : Boolean =
+    self.owner.suspends and self.owner.suspendState <> self;
+
+helper context Sectioned!Transition def : source : Sectioned!State = self.refImmediateComposite();
+
+helper context Sectioned!Transition def : index : Integer =
+    self.source.transitions->indexOf(self) - 1;
+
+-- The state a transition leads to once its exit section has run.
+helper context Sectioned!Transition def : directTarget : OclAny =
+    if self.target = self.source then
+        if thisModule.keepsStateOnSelfLoop then thisModule.WaitState(self.source) else self.source endif
+    else
+        self.target
+    endif;
+
+-- The state a label of a resting state leads to.
+helper context Sectioned!Transition def : labelTarget : OclAny =
+    if self.source.hasExitStates then thisModule.ExitState(self) else self.directTarget endif;
+
+-- The kernel states that encode a sectioned state, in machine order.
+helper context Sectioned!State def : kernelStates : Sequence(OclAny) =
+    self.encodingStates
+        ->union(if self.isWorking then
+                    Sequence{thisModule.SuspendState(self), thisModule.ResumeState(self)}
+                else Sequence{} endif)
+        ->union(if self.isSuspendState then Sequence{thisModule.DispatchState(self)} else Sequence{} endif);
+
+-- The kernel states in which an observation of a sectioned state holds.
+helper context Sectioned!State def : encodingStates : Sequence(OclAny) =
+    Sequence{self}
+        ->union(if self.hasInternalState then Sequence{thisModule.InternalState(self)} else Sequence{} endif)
+        ->union(if self.hasWaitState then Sequence{thisModule.WaitState(self)} else Sequence{} endif)
+        ->union(if self.hasExitStates then self.transitions->collect(t | thisModule.ExitState(t)) else Sequence{} endif);
+
+-- Statements and labels
+
+helper def : copies(statements : Sequence(OclAny)) : Sequence(OclAny) =
+    statements->collect(s | s.copy())->select(s | not s.oclIsUndefined());
+
+helper def : copyOf(element : OclAny) : OclAny =
+    if element.oclIsUndefined() then OclUndefined else element.copy() endif;
+
+helper context Sectioned!State def : entryActions() : Sequence(OclAny) =
+    (if self.owner.usesTime then
+        Sequence{thisModule.NewAssignment(
+            thisModule.NewReference(thisModule.EnteredAtVariable(self.owner)),
+            thisModule.NewReference(thisModule.nowVariable))}
+    else Sequence{} endif)
+    ->union(if self.isWorking and thisModule.recordsEveryEntry then
+                Sequence{self.resumeRecord()}
+            else Sequence{} endif)
+    ->union(thisModule.copies(self.onEntry));
+
+helper context Sectioned!State def : resumeRecord() : OclAny =
+    thisModule.NewAssignment(
+        thisModule.NewReference(thisModule.ResumeVariable(self.owner)),
+        thisModule.NewEnumerationLiteral(thisModule.ResumeType(self.owner), self.name));
+
+-- The transitions of the entry state (isWait = false) or the resting state (isWait = true).
+helper context Sectioned!State def : restingTransitions(isWait : Boolean) : Sequence(OclAny) =
+    self.suspensionTransitions()
+        ->union(self.transitions->collect(t |
+            thisModule.MakeTransition(t.label.copy(), t.labelTarget, self.name, 'exit', t.index)))
+        ->union(if self.hasInternalState then
+                    Sequence{thisModule.MakeTransition(thisModule.NewBoolean(true),
+                        thisModule.InternalState(self), self.name, 'internal', OclUndefined)}
+                else if self.hasWaitState and not isWait then
+                    Sequence{thisModule.MakeTransition(thisModule.NewBoolean(true),
+                        thisModule.WaitState(self), self.name, 'wait', OclUndefined)}
+                else Sequence{} endif endif);
+
+helper context Sectioned!State def : suspensionTransitions() : Sequence(OclAny) =
+    if self.isWorking then
+        Sequence{thisModule.MakeTransition(
+            thisModule.NewReference(thisModule.SuspendFlag(self.owner)),
+            thisModule.SuspendState(self), self.name, 'suspend', OclUndefined)}
+    else if self.isSuspendState then
+        Sequence{thisModule.MakeTransition(
+            thisModule.NewUnary('negation', thisModule.NewReference(thisModule.SuspendFlag(self.owner))),
+            thisModule.DispatchState(self), self.name, 'dispatch', OclUndefined)}
+    else Sequence{} endif endif;
+
+-- Copies of kernel expressions and statements
+
+helper context Kernel!BooleanLiteral def : copy() : OclAny = thisModule.NewBoolean(self.value);
+
+helper context Kernel!IntegerLiteral def : copy() : OclAny = thisModule.NewInteger(self.value);
+
+helper context Kernel!EnumerationLiteral def : copy() : OclAny =
+    thisModule.NewEnumerationLiteral(self.type, self.literal);
+
+helper context Kernel!VariableReference def : copy() : OclAny = thisModule.CopyVariableReference(self);
+
+helper context Kernel!UnaryExpression def : copy() : OclAny =
+    thisModule.NewUnary(self.operation, self.operand.copy());
+
+helper context Kernel!BinaryExpression def : copy() : OclAny =
+    thisModule.NewBinary(self.operation, self.left.copy(), self.right.copy());
+
+helper context Kernel!ConditionalExpression def : copy() : OclAny = thisModule.CopyConditional(self);
+
+helper context Kernel!CallExpression def : copy() : OclAny = thisModule.CopyCall(self);
+
+helper context Kernel!OpaqueExpression def : copy() : OclAny = thisModule.CopyOpaqueExpression(self);
+
+helper context Kernel!Assignment def : copy() : OclAny =
+    thisModule.NewAssignment(self.target.copy(), self.value.copy());
+
+helper context Kernel!Print def : copy() : OclAny = thisModule.CopyPrint(self);
+
+helper context Kernel!CallStatement def : copy() : OclAny = thisModule.CopyCallStatement(self);
+
+helper context Kernel!OpaqueStatement def : copy() : OclAny = thisModule.CopyOpaqueStatement(self);
+
+-- The time elapsed since the entry of the current state, in the unit of the expression.
+helper context Sectioned!StateTimeExpression def : copy() : OclAny =
+    let elapsed : OclAny = thisModule.NewBinary('subtraction',
+        thisModule.NewReference(thisModule.nowVariable),
+        thisModule.NewReference(thisModule.EnteredAtVariable(self.owningMachine))) in
+    if self.unit = 'microseconds' then
+        elapsed
+    else
+        thisModule.NewBinary('division', elapsed, thisModule.NewInteger(
+            if self.unit = 'milliseconds' then thisModule.millisecondFactor
+            else if self.unit = 'seconds' then thisModule.secondFactor
+            else thisModule.tickFactor endif endif))
+    endif;
+
+helper context Sectioned!InStateExpression def : copy() : OclAny =
+    if thisModule.expandsInState then
+        self.state.encodingStates->iterate(k; observation : OclAny = OclUndefined |
+            if observation.oclIsUndefined() then
+                thisModule.NewInState(self.instance, k)
+            else
+                thisModule.NewBinary('disjunction', observation, thisModule.NewInState(self.instance, k))
+            endif)
+    else
+        thisModule.NewInState(self.instance, self.state)
+    endif;
+
+helper context Sectioned!MachineControlStatement def : copy() : OclAny =
+    if self.operation = 'restart' or not self.instance.machine.suspends then
+        OclUndefined
+    else
+        thisModule.NewAssignment(
+            thisModule.NewReference(thisModule.SuspendFlag(self.instance.machine)),
+            thisModule.NewBoolean(self.operation = 'suspend'))
+    endif;
+
+-- Arrangements, machines and instances
+
+rule Arrangement {
+    from
+        a : Sectioned!Arrangement
+    to
+        k : Kernel!Arrangement (
+            name <- a.name,
+            language <- a.language,
+            types <- a.types
+                ->union(if thisModule.needsBooleanType and thisModule.declaredBooleanTypes->isEmpty() then
+                            Sequence{thisModule.booleanType}
+                        else Sequence{} endif)
+                ->union(if thisModule.usesTime then Sequence{thisModule.TimeType(a)} else Sequence{} endif)
+                ->union(a.machines->select(m | m.suspends)->collect(m | thisModule.ResumeType(m))),
+            variables <- a.variables
+                ->union(if thisModule.usesTime then Sequence{thisModule.nowVariable} else Sequence{} endif)
+                ->union(a.machines->select(m | m.suspends)->collect(m | thisModule.SuspendFlag(m))),
+            functions <- a.functions,
+            hostDeclarations <- a.hostDeclarations,
+            machines <- (if thisModule.usesTime and thisModule.hasClockMachine then
+                            Sequence{thisModule.ClockMachine(a)}
+                        else Sequence{} endif)->union(a.machines),
+            instances <- (if thisModule.usesTime and thisModule.hasClockMachine then
+                            Sequence{thisModule.ClockInstance(a)}
+                        else Sequence{} endif)->union(a.instances)
+        )
+}
+
+rule Machine {
+    from
+        m : Sectioned!Machine
+    to
+        k : Kernel!Machine (
+            name <- m.name,
+            language <- m.language,
+            variables <- m.variables
+                ->union(if m.usesTime then Sequence{thisModule.EnteredAtVariable(m)} else Sequence{} endif)
+                ->union(if m.suspends then Sequence{thisModule.ResumeVariable(m)} else Sequence{} endif),
+            functions <- m.functions,
+            hostDeclarations <- m.hostDeclarations,
+            states <- m.states->collect(s | s.kernelStates)->flatten(),
+            initial <- m.initial
+        )
+}
+
+rule Instance {
+    from
+        i : Sectioned!Instance
+    to
+        k : Kernel!Instance (
+            name <- i.name,
+            machine <- i.machine,
+            bindings <- i.bindings
+        )
+}
+
+rule Binding {
+    from
+        b : Kernel!Binding
+    to
+        k : Kernel!Binding (
+            variable <- b.variable,
+            value <- b.value.copy()
+        )
+}
+
+-- States
+
+rule State {
+    from
+        s : Sectioned!State
+    to
+        k : Kernel!State (
+            name <- s.name,
+            actions <- s.entryActions(),
+            transitions <- s.restingTransitions(false),
+            origin <- o
+        ),
+        o : Kernel!Origin (
+            state <- s.name,
+            role <- 'entry'
+        )
+}
+
+unique lazy rule InternalState {
+    from
+        s : Sectioned!State
+    to
+        k : Kernel!State (
+            name <- s.name + thisModule.internalSuffix,
+            passThrough <- true,
+            actions <- thisModule.copies(s.internal),
+            transitions <- Sequence{thisModule.MakeTransition(thisModule.NewBoolean(true),
+                thisModule.WaitState(s), s.name, 'wait', OclUndefined)},
+            origin <- o
+        ),
+        o : Kernel!Origin (
+            state <- s.name,
+            role <- 'internal'
+        )
+}
+
+unique lazy rule WaitState {
+    from
+        s : Sectioned!State
+    to
+        k : Kernel!State (
+            name <- s.name + thisModule.waitSuffix,
+            transitions <- s.restingTransitions(true),
+            origin <- o
+        ),
+        o : Kernel!Origin (
+            state <- s.name,
+            role <- 'wait'
+        )
+}
+
+unique lazy rule ExitState {
+    from
+        t : Sectioned!Transition
+    to
+        k : Kernel!State (
+            name <- t.source.name + thisModule.exitSuffix + t.index.toString(),
+            passThrough <- true,
+            actions <- thisModule.copies(t.source.onExit),
+            transitions <- Sequence{thisModule.MakeTransition(thisModule.NewBoolean(true),
+                t.directTarget, t.source.name, 'exit', t.index)},
+            origin <- o
+        ),
+        o : Kernel!Origin (
+            state <- t.source.name,
+            role <- 'exit',
+            transition <- t.index
+        )
+}
+
+unique lazy rule SuspendState {
+    from
+        s : Sectioned!State
+    to
+        k : Kernel!State (
+            name <- s.name + thisModule.suspendSuffix,
+            passThrough <- true,
+            actions <- thisModule.copies(s.onSuspend)->append(s.resumeRecord()),
+            transitions <- Sequence{thisModule.MakeTransition(thisModule.NewBoolean(true),
+                s.owner.suspendState, s.name, 'suspend', OclUndefined)},
+            origin <- o
+        ),
+        o : Kernel!Origin (
+            state <- s.name,
+            role <- 'suspend'
+        )
+}
+
+unique lazy rule ResumeState {
+    from
+        s : Sectioned!State
+    to
+        k : Kernel!State (
+            name <- s.name + thisModule.resumeSuffix,
+            passThrough <- true,
+            actions <- thisModule.copies(s.onResume),
+            transitions <- Sequence{thisModule.MakeTransition(thisModule.NewBoolean(true),
+                s, s.name, 'resume', OclUndefined)},
+            origin <- o
+        ),
+        o : Kernel!Origin (
+            state <- s.name,
+            role <- 'resume'
+        )
+}
+
+unique lazy rule DispatchState {
+    from
+        s : Sectioned!State
+    to
+        k : Kernel!State (
+            name <- s.name + thisModule.dispatchSuffix,
+            passThrough <- true,
+            actions <- thisModule.copies(s.onResume),
+            transitions <- s.owner.workingStates->collect(w | thisModule.MakeTransition(
+                thisModule.NewBinary('equal',
+                    thisModule.NewReference(thisModule.ResumeVariable(s.owner)),
+                    thisModule.NewEnumerationLiteral(thisModule.ResumeType(s.owner), w.name)),
+                thisModule.ResumeState(w), w.name, 'resume', OclUndefined)),
+            origin <- o
+        ),
+        o : Kernel!Origin (
+            state <- s.name,
+            role <- 'dispatch'
+        )
+}
+
+rule MakeTransition(aLabel : Kernel!Expression, aTarget : Kernel!State, aState : String,
+                    aRole : String, anIndex : Integer) {
+    to
+        t : Kernel!Transition (
+            label <- aLabel,
+            target <- aTarget,
+            origin <- o
+        ),
+        o : Kernel!Origin (
+            state <- aState,
+            role <- aRole,
+            transition <- anIndex
+        )
+}
+
+-- Types and variables of the declarations
+
+rule BooleanType {
+    from
+        t : Kernel!BooleanType
+    to
+        k : Kernel!BooleanType (
+            name <- t.name
+        )
+}
+
+rule IntegerType {
+    from
+        t : Kernel!IntegerType
+    to
+        k : Kernel!IntegerType (
+            name <- t.name,
+            lower <- t.lower,
+            upper <- t.upper
+        )
+}
+
+rule EnumerationType {
+    from
+        t : Kernel!EnumerationType
+    to
+        k : Kernel!EnumerationType (
+            name <- t.name,
+            literals <- t.literals->asSequence()
+        )
+}
+
+rule ArrayType {
+    from
+        t : Kernel!ArrayType
+    to
+        k : Kernel!ArrayType (
+            name <- t.name,
+            element <- t.element,
+            size <- t.size
+        )
+}
+
+rule OpaqueType {
+    from
+        t : Kernel!OpaqueType
+    to
+        k : Kernel!OpaqueType (
+            name <- t.name,
+            text <- t.text,
+            language <- t.language
+        )
+}
+
+rule Variable {
+    from
+        v : Kernel!Variable
+    to
+        k : Kernel!Variable (
+            name <- v.name,
+            type <- v.type,
+            external <- v.external,
+            initialValue <- thisModule.copyOf(v.initialValue)
+        )
+}
+
+rule FunctionDeclaration {
+    from
+        f : Kernel!FunctionDeclaration
+    to
+        k : Kernel!FunctionDeclaration (
+            name <- f.name,
+            pure <- f.pure,
+            parameters <- f.parameters,
+            result <- f.result,
+            receiverType <- f.receiverType
+        )
+}
+
+rule Parameter {
+    from
+        p : Kernel!Parameter
+    to
+        k : Kernel!Parameter (
+            name <- p.name,
+            type <- p.type
+        )
+}
+
+rule HostDeclarations {
+    from
+        h : Kernel!HostDeclarations
+    to
+        k : Kernel!HostDeclarations (
+            language <- h.language,
+            includes <- h.includes,
+            declarations <- h.declarations
+        )
+}
+
+-- Declarations added by the encoding
+
+unique lazy rule CreatedBooleanType {
+    from
+        a : Sectioned!Arrangement
+    to
+        k : Kernel!BooleanType (
+            name <- thisModule.booleanTypeName
+        )
+}
+
+unique lazy rule TimeType {
+    from
+        a : Sectioned!Arrangement
+    to
+        k : Kernel!IntegerType (
+            name <- thisModule.timeTypeName,
+            lower <- 0,
+            upper <- thisModule.timeUpper
+        )
+}
+
+unique lazy rule NowVariable {
+    from
+        a : Sectioned!Arrangement
+    to
+        k : Kernel!Variable (
+            name <- thisModule.nowName,
+            type <- thisModule.TimeType(a),
+            external <- not thisModule.hasClockMachine
+        )
+}
+
+unique lazy rule EnteredAtVariable {
+    from
+        m : Sectioned!Machine
+    to
+        k : Kernel!Variable (
+            name <- thisModule.enteredAtName,
+            type <- thisModule.TimeType(thisModule.arrangement)
+        )
+}
+
+unique lazy rule SuspendFlag {
+    from
+        m : Sectioned!Machine
+    to
+        k : Kernel!Variable (
+            name <- thisModule.suspendPrefix + m.name,
+            type <- thisModule.booleanType,
+            external <- not m.isControlled
+        )
+}
+
+unique lazy rule ResumeType {
+    from
+        m : Sectioned!Machine
+    to
+        k : Kernel!EnumerationType (
+            name <- m.name + thisModule.resumeTypeSuffix,
+            literals <- m.workingStates->collect(s | s.name)
+        )
+}
+
+unique lazy rule ResumeVariable {
+    from
+        m : Sectioned!Machine
+    to
+        k : Kernel!Variable (
+            name <- thisModule.resumeToName,
+            type <- thisModule.ResumeType(m),
+            initialValue <- thisModule.NewEnumerationLiteral(thisModule.ResumeType(m), m.initial.name)
+        )
+}
+
+-- The clock machine
+
+unique lazy rule ClockMachine {
+    from
+        a : Sectioned!Arrangement
+    to
+        k : Kernel!Machine (
+            name <- thisModule.clockMachineName,
+            states <- Sequence{thisModule.ClockState(a)},
+            initial <- thisModule.ClockState(a)
+        )
+}
+
+unique lazy rule ClockState {
+    from
+        a : Sectioned!Arrangement
+    to
+        k : Kernel!State (
+            name <- thisModule.clockStateName,
+            actions <- Sequence{thisModule.NewAssignment(
+                thisModule.NewReference(thisModule.nowVariable),
+                thisModule.NewBinary('addition',
+                    thisModule.NewReference(thisModule.nowVariable), thisModule.NewInteger(1)))},
+            transitions <- Sequence{thisModule.MakeTransition(
+                thisModule.NewBinary('lessThan',
+                    thisModule.NewReference(thisModule.nowVariable), thisModule.NewInteger(thisModule.timeUpper)),
+                thisModule.ClockState(a), OclUndefined, 'clock', OclUndefined)},
+            origin <- o
+        ),
+        o : Kernel!Origin (
+            role <- 'clock'
+        )
+}
+
+unique lazy rule ClockInstance {
+    from
+        a : Sectioned!Arrangement
+    to
+        k : Kernel!Instance (
+            name <- thisModule.clockInstanceName,
+            machine <- thisModule.ClockMachine(a)
+        )
+}
+
+-- Copies of nodes with several features
+
+lazy rule CopyVariableReference {
+    from
+        e : Kernel!VariableReference
+    to
+        k : Kernel!VariableReference (
+            variable <- e.variable,
+            index <- thisModule.copyOf(e.index)
+        )
+}
+
+lazy rule CopyConditional {
+    from
+        e : Kernel!ConditionalExpression
+    to
+        k : Kernel!ConditionalExpression (
+            condition <- e.condition.copy(),
+            whenTrue <- e.whenTrue.copy(),
+            whenFalse <- e.whenFalse.copy()
+        )
+}
+
+lazy rule CopyCall {
+    from
+        e : Kernel!CallExpression
+    to
+        k : Kernel!CallExpression (
+            function <- e.function,
+            receiver <- thisModule.copyOf(e.receiver),
+            arguments <- e.arguments->collect(a | a.copy())
+        )
+}
+
+lazy rule CopyOpaqueExpression {
+    from
+        e : Kernel!OpaqueExpression
+    to
+        k : Kernel!OpaqueExpression (
+            text <- e.text,
+            language <- e.language,
+            type <- e.type
+        )
+}
+
+lazy rule CopyPrint {
+    from
+        e : Kernel!Print
+    to
+        k : Kernel!Print (
+            text <- e.text,
+            values <- e.values->collect(v | v.copy())
+        )
+}
+
+lazy rule CopyCallStatement {
+    from
+        e : Kernel!CallStatement
+    to
+        k : Kernel!CallStatement (
+            call <- e.call.copy()
+        )
+}
+
+lazy rule CopyOpaqueStatement {
+    from
+        e : Kernel!OpaqueStatement
+    to
+        k : Kernel!OpaqueStatement (
+            text <- e.text,
+            language <- e.language
+        )
+}
+
+-- New kernel nodes
+
+rule NewBoolean(aValue : Boolean) {
+    to
+        k : Kernel!BooleanLiteral (
+            value <- aValue
+        )
+}
+
+rule NewInteger(aValue : Integer) {
+    to
+        k : Kernel!IntegerLiteral (
+            value <- aValue
+        )
+}
+
+rule NewEnumerationLiteral(aType : Kernel!EnumerationType, aLiteral : String) {
+    to
+        k : Kernel!EnumerationLiteral (
+            type <- aType,
+            literal <- aLiteral
+        )
+}
+
+rule NewReference(aVariable : Kernel!Variable) {
+    to
+        k : Kernel!VariableReference (
+            variable <- aVariable
+        )
+}
+
+rule NewUnary(anOperation : String, anOperand : Kernel!Expression) {
+    to
+        k : Kernel!UnaryExpression (
+            operation <- anOperation,
+            operand <- anOperand
+        )
+}
+
+rule NewBinary(anOperation : String, aLeft : Kernel!Expression, aRight : Kernel!Expression) {
+    to
+        k : Kernel!BinaryExpression (
+            operation <- anOperation,
+            left <- aLeft,
+            right <- aRight
+        )
+}
+
+rule NewInState(anInstance : OclAny, aState : OclAny) {
+    to
+        k : Kernel!InStateExpression (
+            instance <- anInstance,
+            state <- aState
+        )
+}
+
+rule NewAssignment(aTarget : Kernel!VariableReference, aValue : Kernel!Expression) {
+    to
+        k : Kernel!Assignment (
+            target <- aTarget,
+            value <- aValue
+        )
+}

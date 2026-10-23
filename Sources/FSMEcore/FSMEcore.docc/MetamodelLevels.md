@@ -20,7 +20,8 @@ kernel elements with ``LLFSMMetamodels/kernelNamespaceURI`` (prefix
 ``LLFSMMetamodels/sectionedNamespaceURI`` (prefix `sectioned`), so a
 sectioned document contains kernel statements and expressions under their
 own namespace. <doc:SectionedSemantics> specifies how a sectioned model
-executes and how it is encoded into the kernel.
+executes and how it is encoded into the kernel, and <doc:Transformations>
+describes the transformations between the levels.
 
 ## Loading and Registering
 

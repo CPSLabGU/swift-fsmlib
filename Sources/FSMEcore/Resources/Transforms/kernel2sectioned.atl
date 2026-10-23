@@ -1,0 +1,588 @@
+-- kernel2sectioned.atl
+--
+-- Rebuilds a sectioned LLFSM arrangement from a kernel arrangement.
+--
+-- A kernel machine whose states record their origins is the encoding of a
+-- sectioned machine: its entry states become the sectioned states, the
+-- actions of the pass-through and resting states that encode the same state
+-- become its exit, internal, suspend and resume sections, the declarations
+-- added by the encoding are dropped, time and in-state expressions are
+-- folded back, and assignments of a suspension request become machine
+-- control statements. The clock machine of the encoding is dropped.
+--
+-- A kernel machine without origin records is mapped flatly: every action
+-- becomes an entry section, every state an ordinary state, and the labels
+-- are copied.
+--
+-- The names of the elements that the encoding adds and the constants of the
+-- time encoding are passed as parameters, as for the encoding.
+--
+-- @nsURI Sectioned=http://cpslabgu.github.io/llfsm/sectioned
+-- @nsURI Kernel=http://cpslabgu.github.io/llfsm/kernel
+-- @param nowName : String
+-- @param enteredAtName : String
+-- @param resumeToName : String
+-- @param suspendPrefix : String
+-- @param timeTypeName : String
+-- @param booleanTypeName : String
+-- @param resumeTypeSuffix : String
+-- @param millisecondFactor : Integer
+-- @param secondFactor : Integer
+-- @param tickFactor : Integer
+module kernel2sectioned;
+create OUT : Sectioned, KOUT : Kernel from IN : Kernel;
+
+-- Origins
+
+helper def : hasOrigins : Boolean = Kernel!Origin.allInstancesFrom('IN')->notEmpty();
+
+helper context Kernel!State def : owner : Kernel!Machine = self.refImmediateComposite();
+
+helper context Kernel!State def : role : String =
+    if self.origin.oclIsUndefined() then OclUndefined else self.origin.role endif;
+
+helper context Kernel!State def : encodedName : String =
+    if self.origin.oclIsUndefined() then OclUndefined else self.origin.state endif;
+
+helper context Kernel!Machine def : hasOrigins : Boolean =
+    self.states->exists(s | not s.origin.oclIsUndefined());
+
+helper context Kernel!Machine def : isClock : Boolean =
+    self.states->notEmpty() and self.states->forAll(s | s.role = 'clock');
+
+helper context Kernel!Machine def : isEncoded : Boolean = self.hasOrigins and not self.isClock;
+
+-- The states of the encoding that play a role for the sectioned state with a name.
+helper context Kernel!Machine def : statesFor(name : String, role : String) : Sequence(Kernel!State) =
+    self.states->select(s | s.encodedName = name and s.role = role);
+
+helper context Kernel!Machine def : entryStateFor(name : String) : Kernel!State =
+    self.statesFor(name, 'entry')->first();
+
+helper context Kernel!Machine def : dispatchState : Kernel!State =
+    self.states->select(s | s.role = 'dispatch')->first();
+
+helper context Kernel!State def : isSectionedState : Boolean =
+    if self.owner.isEncoded then self.role = 'entry' else not self.owner.isClock endif;
+
+-- The sectioned state that a kernel state belongs to.
+helper context Kernel!State def : sectionedState : Kernel!State =
+    if self.owner.isEncoded then self.owner.entryStateFor(self.encodedName) else self endif;
+
+helper context Kernel!State def : section(role : String) : Sequence(OclAny) =
+    let carrier : Kernel!State = self.owner.statesFor(self.encodedName, role)->first() in
+    if carrier.oclIsUndefined() then Sequence{} else thisModule.restored(carrier.actions) endif;
+
+-- Declarations added by the encoding
+
+helper context Kernel!Machine def : suspendFlagName : String = thisModule.suspendPrefix + self.name;
+
+helper def : suspendingMachines : Sequence(Kernel!Machine) =
+    Kernel!Machine.allInstancesFrom('IN')->select(m | m.isEncoded and not m.dispatchState.oclIsUndefined());
+
+helper context Kernel!Variable def : isEncodingVariable : Boolean =
+    let owner : OclAny = self.refImmediateComposite() in
+    if owner.oclIsKindOf(Kernel!Machine) then
+        owner.isEncoded and (self.name = thisModule.enteredAtName or self.name = thisModule.resumeToName)
+    else
+        thisModule.hasOrigins and (self.name = thisModule.nowName or
+            thisModule.suspendingMachines->exists(m | m.suspendFlagName = self.name))
+    endif;
+
+helper context Kernel!Type def : isReferencedByDeclarations : Boolean =
+    Kernel!Variable.allInstancesFrom('IN')->exists(v | v.type = self and not v.isEncodingVariable)
+    or Kernel!Parameter.allInstancesFrom('IN')->exists(p | p.type = self)
+    or Kernel!FunctionDeclaration.allInstancesFrom('IN')->exists(f | f.result = self or f.receiverType = self)
+    or Kernel!ArrayType.allInstancesFrom('IN')->exists(a | a.element = self)
+    or Kernel!OpaqueExpression.allInstancesFrom('IN')->exists(e | e.type = self);
+
+helper context Kernel!Type def : isEncodingType : Boolean =
+    thisModule.hasOrigins and not self.isReferencedByDeclarations and
+    ((self.oclIsKindOf(Kernel!IntegerType) and self.name = thisModule.timeTypeName)
+     or (self.oclIsKindOf(Kernel!BooleanType) and self.name = thisModule.booleanTypeName)
+     or (self.oclIsKindOf(Kernel!EnumerationType) and
+         thisModule.suspendingMachines->exists(m | m.name + thisModule.resumeTypeSuffix = self.name)));
+
+helper context Kernel!Statement def : isEncodingStatement : Boolean = false;
+
+helper context Kernel!Assignment def : isEncodingStatement : Boolean =
+    let variable : Kernel!Variable = self.target.variable in
+    variable.isEncodingVariable and variable.name <> thisModule.nowName and
+    not thisModule.suspendingMachines->exists(m | m.suspendFlagName = variable.name);
+
+helper context Kernel!Variable def : suspendedMachine : Kernel!Machine =
+    if thisModule.hasOrigins and self.refImmediateComposite().oclIsKindOf(Kernel!Arrangement) then
+        thisModule.suspendingMachines->select(m | m.suspendFlagName = self.name)->first()
+    else OclUndefined endif;
+
+-- Restoring sections and labels
+
+helper def : restored(statements : Sequence(OclAny)) : Sequence(OclAny) =
+    statements->select(s | not s.isEncodingStatement)->collect(s | s.restore());
+
+helper def : restoredOf(element : OclAny) : OclAny =
+    if element.oclIsUndefined() then OclUndefined else element.restore() endif;
+
+helper context Kernel!Expression def : isElapsedTime : Boolean = false;
+
+helper context Kernel!BinaryExpression def : isElapsedTime : Boolean =
+    thisModule.hasOrigins and self.operation = 'subtraction' and
+    self.left.oclIsKindOf(Kernel!VariableReference) and self.right.oclIsKindOf(Kernel!VariableReference) and
+    self.left.variable.name = thisModule.nowName and self.left.variable.isEncodingVariable and
+    self.right.variable.name = thisModule.enteredAtName and self.right.variable.isEncodingVariable;
+
+helper context Kernel!BinaryExpression def : timeUnit : String =
+    if self.isElapsedTime then 'microseconds'
+    else if self.operation = 'division' and self.left.isElapsedTime and
+            self.right.oclIsKindOf(Kernel!IntegerLiteral) then
+        if self.right.value = thisModule.millisecondFactor then 'milliseconds'
+        else if self.right.value = thisModule.secondFactor then 'seconds'
+        else if self.right.value = thisModule.tickFactor then 'ticks'
+        else OclUndefined endif endif endif
+    else OclUndefined endif endif;
+
+helper context Kernel!Expression def : disjuncts : Sequence(Kernel!Expression) = Sequence{self};
+
+helper context Kernel!BinaryExpression def : disjuncts : Sequence(Kernel!Expression) =
+    if self.operation = 'disjunction' then self.left.disjuncts->union(self.right.disjuncts)
+    else Sequence{self} endif;
+
+-- Whether a disjunction observes every kernel state that encodes one sectioned state.
+helper context Kernel!BinaryExpression def : isExpandedInState : Boolean =
+    let observations : Sequence(Kernel!Expression) = self.disjuncts in
+    let first : Kernel!Expression = observations->first() in
+    self.operation = 'disjunction' and
+    observations->forAll(o | o.oclIsKindOf(Kernel!InStateExpression)) and
+    first.state.owner.isEncoded and first.state.role = 'entry' and
+    observations->forAll(o | o.instance = first.instance and o.state.encodedName = first.state.encodedName);
+
+helper context Kernel!BooleanLiteral def : restore() : OclAny = thisModule.NewBoolean(self.value);
+
+helper context Kernel!IntegerLiteral def : restore() : OclAny = thisModule.NewInteger(self.value);
+
+helper context Kernel!EnumerationLiteral def : restore() : OclAny =
+    thisModule.NewEnumerationLiteral(self.type, self.literal);
+
+helper context Kernel!VariableReference def : restore() : OclAny = thisModule.RestoreVariableReference(self);
+
+helper context Kernel!UnaryExpression def : restore() : OclAny =
+    thisModule.NewUnary(self.operation, self.operand.restore());
+
+helper context Kernel!BinaryExpression def : restore() : OclAny =
+    if not self.timeUnit.oclIsUndefined() then
+        thisModule.NewStateTime(self.timeUnit)
+    else if self.isExpandedInState then
+        thisModule.NewInState(self.disjuncts->first().instance, self.disjuncts->first().state.sectionedState)
+    else
+        thisModule.NewBinary(self.operation, self.left.restore(), self.right.restore())
+    endif endif;
+
+helper context Kernel!ConditionalExpression def : restore() : OclAny = thisModule.RestoreConditional(self);
+
+helper context Kernel!InStateExpression def : restore() : OclAny =
+    thisModule.NewInState(self.instance, self.state.sectionedState);
+
+helper context Kernel!CallExpression def : restore() : OclAny = thisModule.RestoreCall(self);
+
+helper context Kernel!OpaqueExpression def : restore() : OclAny = thisModule.RestoreOpaqueExpression(self);
+
+helper context Kernel!Assignment def : restore() : OclAny =
+    let machine : Kernel!Machine = self.target.variable.suspendedMachine in
+    if machine.oclIsUndefined() then
+        thisModule.NewAssignment(self.target.restore(), self.value.restore())
+    else
+        thisModule.NewControl(
+            if self.value.oclIsKindOf(Kernel!BooleanLiteral) and self.value.value then 'suspend' else 'resume' endif,
+            Kernel!Instance.allInstancesFrom('IN')->select(i | i.machine = machine)->first())
+    endif;
+
+helper context Kernel!Print def : restore() : OclAny = thisModule.RestorePrint(self);
+
+helper context Kernel!CallStatement def : restore() : OclAny = thisModule.RestoreCallStatement(self);
+
+helper context Kernel!OpaqueStatement def : restore() : OclAny = thisModule.RestoreOpaqueStatement(self);
+
+-- Arrangements, machines and instances
+
+rule Arrangement {
+    from
+        a : Kernel!Arrangement
+    to
+        k : Sectioned!Arrangement (
+            name <- a.name,
+            language <- a.language,
+            types <- a.types->select(t | not t.isEncodingType),
+            variables <- a.variables->select(v | not v.isEncodingVariable),
+            functions <- a.functions,
+            hostDeclarations <- a.hostDeclarations,
+            machines <- a.machines->select(m | not m.isClock),
+            instances <- a.instances->select(i | not i.machine.isClock)
+        )
+}
+
+rule Machine {
+    from
+        m : Kernel!Machine (
+            not m.isClock
+        )
+    to
+        k : Sectioned!Machine (
+            name <- m.name,
+            language <- m.language,
+            variables <- m.variables->select(v | not v.isEncodingVariable),
+            functions <- m.functions,
+            hostDeclarations <- m.hostDeclarations,
+            states <- m.states->select(s | s.isSectionedState),
+            initial <- m.initial.sectionedState,
+            suspendState <- if m.isEncoded and not m.dispatchState.oclIsUndefined() then
+                                m.dispatchState.sectionedState
+                            else OclUndefined endif
+        )
+}
+
+rule Instance {
+    from
+        i : Kernel!Instance (
+            not i.machine.isClock
+        )
+    to
+        k : Sectioned!Instance (
+            name <- i.name,
+            machine <- i.machine,
+            bindings <- i.bindings
+        )
+}
+
+rule Binding {
+    from
+        b : Kernel!Binding
+    to
+        k : Kernel!Binding (
+            variable <- b.variable,
+            value <- b.value.restore()
+        )
+}
+
+-- States
+
+-- A state of a machine that records origins becomes the sectioned state it encodes.
+rule EncodedState {
+    from
+        s : Kernel!State (
+            s.owner.isEncoded and s.role = 'entry'
+        )
+    to
+        k : Sectioned!State (
+            name <- s.encodedName,
+            onEntry <- thisModule.restored(s.actions),
+            onExit <- s.section('exit'),
+            internal <- s.section('internal'),
+            onSuspend <- s.section('suspend'),
+            onResume <- if s.owner.dispatchState.oclIsUndefined() then
+                            s.section('resume')
+                        else if s.owner.dispatchState.sectionedState = s then
+                            s.section('dispatch')
+                        else
+                            s.section('resume')
+                        endif endif,
+            transitions <- s.transitions
+                ->select(t | t.origin.oclIsUndefined() or t.origin.role = 'exit')
+                ->collect(t | thisModule.EncodedTransition(t))
+        )
+}
+
+-- A state of a machine without origins becomes an ordinary state.
+rule FlatState {
+    from
+        s : Kernel!State (
+            not s.owner.hasOrigins
+        )
+    to
+        k : Sectioned!State (
+            name <- s.name,
+            onEntry <- thisModule.restored(s.actions),
+            transitions <- s.transitions->collect(t | thisModule.FlatTransition(t))
+        )
+}
+
+-- The sectioned state a transition of an entry state leads to, past its exit state.
+helper context Kernel!Transition def : sectionedTarget : Kernel!State =
+    if self.target.role = 'exit' and self.target.passThrough then
+        self.target.transitions->first().target.sectionedState
+    else
+        self.target.sectionedState
+    endif;
+
+lazy rule EncodedTransition {
+    from
+        t : Kernel!Transition
+    to
+        k : Sectioned!Transition (
+            label <- t.label.restore(),
+            target <- t.sectionedTarget
+        )
+}
+
+lazy rule FlatTransition {
+    from
+        t : Kernel!Transition
+    to
+        k : Sectioned!Transition (
+            label <- t.label.restore(),
+            target <- t.target
+        )
+}
+
+-- Declarations
+
+rule BooleanType {
+    from
+        t : Kernel!BooleanType (
+            not t.isEncodingType
+        )
+    to
+        k : Kernel!BooleanType (
+            name <- t.name
+        )
+}
+
+rule IntegerType {
+    from
+        t : Kernel!IntegerType (
+            not t.isEncodingType
+        )
+    to
+        k : Kernel!IntegerType (
+            name <- t.name,
+            lower <- t.lower,
+            upper <- t.upper
+        )
+}
+
+rule EnumerationType {
+    from
+        t : Kernel!EnumerationType (
+            not t.isEncodingType
+        )
+    to
+        k : Kernel!EnumerationType (
+            name <- t.name,
+            literals <- t.literals->asSequence()
+        )
+}
+
+rule ArrayType {
+    from
+        t : Kernel!ArrayType
+    to
+        k : Kernel!ArrayType (
+            name <- t.name,
+            element <- t.element,
+            size <- t.size
+        )
+}
+
+rule OpaqueType {
+    from
+        t : Kernel!OpaqueType
+    to
+        k : Kernel!OpaqueType (
+            name <- t.name,
+            text <- t.text,
+            language <- t.language
+        )
+}
+
+rule Variable {
+    from
+        v : Kernel!Variable (
+            not v.isEncodingVariable
+        )
+    to
+        k : Kernel!Variable (
+            name <- v.name,
+            type <- v.type,
+            external <- v.external,
+            initialValue <- thisModule.restoredOf(v.initialValue)
+        )
+}
+
+rule FunctionDeclaration {
+    from
+        f : Kernel!FunctionDeclaration
+    to
+        k : Kernel!FunctionDeclaration (
+            name <- f.name,
+            pure <- f.pure,
+            parameters <- f.parameters,
+            result <- f.result,
+            receiverType <- f.receiverType
+        )
+}
+
+rule Parameter {
+    from
+        p : Kernel!Parameter
+    to
+        k : Kernel!Parameter (
+            name <- p.name,
+            type <- p.type
+        )
+}
+
+rule HostDeclarations {
+    from
+        h : Kernel!HostDeclarations
+    to
+        k : Kernel!HostDeclarations (
+            language <- h.language,
+            includes <- h.includes,
+            declarations <- h.declarations
+        )
+}
+
+-- Copies of nodes with several features
+
+lazy rule RestoreVariableReference {
+    from
+        e : Kernel!VariableReference
+    to
+        k : Kernel!VariableReference (
+            variable <- e.variable,
+            index <- thisModule.restoredOf(e.index)
+        )
+}
+
+lazy rule RestoreConditional {
+    from
+        e : Kernel!ConditionalExpression
+    to
+        k : Kernel!ConditionalExpression (
+            condition <- e.condition.restore(),
+            whenTrue <- e.whenTrue.restore(),
+            whenFalse <- e.whenFalse.restore()
+        )
+}
+
+lazy rule RestoreCall {
+    from
+        e : Kernel!CallExpression
+    to
+        k : Kernel!CallExpression (
+            function <- e.function,
+            receiver <- thisModule.restoredOf(e.receiver),
+            arguments <- e.arguments->collect(a | a.restore())
+        )
+}
+
+lazy rule RestoreOpaqueExpression {
+    from
+        e : Kernel!OpaqueExpression
+    to
+        k : Kernel!OpaqueExpression (
+            text <- e.text,
+            language <- e.language,
+            type <- e.type
+        )
+}
+
+lazy rule RestorePrint {
+    from
+        e : Kernel!Print
+    to
+        k : Kernel!Print (
+            text <- e.text,
+            values <- e.values->collect(v | v.restore())
+        )
+}
+
+lazy rule RestoreCallStatement {
+    from
+        e : Kernel!CallStatement
+    to
+        k : Kernel!CallStatement (
+            call <- e.call.restore()
+        )
+}
+
+lazy rule RestoreOpaqueStatement {
+    from
+        e : Kernel!OpaqueStatement
+    to
+        k : Kernel!OpaqueStatement (
+            text <- e.text,
+            language <- e.language
+        )
+}
+
+-- New nodes
+
+rule NewBoolean(aValue : Boolean) {
+    to
+        k : Kernel!BooleanLiteral (
+            value <- aValue
+        )
+}
+
+rule NewInteger(aValue : Integer) {
+    to
+        k : Kernel!IntegerLiteral (
+            value <- aValue
+        )
+}
+
+rule NewEnumerationLiteral(aType : Kernel!EnumerationType, aLiteral : String) {
+    to
+        k : Kernel!EnumerationLiteral (
+            type <- aType,
+            literal <- aLiteral
+        )
+}
+
+rule NewUnary(anOperation : String, anOperand : Kernel!Expression) {
+    to
+        k : Kernel!UnaryExpression (
+            operation <- anOperation,
+            operand <- anOperand
+        )
+}
+
+rule NewBinary(anOperation : String, aLeft : Kernel!Expression, aRight : Kernel!Expression) {
+    to
+        k : Kernel!BinaryExpression (
+            operation <- anOperation,
+            left <- aLeft,
+            right <- aRight
+        )
+}
+
+rule NewAssignment(aTarget : Kernel!VariableReference, aValue : Kernel!Expression) {
+    to
+        k : Kernel!Assignment (
+            target <- aTarget,
+            value <- aValue
+        )
+}
+
+rule NewStateTime(aUnit : String) {
+    to
+        k : Sectioned!StateTimeExpression (
+            unit <- aUnit
+        )
+}
+
+rule NewInState(anInstance : Kernel!Instance, aState : Kernel!State) {
+    to
+        k : Sectioned!InStateExpression (
+            instance <- anInstance,
+            state <- aState
+        )
+}
+
+rule NewControl(anOperation : String, anInstance : Kernel!Instance) {
+    to
+        k : Sectioned!MachineControlStatement (
+            operation <- anOperation,
+            instance <- anInstance
+        )
+}

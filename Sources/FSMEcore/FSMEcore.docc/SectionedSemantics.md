@@ -12,12 +12,13 @@ state was entered. The kernel has none of these: a state has one action and
 an ordered list of labels, and a pass-through state continues the ringlet
 instead of ending it.
 
-The encoding from the sectioned view into the kernel is specified as a model
+The encoding from the sectioned view into the kernel is a model
 transformation with semantic options. The default options reproduce the
-traditional execution order of the reference engines. Each option is
-intended to become a transformation parameter and a command-line option of
-`fsmconvert`; the transformation itself is not yet part of this release, and
-this article specifies the semantics it implements.
+traditional execution order of the reference engines. Each option is a
+parameter of ``LLFSMTransformations/sectionedToKernel(_:options:uri:)``,
+given by ``SectionedToKernelOptions``; this article specifies the semantics
+that the transformation implements, and <doc:Transformations> describes how
+to run it.
 
 ## Traditional execution order (the default)
 
@@ -99,23 +100,30 @@ observations; with `inState=exact` it observes only the kernel state `S`.
 ### Suspension (E2)
 
 For a machine with suspend state `Z` the encoding adds a shared Boolean
-`suspend<Machine>` per instance (set and cleared by the encoded
+`suspend<Machine>` (set and cleared by the encoded
 `MachineControlStatement`s of other instances, or external when the
-controller is outside the arrangement) and a local enumeration `resumeTo`
-over the working states. Every working state `W` gains, as its first label,
+controller is outside the arrangement) and a local variable `resumeTo` of
+the enumeration `<Machine>States` over the working states. The request
+belongs to the machine, so all instances of a suspensible machine are
+suspended and resumed together; the encoding reports a machine with more
+than one instance. Every working state `W` gains, as its first label,
 `suspend<M> → W_s`, where `W_s` is pass-through, runs the suspend section of
 `W` and records `resumeTo := W`. All `W_s` lead to the kernel encoding of `Z`
 (whose entry section runs as its action). `Z` gains the label
-`¬suspend<M> → Z_r`, where `Z_r` is pass-through, runs the resume section of
-`Z` and dispatches on `resumeTo` to one pass-through state per `W` that runs
-the resume section of `W` and enters `W`. The labels of `Z` itself follow, so
+`¬suspend<M> → Z_d`, where `Z_d` is pass-through, runs the resume section of
+`Z` and dispatches on `resumeTo` to one pass-through state `W_r` per `W` that
+runs the resume section of `W` and enters `W`. The labels of `Z` itself follow, so
 the suspend state keeps its own behaviour while suspended.
 
-With `suspension=omit` the suspend state, the control statements and the
-suspend and resume sections are dropped with a diagnostic. With
+With `suspension=omit` the suspend state designation, the control
+statements and the suspend and resume sections are dropped with a
+diagnostic; the former suspend state remains an ordinary state. With
 `resumeFallback=initial` (the default) an instance resumed before it was
-ever suspended enters its initial state; with `resumeFallback=previous` it
-enters the state recorded by the most recent restart.
+ever suspended enters its initial state; with `resumeFallback=previous` the
+entry of every working state records that state, so the instance enters the
+working state it entered most recently. Restart requests are not encoded:
+they are dropped with a diagnostic, as are suspend and resume requests for
+an instance whose suspension is not encoded.
 
 ### Time
 
@@ -126,7 +134,10 @@ state entry (`S`, and the resume target of a resume dispatch). With
 `time=external` (the default) `now` is supplied by the environment; with
 `time=clock` a `Clock` machine instance placed first in the arrangement
 advances `now` by one unit per round so that verification models stay
-closed. Units are converted at the encoding (seconds to the clock unit).
+closed. The clock unit is the microsecond, and units are converted at the
+encoding: a state-time expression in milliseconds or seconds becomes the
+elapsed time divided by 1000 or 1000000, and one in ticks, which counts
+clock units, the elapsed time divided by one.
 
 ### Origin annotations
 
