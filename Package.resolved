@@ -1,5 +1,5 @@
 {
-  "originHash" : "dc5173b9ca004bec4e954eb22583318d6ad60dd6978c911e118b9b2e5d6156bd",
+  "originHash" : "7cb0f1f92c67fe9e9b7854b2f4739793071c1b4f2b15bd1d776ae04422a74afa",
   "pins" : [
     {
       "identity" : "bigint",
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/mipalgu/swift-aql.git",
       "state" : {
-        "branch" : "main",
-        "revision" : "2c135a59bb8e952c375cf662c43002c4356ca17f"
+        "branch" : "development",
+        "revision" : "1e6715b6ecefcd2755a229aec3e9c54bdb0a61cc"
       }
     },
     {
@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/mipalgu/swift-atl.git",
       "state" : {
-        "branch" : "main",
-        "revision" : "15be08450bd617289d1eef75e7a94d281913b276"
+        "branch" : "development",
+        "revision" : "5f81b551e667058b0fe2ecb1b6edc0d9a47cbc32"
       }
     },
     {
@@ -69,8 +69,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/mipalgu/swift-ecore.git",
       "state" : {
-        "branch" : "main",
-        "revision" : "375cc68f673aa34817368bcd1c95194f52753739"
+        "branch" : "development",
+        "revision" : "591ab1bfc791b7c86d57176e94489aca1392b708"
       }
     },
     {
@@ -78,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/mipalgu/swift-modelling.git",
       "state" : {
-        "branch" : "main",
-        "revision" : "47a6e865c2efcb66ea2b3f0963975edb885d11ea"
+        "branch" : "development",
+        "revision" : "39c985ea90095ef04c6750ced5701e701eda9566"
       }
     },
     {
@@ -87,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/mipalgu/swift-mtl.git",
       "state" : {
-        "branch" : "main",
-        "revision" : "2401c68a51c51e64ae10bf897dd477c3749d0b33"
+        "branch" : "development",
+        "revision" : "97f915b05de955880e5fe43819161c3a2769f15c"
       }
     },
     {
