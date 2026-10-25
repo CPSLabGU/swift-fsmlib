@@ -8,6 +8,7 @@
 // These tests run the fsmconvert executable, and WASI cannot spawn processes.
 #if !os(WASI)
 import Foundation
+import Synchronization
 
 /// Builds the `fsmconvert` executable once and runs it for end-to-end tests.
 ///
@@ -223,11 +224,23 @@ enum SwiftToolchain {
         #endif
     }
 
-    /// Find the Swift driver through the `PATH` of the test process.
+    /// The name of the environment variable that lists the executable directories.
+    static let pathVariable = "PATH"
+
+    /// The executable directories of the test process.
+    ///
+    /// Windows names the variable `Path`, so the lookup ignores case.
+    static var searchPath: String {
+        let environment = ProcessInfo.processInfo.environment
+        let key = environment.keys.first { $0.caseInsensitiveCompare(pathVariable) == .orderedSame }
+        return key.flatMap { environment[$0] } ?? ""
+    }
+
+    /// Find the Swift driver through the executable directories of the test process.
     ///
     /// - Returns: The driver, or `nil` if no directory on the path holds one.
     static func findDriver() -> URL? {
-        let path = ProcessInfo.processInfo.environment["PATH"] ?? ""
+        let path = searchPath
         let fileName = driverName + executableSuffix
         for directory in path.split(separator: pathSeparator) where !directory.isEmpty {
             let candidate = URL(fileURLWithPath: String(directory), isDirectory: true).appendingPathComponent(fileName)
@@ -255,6 +268,33 @@ enum SwiftToolchain {
         return process
     }
 
+    /// The directory that holds the products built into a scratch build directory.
+    ///
+    /// The directory is asked from the package manager, because its layout
+    /// differs between host platforms.  Where it cannot be asked, the
+    /// configuration directory below the scratch build directory is used.
+    ///
+    /// - Parameter buildPath: The scratch build directory.
+    /// - Returns: The directory of the built products.
+    static func binPath(for buildPath: String) -> String {
+        let fallback = buildPath + "/" + configuration
+        let output = FileManager.default.temporaryDirectory.appendingPathComponent("bin-path-\(UUID().uuidString)")
+        FileManager.default.createFile(atPath: output.path, contents: nil)
+        defer { try? FileManager.default.removeItem(at: output) }
+        guard let handle = try? FileHandle(forWritingTo: output) else { return fallback }
+        var arguments = ["build", "--build-path", buildPath, "--show-bin-path"]
+        if CLIIntegrationTests.overriddenBuildPath != nil { arguments.append("--ignore-lock") }
+        let process = process(arguments: arguments)
+        process.standardOutput = handle
+        process.standardError = FileHandle.nullDevice
+        guard (try? process.run()) != nil else { return fallback }
+        process.waitUntilExit()
+        try? handle.close()
+        let text = (try? String(contentsOf: output, encoding: .utf8)) ?? ""
+        let path = text.split(whereSeparator: \.isNewline).last.map(String.init) ?? ""
+        return process.terminationStatus == 0 && !path.isEmpty ? path : fallback
+    }
+
     /// The path of a built executable product.
     ///
     /// - Parameters:
@@ -262,7 +302,23 @@ enum SwiftToolchain {
     ///   - buildPath: The scratch build directory.
     /// - Returns: The path of the executable.
     static func productPath(_ product: String, in buildPath: String) -> String {
-        buildPath + "/" + configuration + "/" + product + executableSuffix
+        resolvedBinPath(for: buildPath) + "/" + product + executableSuffix
     }
+
+    /// The directory of the built products, asked once per scratch build directory.
+    ///
+    /// - Parameter buildPath: The scratch build directory.
+    /// - Returns: The directory of the built products.
+    static func resolvedBinPath(for buildPath: String) -> String {
+        binPathCache.withLock { cache in
+            if let path = cache[buildPath] { return path }
+            let path = binPath(for: buildPath)
+            cache[buildPath] = path
+            return path
+        }
+    }
+
+    /// The directories of the built products asked so far, by scratch build directory.
+    static let binPathCache = Mutex<[String: String]>([:])
 }
 #endif

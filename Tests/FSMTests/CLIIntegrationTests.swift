@@ -16,8 +16,17 @@ import XCTest
 /// scratch path of the test run itself, so that the tool is built against the
 /// same dependency checkouts as the tests.
 final class CLIIntegrationTests: XCTestCase {
+    /// The name of the scratch build directory used when the environment names none.
+    static let defaultBuildDirectoryName = "build-swift-fsmlib-cli-tests"
+
     /// The scratch build directory used when the environment names none.
-    static let defaultBuildPath = "/tmp/build-swift-fsmlib-cli-tests"
+    static var defaultBuildPath: String {
+        #if os(Windows)
+        return FileManager.default.temporaryDirectory.appendingPathComponent(defaultBuildDirectoryName).path
+        #else
+        return "/tmp/" + defaultBuildDirectoryName
+        #endif
+    }
 
     /// The environment variable that overrides the scratch build directory.
     static let buildPathVariable = "FSMCONVERT_BUILD_PATH"
