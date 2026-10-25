@@ -14,10 +14,14 @@ jobs:
   build-linux:
     name: ${{ matrix.os }} (Swift ${{ matrix.swift }})
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
     strategy:
       fail-fast: false
       matrix:
         include:
+          - os: ubuntu-26.04
+            swift: "6.4.1"
+            container: swift:6.4.1-resolute
           - os: ubuntu-24.04
             swift: "6.2"
           - os: ubuntu-22.04
@@ -29,6 +33,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Swift
+        if: ${{ !matrix.container }}
         uses: swift-actions/setup-swift@v2
         with:
           swift-version: ${{ matrix.swift }}
