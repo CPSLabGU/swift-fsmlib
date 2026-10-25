@@ -62,7 +62,7 @@ public struct SCXMLBinding: OutputLanguage {
     public func write(_ machine: Machine, to url: URL) throws {
         let writer = SCXMLWriter()
         let xml = try writer.generate(from: machine)
-        try xml.write(to: url, atomically: true, encoding: .utf8)
+        try xml.write(to: url, atomically: PlatformSupport.writesAtomically, encoding: .utf8)
     }
 
     /// Generate SCXML string from Machine

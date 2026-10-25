@@ -223,7 +223,7 @@ public extension OutputLanguage {
             return
         }
         let plist = dictionary(from: layout)
-        let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+        let data = try PlatformSupport.xmlPropertyListData(from: plist)
         let fileWrapper = FileWrapper(regularFileWithContents: data)
         fileWrapper.preferredFilename = .layout
         directoryWrapper.replaceFileWrapper(fileWrapper)

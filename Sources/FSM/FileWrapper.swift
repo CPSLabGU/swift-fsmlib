@@ -252,7 +252,7 @@ open class FileWrapper: @unchecked Sendable {
         }
         if let content {
             guard case let .data(data) = content else { throw POSIXError(.EINVAL) }
-            try data.write(to: url, options: writingOptions.contains(.atomic) ? .atomic : [])
+            try data.write(to: url, options: writingOptions.contains(.atomic) ? PlatformSupport.atomicWritingOptions : [])
         }
         if writingOptions.contains(.withNameUpdating) {
             filename = url.lastPathComponent

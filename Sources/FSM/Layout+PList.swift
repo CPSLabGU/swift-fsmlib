@@ -18,9 +18,14 @@ public extension Vector2D {
 }
 
 /// Return the vector as a Property List array.
+///
+/// The coordinates are returned as a Swift array, which a property list
+/// stores as an array of numbers, and which compares by value wherever
+/// Foundation does not bridge it to `NSArray`.
+///
 /// - Parameter vector: The vector to convert to a property list.
-/// - Returns: The NSArray representing the property list.
+/// - Returns: The x and y coordinates of the vector.
 @usableFromInline
-func asPList<V: Vector2D>(_ vector: V) -> NSArray {
+func asPList<V: Vector2D>(_ vector: V) -> [Double] {
     [ vector.x, vector.y ]
 }

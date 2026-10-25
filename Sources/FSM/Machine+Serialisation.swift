@@ -106,7 +106,7 @@ extension URL {
     ///   - encoding: The encoding to use (defaults to UTF-8).
     ///   - file: The file name to write to.
     @usableFromInline
-    func write(_ data: Data?, options: Data.WritingOptions = .atomic, to file: Filename) throws {
+    func write(_ data: Data?, options: Data.WritingOptions = PlatformSupport.atomicWritingOptions, to file: Filename) throws {
         try data?.write(to: fileURL(for: file), options: options)
     }
 
@@ -117,6 +117,6 @@ extension URL {
     ///   - file: The file name to write to.
     @usableFromInline
     func write(content: String, encoding: String.Encoding = .utf8, to file: Filename) throws {
-        try content.write(to: fileURL(for: file), atomically: true, encoding: encoding)
+        try content.write(to: fileURL(for: file), atomically: PlatformSupport.writesAtomically, encoding: encoding)
     }
 }

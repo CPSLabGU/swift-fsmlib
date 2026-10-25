@@ -361,7 +361,7 @@ public func stateNames(from content: String) -> StateNames {
 /// - Returns: A mapping from state names to state layouts.
 @inlinable
 public func stateNameLayouts(from url: URL) throws -> StateNameLayouts {
-    (NSDictionary(contentsOf: url)?[String.states] as? NSDictionary).flatMap {
+    (PlatformSupport.dictionary(contentsOf: url)?[String.states] as? NSDictionary).flatMap {
         stateNameLayouts(from: $0)
     } ?? [:]
 }
