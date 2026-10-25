@@ -27,6 +27,8 @@ open class FileWrapper: @unchecked Sendable {
     @usableFromInline var readingOptions: ReadingOptions = []
     /// Writing options for the file wrapper.
     @usableFromInline var writingOptions: WritingOptions = []
+    /// The names of removed children, whose files are removed before the directory is written.
+    @usableFromInline var removedFilenames = Set<String>()
     /// Return the file name of the file wrapper.
     open var filename: String?
     /// Return the preferred file name of the file wrapper.
@@ -141,6 +143,7 @@ open class FileWrapper: @unchecked Sendable {
             children[$0.lastPathComponent] = try FileWrapper(url: $0, options: readingOptions)
         }
         content = .directory(children)
+        removedFilenames.removeAll()
     }
 
     /// Read the symbolic link associated with the file wrapper.
@@ -197,6 +200,10 @@ open class FileWrapper: @unchecked Sendable {
         guard let url, case let .directory(children) = content else { throw POSIXError(.EBADF) }
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: url, withIntermediateDirectories: true)
+        for file in removedFilenames {
+            try? fileManager.removeItem(at: url.appendingPathComponent(file))
+        }
+        removedFilenames.removeAll()
         for (file, fileWrapper) in children {
 #if canImport(Darwin)
             let fileURL = url.appending(path: file, directoryHint: fileWrapper.isDirectory ? .isDirectory : .notDirectory)
@@ -279,19 +286,15 @@ open class FileWrapper: @unchecked Sendable {
     /// Remove a child `FileWrapper`.
     ///
     /// This method removes a child `FileWrapper` from the receiver.
+    /// Only the receiver changes: the file of the child is removed
+    /// when the receiver is next written, at the location written to.
     ///
     /// - Parameter child: The child `FileWrapper` to remove.
     @inlinable
     open func removeFileWrapper(_ child: FileWrapper) {
         guard case var .directory(children) = content else { return }
         for (filename, fileWrapper) in children where fileWrapper === child {
-            child.removeFileWrappers()
-            if let url = child.url {
-                try? FileManager.default.removeItem(at: url)
-            } else if let url = url {
-                let fileURL = url.appendingPathComponent(filename)
-                try? FileManager.default.removeItem(at: fileURL)
-            }
+            removedFilenames.insert(filename)
             children[filename] = nil
             content = .directory(children)
             break
