@@ -105,11 +105,35 @@ enum FSMEcoreTestSupport {
         let rhsList = try PropertyListSerialization.propertyList(from: rhsData, format: nil)
 
         XCTAssertEqual(
-            String(describing: lhsList as AnyObject),
-            String(describing: rhsList as AnyObject),
+            canonicalDescription(of: lhsList),
+            canonicalDescription(of: rhsList),
             file: file,
             line: line
         )
+    }
+
+    /// Describe a property list value with its dictionary keys in sorted order.
+    ///
+    /// The description of a dictionary does not order its keys on every
+    /// platform, so equal property lists could otherwise be described differently.
+    ///
+    /// - Parameters:
+    ///   - value: The property list value.
+    ///   - indentation: The indentation of the value.
+    /// - Returns: The description.
+    static func canonicalDescription(of value: Any, indentation: String = "") -> String {
+        let nested = indentation + "    "
+        if let dictionary = value as? [String: Any] {
+            let entries = dictionary.keys.sorted().map { key in
+                "\(nested)\(key) = \(canonicalDescription(of: dictionary[key] ?? "", indentation: nested));"
+            }
+            return (["{"] + entries + [indentation + "}"]).joined(separator: "\n")
+        }
+        if let array = value as? [Any] {
+            let elements = array.map { nested + canonicalDescription(of: $0, indentation: nested) + "," }
+            return (["("] + elements + [indentation + ")"]).joined(separator: "\n")
+        }
+        return String(describing: value)
     }
 
     /// Assert that two machines agree in language, structure, boilerplate, activities, and layout.
