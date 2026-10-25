@@ -41,12 +41,18 @@ enum TransformationTestSupport {
 
     /// The validation profile that a kernel model is meant to satisfy.
     ///
-    /// - Parameter resource: The resource that holds the kernel model.
+    /// - Parameters:
+    ///   - resource: The resource that holds the kernel model.
+    ///   - kernel: The kernel metamodel that defines the opaque classes.
     /// - Returns: ``ValidationProfile/relaxed`` if the model holds opaque
     ///   nodes or host declarations, ``ValidationProfile/strict`` otherwise.
     static func profile(for resource: Resource, kernel: KernelMetamodel) async -> ValidationProfile {
-        let opaqueClasses = [kernel.opaqueExpressionClass, kernel.opaqueStatementClass, kernel.opaqueTypeClass,
-                             kernel.hostDeclarationsClass].map(\.id)
+        let opaqueClasses = [
+            kernel.opaqueExpressionClass,
+            kernel.opaqueStatementClass,
+            kernel.opaqueTypeClass,
+            kernel.hostDeclarationsClass,
+        ].map(\.id)
         for case let object as DynamicEObject in await resource.getAllObjects()
         where opaqueClasses.contains(object.eClass.id) {
             return .relaxed
@@ -55,12 +61,18 @@ enum TransformationTestSupport {
     }
 
     /// The objects of a resource whose class has a given name, in containment order.
+    ///
+    /// - Parameters:
+    ///   - className: The name of the class to select.
+    ///   - resource: The resource that holds the kernel model.
+    /// - Returns: The matching objects, in containment order.
     static func objects(named className: String, in resource: Resource) async -> [DynamicEObject] {
         let index = await KernelModelIndex(resource: resource)
         return index.order.compactMap(index.object).filter { $0.eClass.name == className }
     }
 }
 
+/// Sectioned example models that the transformation tests share.
 extension KernelModelBuilder {
     /// A fresh sectioned model of a counter whose state loops on itself.
     ///
@@ -81,8 +93,11 @@ extension KernelModelBuilder {
         section(.onEntry, of: counting, printLine("enter"))
         section(.internal, of: counting, printLine("idle"))
         section(.onExit, of: counting, assign(ref(count), binary(.addition, ref(count), int(1))), printLine("leave"))
-        sectionedTransition(from: counting, to: counting,
-                            when: binary(.conjunction, ref(go), binary(.lessThan, ref(count), int(3))))
+        sectionedTransition(
+            from: counting,
+            to: counting,
+            when: binary(.conjunction, ref(go), binary(.lessThan, ref(count), int(3)))
+        )
         sectionedTransition(from: counting, to: done, when: binary(.greaterOrEqual, ref(count), int(3)))
         section(.onEntry, of: done, printLine("done", [ref(count)]))
         sectionedInstance("main", of: looper, in: system)

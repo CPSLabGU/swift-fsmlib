@@ -256,19 +256,19 @@ public struct LLFSMTransformations {
     // MARK: - Running Modules
 
     /// The name given to a sectioned arrangement made from a structural arrangement by default.
-    public nonisolated static let defaultArrangementName = LLFSMTransformationNames.defaultArrangementName
+    nonisolated public static let defaultArrangementName = LLFSMTransformationNames.defaultArrangementName
 
     /// The URI given to kernel models by default.
-    public nonisolated static let defaultKernelURI = "memory:/kernel.xmi"
+    nonisolated public static let defaultKernelURI = "memory:/kernel.xmi"
 
     /// The URI given to sectioned models by default.
-    public nonisolated static let defaultSectionedURI = "memory:/sectioned.xmi"
+    nonisolated public static let defaultSectionedURI = "memory:/sectioned.xmi"
 
     /// The URI given to structural models by default.
-    public nonisolated static let defaultStructuralURI = "memory:/structural.xmi"
+    nonisolated public static let defaultStructuralURI = "memory:/structural.xmi"
 
     /// The language of structural machines made from sectioned machines that name none.
-    public nonisolated static let defaultLanguage = LLFSMTransformationNames.defaultLanguage
+    nonisolated public static let defaultLanguage = LLFSMTransformationNames.defaultLanguage
 
     /// The model aliases of the transformation headers.
     private typealias Alias = LLFSMTransformationNames.Alias

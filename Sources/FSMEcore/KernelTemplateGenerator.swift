@@ -36,8 +36,20 @@ public struct KernelTemplateSet: Decodable, Sendable, Equatable {
     /// The options of the template set, if it has any.
     public let options: Options?
 
+    /// The keys of a template set description.
     private enum CodingKeys: String, CodingKey {
-        case name, summary, mainModule, mainTemplate, imports, options
+        /// The `name` key of the description.
+        case name
+        /// The `summary` key of the description.
+        case summary
+        /// The `mainModule` key of the description.
+        case mainModule
+        /// The `mainTemplate` key of the description.
+        case mainTemplate
+        /// The `imports` key of the description.
+        case imports
+        /// The `options` key of the description.
+        case options
     }
 
     /// Decode a template set description.

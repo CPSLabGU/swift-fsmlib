@@ -11,12 +11,20 @@ import Foundation
 import Testing
 @testable import FSMEcore
 
+/// Tests the transformation of kernel models into sectioned models.
+///
+/// Kernel models without origin annotations map flatly, whereas those with
+/// origins rebuild their sections, labels and time expressions.
 @Suite("Kernel to sectioned transformation")
 @MainActor
 struct KernelToSectionedTests {
     /// The kernel fixtures that record no origins.
     nonisolated static let flatFixtures = KernelFixture.allCases.filter { !$0.isSectioned && $0 != .crossingController }
 
+    /// Checks that kernel machines without origins map flatly, with one warning per machine.
+    ///
+    /// - Parameter fixture: The kernel fixture to transform.
+    /// - Throws: Any error raised by the transformations.
     @Test("kernel machines without origins map flatly, with one warning per machine", arguments: flatFixtures)
     func flatMapping(_ fixture: KernelFixture) async throws {
         let transformations = try await TransformationTestSupport.transformations()
@@ -66,6 +74,10 @@ struct KernelToSectionedTests {
                 == kernelIndex.objects(.instances, of: kernelArrangement).map { $0.string(.name) })
     }
 
+    /// Checks that the flat mapping encodes back into a valid kernel model.
+    ///
+    /// - Parameter fixture: The kernel fixture to transform and encode.
+    /// - Throws: Any error raised by the transformations.
     @Test("the flat mapping encodes back into a valid kernel model", arguments: flatFixtures)
     func flatMappingEncodes(_ fixture: KernelFixture) async throws {
         let transformations = try await TransformationTestSupport.transformations()
@@ -79,6 +91,9 @@ struct KernelToSectionedTests {
         #expect(diagnostics.isEmpty, "\(diagnostics)")
     }
 
+    /// Checks that a kernel model with origins rebuilds its sections, labels and time expressions.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("a kernel model with origins rebuilds its sections, labels and time expressions")
     func originRebuild() async throws {
         let transformations = try await TransformationTestSupport.transformations()

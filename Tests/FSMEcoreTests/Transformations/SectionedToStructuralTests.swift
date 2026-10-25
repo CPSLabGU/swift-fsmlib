@@ -12,6 +12,10 @@ import Testing
 @testable import FSM
 @testable import FSMEcore
 
+/// Tests the transformation of sectioned models back into structural models.
+///
+/// The tests run each example through the sectioned level and back, and
+/// compare the resulting bundles with the originals.
 @Suite("Sectioned to structural transformation")
 @MainActor
 struct SectionedToStructuralTests {
@@ -43,28 +47,56 @@ struct SectionedToStructuralTests {
         return (original, result)
     }
 
+    /// The files of an example bundle before and after a round trip.
+    private struct BundleFiles {
+        /// The files of the original bundle, by path.
+        let original: [String: Data]
+
+        /// The files of the bundle that came back, by path.
+        let back: [String: Data]
+
+        /// The output format of the bundle.
+        let format: Format
+    }
+
     /// The files of the original bundle of an example and of its round trip.
-    private func files(of example: ParityExample, restoresLayouts: Bool) async throws -> (
-        original: [String: Data], back: [String: Data], format: Format
-    ) {
+    ///
+    /// - Parameters:
+    ///   - example: The example to run.
+    ///   - restoresLayouts: Whether the layouts of the original are laid over the result.
+    /// - Returns: The files of the original bundle and of the bundle that came back.
+    /// - Throws: Any error raised by the transformations.
+    private func files(of example: ParityExample, restoresLayouts: Bool) async throws -> BundleFiles {
         let (original, result) = try await roundTrip(example, restoresLayouts: restoresLayouts)
         let format = try format(of: original)
         let source = try await StructuralRoundTrip.decode(try await StructuralRoundTrip.xmiResource(of: original))
         let originalFiles = try await StructuralRoundTrip.files(of: source, named: example.name, format: format)
         let back = try await StructuralRoundTrip.decode(result.resource)
-        return (originalFiles, try await StructuralRoundTrip.files(of: back, named: example.name, format: format), format)
+        let backFiles = try await StructuralRoundTrip.files(of: back, named: example.name, format: format)
+        return BundleFiles(original: originalFiles, back: backFiles, format: format)
     }
 
+    /// Checks that every bundle comes back byte for byte when the layouts are restored.
+    ///
+    /// - Parameter example: The example to run through the round trip.
+    /// - Throws: Any error raised by the transformations.
     @Test("with the layouts restored, every bundle comes back byte for byte", arguments: examples)
     func bundleRoundTrip(_ example: ParityExample) async throws {
-        let (original, back, format) = try await files(of: example, restoresLayouts: true)
-        let parityCase = ParityCase(example: example, format: format, isSuspensible: true)
-        TemplateParity.expectIdentical(back, original, case: parityCase)
+        let bundle = try await files(of: example, restoresLayouts: true)
+        let parityCase = ParityCase(example: example, format: bundle.format, isSuspensible: true)
+        TemplateParity.expectIdentical(bundle.back, bundle.original, case: parityCase)
     }
 
+    /// Checks that only the layout files differ when the layouts are not restored.
+    ///
+    /// - Parameter example: The example to run through the round trip.
+    /// - Throws: Any error raised by the transformations.
     @Test("without the layouts restored, only the layout files differ", arguments: examples)
     func bundleRoundTripWithoutLayouts(_ example: ParityExample) async throws {
-        let (original, back, format) = try await files(of: example, restoresLayouts: false)
+        let bundle = try await files(of: example, restoresLayouts: false)
+        let original = bundle.original
+        let back = bundle.back
+        let format = bundle.format
         let expectedModel = try await StructuralRoundTrip.decode(
             try await StructuralRoundTrip.xmiResource(of: StructuralRoundTrip.withoutLayouts(
                 try StructuralRoundTrip.model(of: example))))
@@ -77,12 +109,17 @@ struct SectionedToStructuralTests {
                 "\(differing.sorted())")
     }
 
+    /// Checks that only the layouts are reported as lost for every machine.
+    ///
+    /// - Parameter example: The example to run through the round trip.
+    /// - Throws: Any error raised by the transformations.
     @Test("only the layouts are reported as lost for every machine", arguments: examples)
     func warnings(_ example: ParityExample) async throws {
         let (original, result) = try await roundTrip(example)
         var machines: [String] = []
         switch original {
-        case .machine(let name, _): machines = [name]
+        case .machine(let name, _):
+            machines = [name]
         case .arrangement(let arrangement):
             for instance in arrangement.namedInstances where !machines.contains(String(instance.typeName)) {
                 machines.append(String(instance.typeName))
@@ -91,6 +128,9 @@ struct SectionedToStructuralTests {
         #expect(result.diagnostics.warnings.map(\.kind) == machines.map { .notRecovered(.layout, owner: $0) })
     }
 
+    /// Checks that the traffic light keeps its names, state order, initial state and timed labels.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("the traffic light keeps its names, state order, initial state and timed labels")
     func trafficLight() async throws {
         let example = ParityExample(url: try FSMEcoreTestSupport.trafficLightMachineURL())
@@ -107,6 +147,9 @@ struct SectionedToStructuralTests {
         #expect(labels == ["true", "after(60)", "after(5)", "after(60)", "after(3)"])
     }
 
+    /// Checks that the counter arrangement keeps its instances, type files and suspend state.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("the counter arrangement keeps its instances, type files and suspend state")
     func counterArrangement() async throws {
         let example = ParityExample(url: TemplateParity.examplesDirectory.appendingPathComponent("Counter2.arrangement"))
@@ -122,6 +165,9 @@ struct SectionedToStructuralTests {
         #expect(counter.llfsm.suspendState.flatMap(counter.llfsm.stateName(for:)) == "SUSPENDED")
     }
 
+    /// Checks that a model without a sectioned root is rejected.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("a model without a sectioned root is rejected")
     func rejectsOtherModels() async throws {
         let transformations = try await TransformationTestSupport.transformations()

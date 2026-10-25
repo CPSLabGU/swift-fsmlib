@@ -345,7 +345,8 @@ enum OutputTargetNames {
 enum SemanticsOption {
     /// The family of `--semantics` values, checked against ``SectionedToKernelOptions``.
     static let family = KeyValueOption<String>(
-        noun: "semantic option", keyPlaceholder: "option",
+        noun: "semantic option",
+        keyPlaceholder: "option",
         allowedKeys: SectionedToKernelOptions.Key.allCases.map(\.rawValue)
     ) { key, text in
         guard let option = SectionedToKernelOptions.Key(rawValue: key) else { return text }
@@ -362,6 +363,7 @@ enum SemanticsOption {
     }
 }
 
+/// Command-line parsing of the metamodel level.
 extension LLFSMLevel: ExpressibleByArgument {
     /// The deprecated command-line spelling that now maps to ``sectioned``.
     static let deprecatedExecutableArgument = "executable"
@@ -387,7 +389,14 @@ extension LLFSMLevel: ExpressibleByArgument {
     }
 }
 
+/// Command-line parsing of the native generator, by its raw value.
 extension NativeGenerator: ExpressibleByArgument {}
+
+/// Command-line parsing of the validation profile, by its raw value.
 extension ValidationProfile: ExpressibleByArgument {}
+
+/// Command-line parsing of the kernel entry mode, by its raw value.
 extension KernelEntryMode: ExpressibleByArgument {}
+
+/// Command-line parsing of the treatment of opaque sections, by its raw value.
 extension KernelOpaqueTreatment: ExpressibleByArgument {}

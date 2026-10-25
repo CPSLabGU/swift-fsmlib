@@ -21,6 +21,7 @@ struct InstanceOrderingTests {
         }
     }
 
+    /// Checks that machine type names and first instances follow the order of first appearance.
     @Test("Machine type names follow first appearance")
     func machineTypeNamesFollowFirstAppearance() {
         let instances = makeInstances()
@@ -29,6 +30,7 @@ struct InstanceOrderingTests {
         #expect(instances.firstInstancesByType.map(\.instance.name) == ["instance0", "instance1", "instance3"])
     }
 
+    /// Checks that every arrangement generator is deterministic and lists machine types in instance order.
     @Test("Arrangement code is identical across runs and lists types in instance order")
     func arrangementCodeIsStable() {
         let instances = makeInstances()

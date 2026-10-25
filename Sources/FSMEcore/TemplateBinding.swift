@@ -118,8 +118,13 @@ public struct TemplateBinding: OutputLanguage {
                 machine, named: name, format: format, isSuspensible: !isSuspensible).files
         }
         return TemplateBinding(
-            name: set.language, format: format, bundleName: name, files: files, isSingleFile: set.isSingleFile,
-            suspensibilityVariants: variants)
+            name: set.language,
+            format: format,
+            bundleName: name,
+            files: files,
+            isSingleFile: set.isSingleFile,
+            suspensibilityVariants: variants
+        )
     }
 
     /// Render an arrangement and its machines through the structural templates.
@@ -149,8 +154,13 @@ public struct TemplateBinding: OutputLanguage {
             $0.typeFile.hasSuffix(suffix) ? $0.typeFile : $0.typeFile + suffix
         })
         return TemplateBinding(
-            name: set.language, format: format, bundleName: name, files: files,
-            isSingleFile: set.isSingleFile, machineDirectories: directories)
+            name: set.language,
+            format: format,
+            bundleName: name,
+            files: files,
+            isSingleFile: set.isSingleFile,
+            machineDirectories: directories
+        )
     }
 
     /// Tell whether the bundled templates write a format.

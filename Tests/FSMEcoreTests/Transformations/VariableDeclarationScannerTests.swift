@@ -9,11 +9,15 @@ import Foundation
 import Testing
 @testable import FSMEcore
 
+/// Tests that the scanner recognises simple variable declarations and keeps all other text.
 @Suite("Variable declaration scanner")
 struct VariableDeclarationScannerTests {
+    /// The scanned type of a signed 32-bit integer.
     let int = ScannedType.integer(name: "int", range: Int(Int32.min)...Int(Int32.max))
+    /// The scanned type of an unsigned 32-bit integer.
     let unsigned = ScannedType.integer(name: "unsigned", range: 0...Int(Int32.max))
 
+    /// Checks that simple declarations and their documentation comments are recognised.
     @Test("simple declarations with documentation comments are recognised")
     func simpleDeclarations() {
         let text = "int\tcounter;\t///< Bean counter\nbool flag;\nunsigned ticks;\nunsigned int  big ;\nsigned delta;\nint samples[4];"
@@ -29,6 +33,7 @@ struct VariableDeclarationScannerTests {
         #expect(result.remainder.isEmpty)
     }
 
+    /// Checks that unrecognised lines are kept verbatim.
     @Test("everything else is kept verbatim, line by line")
     func remainder() {
         let lines = [
@@ -45,6 +50,7 @@ struct VariableDeclarationScannerTests {
         #expect(result.remainder == expected.joined(separator: "\n"))
     }
 
+    /// Checks that a repeated name is declared only once.
     @Test("a repeated name is declared once")
     func repeatedName() {
         let result = VariableDeclarationScanner(language: "c").scan("int x;\nbool x;")
@@ -52,6 +58,9 @@ struct VariableDeclarationScannerTests {
         #expect(result.remainder == "bool x;")
     }
 
+    /// Checks that languages without simple declaration types keep the text unchanged.
+    ///
+    /// - Parameter language: The language to scan.
     @Test("languages without simple declaration types keep the text", arguments: ["swift", "java", "scxml"])
     func otherLanguages(_ language: String) {
         let result = VariableDeclarationScanner(language: language).scan("int x;")
@@ -59,6 +68,7 @@ struct VariableDeclarationScannerTests {
         #expect(result.remainder == "int x;")
     }
 
+    /// Checks that recognised declarations record their line, text and comment.
     @Test("recognised declarations record their line, their verbatim text and their comment")
     func placements() {
         let text = "//\nint\tcounter;\t///< Bean counter\nbool flag;\nint other; ///<   \nunsigned ticks;///<Tick count  \n"
@@ -74,6 +84,7 @@ struct VariableDeclarationScannerTests {
         #expect(result.remainderLineCount == 2)
     }
 
+    /// Checks that recognised declarations alone leave no remainder lines.
     @Test("a text of recognised declarations only leaves no remainder lines")
     func noRemainderLines() {
         let result = VariableDeclarationScanner(language: "c").scan("int x;\nbool y;")
@@ -84,6 +95,9 @@ struct VariableDeclarationScannerTests {
         #expect(terminated.remainderLineCount == 1)
     }
 
+    /// Checks that unrecognised text yields no placements.
+    ///
+    /// - Parameter language: The language to scan.
     @Test("unrecognised text has no placements", arguments: ["swift", "c"])
     func noPlacements(_ language: String) {
         let result = VariableDeclarationScanner(language: language).scan("int a, b;\n")
@@ -92,6 +106,9 @@ struct VariableDeclarationScannerTests {
         #expect(result.remainderLineCount == 2)
     }
 
+    /// Checks that merging placements into the remainder restores the scanned text.
+    ///
+    /// - Parameter text: The text to scan and merge back.
     @Test("merging the placements into the remainder gives back the scanned text", arguments: [
         "", "int x;", "int x;\n", "\n", "//\nint\tcounter;\t///< Bean counter\n",
         "int x;\n// note\nbool y;\n\n", "a\nint x;", "int x;\nint x;\nbool b;", "int a, b;\nint c;\n",
@@ -103,6 +120,7 @@ struct VariableDeclarationScannerTests {
         #expect(VariableDeclarationScanner.merged(remainder: remainder, placements: result.placements) == text)
     }
 
+    /// Checks that placements beyond the remainder are appended in line order.
     @Test("placements beyond the remainder are appended in line order")
     func mergeAppends() {
         let placements: [VariableDeclarationScanner.Placement] = [
@@ -111,10 +129,11 @@ struct VariableDeclarationScannerTests {
         ]
         #expect(VariableDeclarationScanner.merged(remainder: "a\nb", placements: placements)
             == "int first;\na\nb\nbool late;")
-        #expect(VariableDeclarationScanner.merged(remainder: nil, placements: []) == "")
+        #expect(VariableDeclarationScanner.merged(remainder: nil, placements: []).isEmpty)
         #expect(VariableDeclarationScanner.merged(remainder: "keep", placements: []) == "keep")
     }
 
+    /// Checks that array types are named after their element type and size.
     @Test("array types are named after their element type and size")
     func arrayNames() {
         #expect(ScannedType.array(element: int, size: 4).name == "intArray4")

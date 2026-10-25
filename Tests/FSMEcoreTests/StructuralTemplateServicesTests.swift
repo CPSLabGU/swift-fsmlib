@@ -13,6 +13,7 @@ import Testing
 /// Tests for the text services offered to the structural templates.
 @Suite("Structural template services")
 struct StructuralTemplateServicesTests {
+    /// Numbers format with C conversions, including `%g` at full precision.
     @Test("Numbers are formatted with C conversions")
     func formatting() throws {
         #expect(try StructuralTemplateServices.format(607.27668023017429, with: "%.17g") == "607.27668023017429")
@@ -28,6 +29,7 @@ struct StructuralTemplateServicesTests {
         #expect(try StructuralTemplateServices.format(3, with: "%.1f") == "3.0")
     }
 
+    /// A format specification with no, several or unsupported conversions is rejected.
     @Test("Format specifications must hold exactly one supported conversion")
     func invalidFormats() {
         for format in ["", "plain", "%s", "%@", "%n", "%d %d", "%ld", "%1000f", "%.1000f", "%"] {
@@ -40,6 +42,7 @@ struct StructuralTemplateServicesTests {
         }
     }
 
+    /// Base64 text decodes in the requested charset, and invalid text or bytes are errors.
     @Test("Base64 text is decoded in the requested character set")
     func decoding() throws {
         let text = Data("<?xml?>\n\tä".utf8).base64EncodedString()
@@ -55,6 +58,7 @@ struct StructuralTemplateServicesTests {
         }
     }
 
+    /// Every error describes the value that caused it.
     @Test("Errors describe the problem")
     func messages() {
         #expect(StructuralTemplateServicesError.invalidFormat("%s").errorDescription?.contains("%s") == true)
@@ -63,6 +67,7 @@ struct StructuralTemplateServicesTests {
         #expect(StructuralTemplateServicesError.undecodable("UTF-8").errorDescription?.contains("UTF-8") == true)
     }
 
+    /// A template reaches every service through the AQL service provider.
     @Test("Templates can call the services")
     @MainActor
     func templateCalls() async throws {

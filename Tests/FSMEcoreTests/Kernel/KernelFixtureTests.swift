@@ -36,6 +36,11 @@ struct KernelFixtureTests {
         return (text, resource)
     }
 
+    /// Verify that a checked-in fixture equals the serialisation of its builder.
+    ///
+    /// When the regeneration variable is set, the fixture is rewritten first.
+    ///
+    /// - Parameter fixture: The fixture to compare.
     @Test("each checked-in fixture is the serialisation of its builder", arguments: KernelFixture.allCases)
     func fixtureMatchesBuilder(_ fixture: KernelFixture) async throws {
         let builder = try await KernelModelBuilder.make()
@@ -51,12 +56,18 @@ struct KernelFixtureTests {
         #expect(try String(contentsOf: url, encoding: .utf8) == text)
     }
 
+    /// Verify that a fixture reads and reserialises byte for byte.
+    ///
+    /// - Parameter fixture: The fixture to round-trip.
     @Test("each fixture reads and reserialises byte for byte", arguments: KernelFixture.allCases)
     func fixtureRoundTrips(_ fixture: KernelFixture) async throws {
         let (text, resource) = try await Self.load(fixture)
         #expect(try await Self.serialise(resource) == text)
     }
 
+    /// Verify that a kernel fixture validates under the profiles it is written for.
+    ///
+    /// - Parameter fixture: The kernel fixture to validate.
     @Test("each kernel fixture is valid under the profiles it is written for",
           arguments: KernelFixture.allCases.filter { !$0.isSectioned })
     func kernelFixturesValidate(_ fixture: KernelFixture) async throws {
@@ -73,6 +84,7 @@ struct KernelFixtureTests {
         }
     }
 
+    /// Verify the number of strict, relaxed and sectioned fixtures.
     @Test("the kernel fixtures include at least three strict models and one relaxed model")
     func fixtureCoverage() {
         let kernelFixtures = KernelFixture.allCases.filter { !$0.isSectioned }

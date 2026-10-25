@@ -149,9 +149,12 @@ public struct StructuralTemplateServices: AQLServiceProvider {
             AQLService(StructuralTemplateServiceName.formatted, receiver: .number, arity: 1) { call in
                 let format = try call.string(0)
                 switch call.receiver {
-                case let integer as Int: return try Self.format(integer, with: format)
-                case let real as Double: return try Self.format(real, with: format)
-                case let real as Float: return try Self.format(Double(real), with: format)
+                case let integer as Int:
+                    return try Self.format(integer, with: format)
+                case let real as Double:
+                    return try Self.format(real, with: format)
+                case let real as Float:
+                    return try Self.format(Double(real), with: format)
                 default:
                     guard let integer = AQLValues.integer(call.receiver) else {
                         throw StructuralTemplateServicesError.invalidFormat(format)
@@ -207,38 +210,55 @@ struct ConversionSpecification {
                 continue
             }
             guard found == nil else { throw StructuralTemplateServicesError.invalidFormat(format) }
-            index += 1
-            var modifiers = ""
-            while index < characters.count, StructuralTemplateServices.flags.contains(characters[index]) {
-                modifiers.append(characters[index])
-                index += 1
-            }
-            let width = Self.digits(in: characters, from: &index)
-            modifiers += width
-            var precision = ""
-            if index < characters.count, characters[index] == "." {
-                modifiers.append(".")
-                index += 1
-                precision = Self.digits(in: characters, from: &index)
-                modifiers += precision
-            }
-            guard width.count <= StructuralTemplateServices.maximumDigits,
-                  precision.count <= StructuralTemplateServices.maximumDigits else {
-                throw StructuralTemplateServicesError.invalidFormat(format)
-            }
-            guard index < characters.count,
-                  StructuralTemplateServices.integerConversions.contains(characters[index])
-                    || StructuralTemplateServices.realConversions.contains(characters[index]) else {
-                throw StructuralTemplateServicesError.invalidFormat(format)
-            }
-            found = (modifiers, characters[index])
-            index += 1
+            found = try Self.conversion(in: characters, from: &index, format: format)
         }
         guard let found else { throw StructuralTemplateServicesError.invalidFormat(format) }
         self.prefix = prefix
         self.modifiers = found.modifiers
         self.conversion = found.conversion
         self.suffix = suffix
+    }
+
+    /// Read the flags, width, precision and conversion character after a conversion marker.
+    ///
+    /// - Parameters:
+    ///   - characters: The characters of the specification.
+    ///   - index: The position of the marker, advanced past the conversion character.
+    ///   - format: The whole specification, for error reporting.
+    /// - Returns: The modifiers and the conversion character.
+    /// - Throws: ``StructuralTemplateServicesError/invalidFormat(_:)`` if the conversion is malformed or unsupported.
+    private static func conversion(
+        in characters: [Character],
+        from index: inout Int,
+        format: String
+    ) throws -> (modifiers: String, conversion: Character) {
+        index += 1
+        var modifiers = ""
+        while index < characters.count, StructuralTemplateServices.flags.contains(characters[index]) {
+            modifiers.append(characters[index])
+            index += 1
+        }
+        let width = Self.digits(in: characters, from: &index)
+        modifiers += width
+        var precision = ""
+        if index < characters.count, characters[index] == "." {
+            modifiers.append(".")
+            index += 1
+            precision = Self.digits(in: characters, from: &index)
+            modifiers += precision
+        }
+        guard width.count <= StructuralTemplateServices.maximumDigits,
+              precision.count <= StructuralTemplateServices.maximumDigits else {
+            throw StructuralTemplateServicesError.invalidFormat(format)
+        }
+        guard index < characters.count,
+              StructuralTemplateServices.integerConversions.contains(characters[index])
+                || StructuralTemplateServices.realConversions.contains(characters[index]) else {
+            throw StructuralTemplateServicesError.invalidFormat(format)
+        }
+        let conversion = characters[index]
+        index += 1
+        return (modifiers, conversion)
     }
 
     /// Read a run of decimal digits.

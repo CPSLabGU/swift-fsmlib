@@ -25,41 +25,51 @@ struct HostTextSample: CustomTestStringConvertible, Sendable {
     /// The variables of the machine boilerplate.
     let variables: String
 
+    /// The language, as the name of the test case.
     var testDescription: String { language }
 
     /// The samples of every language family.
     static let all: [HostTextSample] = [
         HostTextSample(
             language: "c",
-            labels: ["after(60)", "after_ms(100)", "timeout(4)", "!after(2)", "count < 3 && flag",
-                     "(count + 1) * 2 == 4 || !flag", "flag ? count > 1 : count < 1", "Mode_on == mode"],
+            labels: [
+                "after(60)", "after_ms(100)", "timeout(4)", "!after(2)", "count < 3 && flag",
+                "(count + 1) * 2 == 4 || !flag", "flag ? count > 1 : count < 1", "Mode_on == mode",
+            ],
             entry: "count = 1;\nputs(\"go 100% \\\"done\\\"\");\nSUSPEND(&static_fsm_main);\nfflush(stdout);\n",
             internal: "printf(\"walking %s %d\\n\", flag ? \"true\" : \"false\", count);\n",
             variables: "Count\tcount;\nBool\tflag;\nMode\tmode;\n"),
         HostTextSample(
             language: "objc++",
-            labels: ["after(60)", "after_ms(100)", "timeout(4)", "!after(2)", "count < 3 && flag",
-                     "(count + 1) * 2 == 4 || !flag", "flag ? count > 1 : count < 1", "Mode::on == mode"],
+            labels: [
+                "after(60)", "after_ms(100)", "timeout(4)", "!after(2)", "count < 3 && flag",
+                "(count + 1) * 2 == 4 || !flag", "flag ? count > 1 : count < 1", "Mode::on == mode",
+            ],
             entry: "count = 1;\nputs(\"go 100% \\\"done\\\"\");\nsuspend_at(0);\nfflush(stdout);\n",
             internal: "printf(\"walking %s %d\\n\", flag ? \"true\" : \"false\", count);\n",
             variables: "Count\tcount;\nBool\tflag;\nMode\tmode;\n"),
         HostTextSample(
             language: "swift",
-            labels: ["after(60)", "after_ms(100)", "timeout(4)", "!after(2)", "count < 3 && flag",
-                     "(count + 1) * 2 == 4 || !flag", "flag ? count > 1 : count < 1", "Mode.on == mode"],
+            labels: [
+                "after(60)", "after_ms(100)", "timeout(4)", "!after(2)", "count < 3 && flag",
+                "(count + 1) * 2 == 4 || !flag", "flag ? count > 1 : count < 1", "Mode.on == mode",
+            ],
             entry: "count = 1\nprint(\"go 100% \\\"done\\\"\")\nsuspend(main)\nfflush(stdout);\n",
             internal: "print(\"walking\", flag, count)\n",
             variables: "var count: Count\nvar flag: Bool\nvar mode: Mode\n"),
         HostTextSample(
             language: "java",
-            labels: ["after(60)", "after_ms(100)", "timeout(4)", "!after(2)", "count < 3 && flag",
-                     "(count + 1) * 2 == 4 || !flag", "flag ? count > 1 : count < 1", "Mode.on == mode"],
+            labels: [
+                "after(60)", "after_ms(100)", "timeout(4)", "!after(2)", "count < 3 && flag",
+                "(count + 1) * 2 == 4 || !flag", "flag ? count > 1 : count < 1", "Mode.on == mode",
+            ],
             entry: "count = 1;\nSystem.out.println(\"go 100% \\\"done\\\"\");\nsuspend(main);\nfflush(stdout);\n",
             internal: "System.out.println(\"walking\" + \" \" + flag + \" \" + count);\n",
             variables: "int count;\nboolean flag;\nMode mode;\n"),
     ]
 }
 
+/// Tests that typed labels, sections and declarations are written in the syntax of each language.
 @Suite("Host text rendering")
 @MainActor
 struct HostTextRenderingTests {
@@ -79,11 +89,14 @@ struct HostTextRenderingTests {
         let second = builder.sectionedState("Second", in: machine)
         builder.set(machine, .initial, first)
         let instance = builder.sectionedInstance("main", of: machine, in: system)
-        builder.section(.onEntry, of: first,
-                        builder.assign(builder.ref(count), builder.int(1)),
-                        builder.printLine("go 100% \"done\""),
-                        builder.control(.suspend, instance),
-                        builder.opaqueStatement("fflush(stdout);"))
+        builder.section(
+            .onEntry,
+            of: first,
+            builder.assign(builder.ref(count), builder.int(1)),
+            builder.printLine("go 100% \"done\""),
+            builder.control(.suspend, instance),
+            builder.opaqueStatement("fflush(stdout);")
+        )
         builder.section(.internal, of: first, builder.printLine("walking", [builder.ref(flag), builder.ref(count)]))
         let labels = [
             builder.binary(.greaterThan, builder.stateTime(.seconds), builder.int(60)),
@@ -98,14 +111,20 @@ struct HostTextRenderingTests {
                                                          builder.int(2)),
                                           builder.int(4)),
                            builder.unary(.negation, builder.ref(flag))),
-            builder.conditional(builder.ref(flag), builder.binary(.greaterThan, builder.ref(count), builder.int(1)),
-                                builder.binary(.lessThan, builder.ref(count), builder.int(1))),
+            builder.conditional(
+                builder.ref(flag),
+                builder.binary(.greaterThan, builder.ref(count), builder.int(1)),
+                builder.binary(.lessThan, builder.ref(count), builder.int(1))
+            ),
             builder.binary(.equal, builder.literal("on", of: modeType), builder.ref(mode)),
         ]
         for label in labels { builder.sectionedTransition(from: first, to: second, when: label) }
         return await builder.resource()
     }
 
+    /// Checks that typed labels, sections and declarations are written in the syntax of the language.
+    ///
+    /// - Parameter expected: The expected host text for one language.
     @Test("typed labels, sections and declarations are written in the syntax of the language",
           arguments: HostTextSample.all)
     func rendering(_ expected: HostTextSample) async throws {
@@ -129,6 +148,7 @@ struct HostTextRenderingTests {
         ])
     }
 
+    /// Checks that the C text of typed labels and sections types back to the same nodes.
     @Test("the C text of typed labels and sections types back to the same nodes")
     func typesBack() async throws {
         let builder = try await KernelModelBuilder.make()
@@ -142,16 +162,31 @@ struct HostTextRenderingTests {
         let state = builder.sectionedState("Only", in: machine)
         builder.set(machine, .initial, state)
         builder.sectionedInstance("main", of: machine, in: system)
-        builder.section(.onEntry, of: state, builder.assign(builder.ref(count), builder.int(1)),
-                        builder.printLine("go 100%"), builder.printLine("done"))
+        builder.section(
+            .onEntry,
+            of: state,
+            builder.assign(builder.ref(count), builder.int(1)),
+            builder.printLine("go 100%"),
+            builder.printLine("done")
+        )
         let labels = [
             builder.binary(.greaterThan, builder.stateTime(.seconds), builder.int(60)),
             builder.binary(.greaterThan, builder.stateTime(.milliseconds), builder.int(100)),
-            builder.binary(.conjunction, builder.binary(.lessThan, builder.ref(count), builder.int(3)), builder.ref(flag)),
-            builder.binary(.subtraction, builder.ref(count),
-                           builder.binary(.subtraction, builder.int(1), builder.int(2))),
-            builder.conditional(builder.ref(flag), builder.binary(.greaterThan, builder.ref(count), builder.int(1)),
-                                builder.binary(.lessThan, builder.ref(count), builder.int(1))),
+            builder.binary(
+                .conjunction,
+                builder.binary(.lessThan, builder.ref(count), builder.int(3)),
+                builder.ref(flag)
+            ),
+            builder.binary(
+                .subtraction,
+                builder.ref(count),
+                builder.binary(.subtraction, builder.int(1), builder.int(2))
+            ),
+            builder.conditional(
+                builder.ref(flag),
+                builder.binary(.greaterThan, builder.ref(count), builder.int(1)),
+                builder.binary(.lessThan, builder.ref(count), builder.int(1))
+            ),
         ]
         for label in labels.dropLast(2) { builder.sectionedTransition(from: state, to: state, when: label) }
         builder.sectionedTransition(
@@ -170,6 +205,7 @@ struct HostTextRenderingTests {
         #expect(rebuilt == original, "\(Set(rebuilt).symmetricDifference(original).sorted())")
     }
 
+    /// Checks that typed nodes of a language that no module writes stop the transformation.
     @Test("typed nodes of a language that no module writes stop the transformation")
     func unsupportedLanguage() async throws {
         let transformations = try await TransformationTestSupport.transformations()
@@ -179,6 +215,7 @@ struct HostTextRenderingTests {
         }
     }
 
+    /// Checks that opaque text of a language that no module writes is kept byte for byte.
     @Test("opaque text of a language that no module writes is kept byte for byte")
     func opaqueOnly() async throws {
         let builder = try await KernelModelBuilder.make()
@@ -202,6 +239,9 @@ struct HostTextRenderingTests {
         #expect(decoded.stateActivities(for: only)[.onEntry] == "  DISPLAY 'HI'.\n\n")
     }
 
+    /// Checks that kernel models of the fresh sectioned fixtures become structural machines.
+    ///
+    /// - Parameter sample: The sectioned fixture to transform.
     @Test("kernel models of the fresh sectioned fixtures become structural machines",
           arguments: [SectionedSample.sectionedCrossing, .suspendResumeSampler])
     func kernelChain(_ sample: SectionedSample) async throws {
@@ -238,8 +278,12 @@ struct HostTextRenderingTests {
             ])
         default:
             #expect(arrangement.namedInstances.map(\.name) == ["worker", "supervisor"])
-            #expect(labels == ["after_ms(100)", "samples >= 100", "pauseRequested",
-                               "!pauseRequested && in_state(worker, Suspended)"])
+            #expect(labels == [
+                "after_ms(100)",
+                "samples >= 100",
+                "pauseRequested",
+                "!pauseRequested && in_state(worker, Suspended)",
+            ])
             #expect(sections["Sampling.internal"] == "printf(\"sampling %d\\n\", samples);\n")
             #expect(sections["Holding.onEntry"] == "SUSPEND(&static_fsm_worker);\n")
             #expect(sections["Holding.onExit"] == "RESUME(&static_fsm_worker);\n")

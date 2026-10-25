@@ -354,8 +354,10 @@ public enum KernelBinaryOperation: String, CaseIterable, Sendable {
     /// Whether the operation combines two integer operands into an integer.
     public var isArithmetic: Bool {
         switch self {
-        case .addition, .subtraction, .multiplication, .division, .modulo: return true
-        default: return false
+        case .addition, .subtraction, .multiplication, .division, .modulo:
+            return true
+        default:
+            return false
         }
     }
 
@@ -365,8 +367,10 @@ public enum KernelBinaryOperation: String, CaseIterable, Sendable {
     /// Whether the operation orders two integer operands.
     public var isComparison: Bool {
         switch self {
-        case .lessThan, .lessOrEqual, .greaterThan, .greaterOrEqual: return true
-        default: return false
+        case .lessThan, .lessOrEqual, .greaterThan, .greaterOrEqual:
+            return true
+        default:
+            return false
         }
     }
 }

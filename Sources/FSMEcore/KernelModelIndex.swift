@@ -79,9 +79,12 @@ struct KernelModelIndex {
         for reference in object.eClass.eAllContainments {
             let identifiers: [EUUID]
             switch object.eGet(reference) {
-            case let identifier as EUUID: identifiers = [identifier]
-            case let many as [EUUID]: identifiers = many
-            default: identifiers = []
+            case let identifier as EUUID:
+                identifiers = [identifier]
+            case let many as [EUUID]:
+                identifiers = many
+            default:
+                identifiers = []
             }
             for (position, identifier) in identifiers.enumerated() {
                 guard let child = objects[identifier] else {

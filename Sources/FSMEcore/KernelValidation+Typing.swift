@@ -32,16 +32,22 @@ enum KernelValueType: Equatable {
         return false
     }
 
-    /// Whether two types are compatible, or `nil` if either is unknown.
+    /// Whether two types are known to be incompatible.
+    ///
+    /// Types are never incompatible while either of them is unknown.
     ///
     /// - Parameter other: The type to compare with.
-    /// - Returns: Whether values of the two types can be compared or assigned.
-    func isCompatible(with other: KernelValueType) -> Bool? {
+    /// - Returns: Whether values of the two types can be neither compared nor assigned.
+    func isIncompatible(with other: KernelValueType) -> Bool {
         switch (self, other) {
-        case (.unknown, _), (_, .unknown): return nil
-        case (.boolean, .boolean), (.integer, .integer): return true
-        case let (.enumeration(lhs), .enumeration(rhs)), let (.array(lhs), .array(rhs)): return lhs == rhs
-        default: return false
+        case (.unknown, _), (_, .unknown):
+            return false
+        case (.boolean, .boolean), (.integer, .integer):
+            return false
+        case let (.enumeration(lhs), .enumeration(rhs)), let (.array(lhs), .array(rhs)):
+            return lhs != rhs
+        default:
+            return true
         }
     }
 }
@@ -54,6 +60,7 @@ struct KernelTypeIssue {
     let message: String
 }
 
+/// The type and range checks for the expressions of a kernel model.
 extension KernelValidation {
     // MARK: - W5
 
@@ -89,7 +96,7 @@ extension KernelValidation {
             if let target = owner.flatMap({ index.target(.target, of: $0) }) {
                 var ignored: [KernelTypeIssue] = []
                 let targetType = typeOf(target, issues: &ignored)
-                if type.isCompatible(with: targetType) == false {
+                if type.isIncompatible(with: targetType) {
                     issues.append(KernelTypeIssue(
                         object: expression,
                         message: "The assignment stores \(describe(type)) in \(describe(targetType))"))
@@ -114,7 +121,7 @@ extension KernelValidation {
         issues: inout [KernelTypeIssue]
     ) {
         let declared = declaredType(index.target(.type, of: variable))
-        if type.isCompatible(with: declared) == false {
+        if type.isIncompatible(with: declared) {
             issues.append(KernelTypeIssue(
                 object: expression,
                 message: "The \(role) of \(label(variable)) is \(describe(type)), not \(describe(declared))"))
@@ -130,100 +137,207 @@ extension KernelValidation {
     ///   - issues: Receives the type errors found in the expression.
     /// - Returns: The type of the expression.
     func typeOf(_ expression: DynamicEObject, issues: inout [KernelTypeIssue]) -> KernelValueType {
-        func issue(_ message: String) { issues.append(KernelTypeIssue(object: expression, message: message)) }
-        func operand(_ feature: LLFSMFeature) -> KernelValueType {
-            index.target(feature, of: expression).map { typeOf($0, issues: &issues) } ?? .unknown
-        }
-        func require(_ type: KernelValueType, _ predicate: (KernelValueType) -> Bool, _ what: String, _ role: String) {
-            if type.isKnown && !predicate(type) { issue("The \(role) is \(describe(type)), not \(what)") }
-        }
         if isKind(expression, kernel.booleanLiteralClass) { return .boolean }
         if isKind(expression, kernel.integerLiteralClass) {
             let value = expression.int(.value) ?? 0
             return .integer(value...value)
         }
         if isKind(expression, kernel.enumerationLiteralClass) {
-            guard let enumeration = index.target(.type, of: expression) else { return .unknown }
-            let literal = expression.string(.literal) ?? ""
-            if !enumeration.strings(.literals).contains(literal) {
-                issue("'\(literal)' is not a literal of enumeration \(label(enumeration))")
-            }
-            return .enumeration(enumeration.id)
+            return typeOfEnumerationLiteral(expression, issues: &issues)
         }
         if isKind(expression, kernel.variableReferenceClass) {
-            guard let variable = index.target(.variable, of: expression) else { return .unknown }
-            let variableType = index.target(.type, of: variable)
-            guard expression.identifier(.index) != nil else { return declaredType(variableType) }
-            require(operand(.index), \.isInteger, "an integer", "array index")
-            guard let variableType, isKind(variableType, kernel.arrayTypeClass) else {
-                if declaredType(variableType).isKnown {
-                    issue("The variable \(label(variable)) is indexed but is not an array")
-                }
-                return .unknown
-            }
-            return declaredType(index.target(.element, of: variableType))
+            return typeOfVariableReference(expression, issues: &issues)
         }
-        if isKind(expression, kernel.unaryExpressionClass) {
-            let type = operand(.operand)
-            switch KernelUnaryOperation(rawValue: expression.string(.operation) ?? "") {
-            case .negation:
-                require(type, { $0 == .boolean }, "a Boolean", "operand of the negation")
-                return .boolean
-            case .minus:
-                require(type, \.isInteger, "an integer", "operand of the minus")
-                return .integer(nil)
-            case nil:
-                return .unknown
-            }
-        }
-        if isKind(expression, kernel.binaryExpressionClass) {
-            let left = operand(.left)
-            let right = operand(.right)
-            guard let operation = KernelBinaryOperation(rawValue: expression.string(.operation) ?? "") else {
-                return .unknown
-            }
-            let name = operation.rawValue
-            if operation.isLogical {
-                require(left, { $0 == .boolean }, "a Boolean", "left operand of the \(name)")
-                require(right, { $0 == .boolean }, "a Boolean", "right operand of the \(name)")
-                return .boolean
-            }
-            if operation.isEquality {
-                if left.isCompatible(with: right) == false {
-                    issue("The \(name) compares \(describe(left)) with \(describe(right))")
-                }
-                return .boolean
-            }
-            require(left, \.isInteger, "an integer", "left operand of the \(name)")
-            require(right, \.isInteger, "an integer", "right operand of the \(name)")
-            return operation.isComparison ? .boolean : .integer(nil)
-        }
+        if isKind(expression, kernel.unaryExpressionClass) { return typeOfUnary(expression, issues: &issues) }
+        if isKind(expression, kernel.binaryExpressionClass) { return typeOfBinary(expression, issues: &issues) }
         if isKind(expression, kernel.conditionalExpressionClass) {
-            require(operand(.condition), { $0 == .boolean }, "a Boolean", "condition")
-            let whenTrue = operand(.whenTrue)
-            let whenFalse = operand(.whenFalse)
-            if whenTrue.isCompatible(with: whenFalse) == false {
-                issue("The branches are \(describe(whenTrue)) and \(describe(whenFalse))")
-            }
-            return whenTrue.isKnown ? whenTrue : whenFalse
+            return typeOfConditional(expression, issues: &issues)
         }
-        if isKind(expression, kernel.inStateExpressionClass) {
-            if let instance = index.target(.instance, of: expression),
-               let state = index.target(.state, of: expression),
-               let machine = index.target(.machine, of: instance),
-               !machine.identifiers(.states).contains(state.id) {
-                issue("The state \(label(state)) is not a state of machine \(label(machine)) "
-                      + "of instance \(label(instance))")
-            }
-            return .boolean
-        }
-        if isKind(expression, kernel.callExpressionClass) {
-            return typeOfCall(expression, issues: &issues)
-        }
+        if isKind(expression, kernel.inStateExpressionClass) { return typeOfInState(expression, issues: &issues) }
+        if isKind(expression, kernel.callExpressionClass) { return typeOfCall(expression, issues: &issues) }
         if isKind(expression, kernel.opaqueExpressionClass) {
             return declaredType(index.target(.type, of: expression))
         }
         return .unknown
+    }
+
+    /// Record a type error.
+    ///
+    /// - Parameters:
+    ///   - message: A sentence that explains the error.
+    ///   - expression: The offending expression.
+    ///   - issues: Receives the type error.
+    private func record(_ message: String, at expression: DynamicEObject, in issues: inout [KernelTypeIssue]) {
+        issues.append(KernelTypeIssue(object: expression, message: message))
+    }
+
+    /// The type of an operand of an expression.
+    ///
+    /// - Parameters:
+    ///   - feature: The feature that holds the operand.
+    ///   - expression: The expression that owns the operand.
+    ///   - issues: Receives the type errors found in the operand.
+    /// - Returns: The type of the operand, or ``KernelValueType/unknown`` if it is missing.
+    private func operandType(
+        _ feature: LLFSMFeature,
+        of expression: DynamicEObject,
+        issues: inout [KernelTypeIssue]
+    ) -> KernelValueType {
+        index.target(feature, of: expression).map { typeOf($0, issues: &issues) } ?? .unknown
+    }
+
+    /// The type that an operand must have.
+    private enum Expectation {
+        /// A Boolean operand.
+        case boolean
+
+        /// An integer operand.
+        case integer
+
+        /// The description of the expected type in messages.
+        var description: String {
+            switch self {
+            case .boolean:
+                return "a Boolean"
+            case .integer:
+                return "an integer"
+            }
+        }
+
+        /// Whether a type is the expected one.
+        ///
+        /// - Parameter type: The type of the operand.
+        /// - Returns: Whether the type matches the expectation.
+        func isSatisfied(by type: KernelValueType) -> Bool {
+            switch self {
+            case .boolean:
+                return type == .boolean
+            case .integer:
+                return type.isInteger
+            }
+        }
+    }
+
+    /// Record a type error unless a known type satisfies an expectation.
+    ///
+    /// - Parameters:
+    ///   - type: The type of the operand.
+    ///   - expectation: The type that the operand must have.
+    ///   - role: The description of the operand's role.
+    ///   - expression: The expression that owns the operand.
+    ///   - issues: Receives the type error.
+    private func require(
+        _ type: KernelValueType,
+        as expectation: Expectation,
+        _ role: String,
+        of expression: DynamicEObject,
+        issues: inout [KernelTypeIssue]
+    ) {
+        if type.isKnown && !expectation.isSatisfied(by: type) {
+            record("The \(role) is \(describe(type)), not \(expectation.description)", at: expression, in: &issues)
+        }
+    }
+
+    /// The type of an enumeration literal, recording a literal that its enumeration lacks.
+    private func typeOfEnumerationLiteral(
+        _ expression: DynamicEObject,
+        issues: inout [KernelTypeIssue]
+    ) -> KernelValueType {
+        guard let enumeration = index.target(.type, of: expression) else { return .unknown }
+        let literal = expression.string(.literal) ?? ""
+        if !enumeration.strings(.literals).contains(literal) {
+            record("'\(literal)' is not a literal of enumeration \(label(enumeration))", at: expression, in: &issues)
+        }
+        return .enumeration(enumeration.id)
+    }
+
+    /// The type of a variable reference, recording the misuse of an index.
+    private func typeOfVariableReference(
+        _ expression: DynamicEObject,
+        issues: inout [KernelTypeIssue]
+    ) -> KernelValueType {
+        guard let variable = index.target(.variable, of: expression) else { return .unknown }
+        let variableType = index.target(.type, of: variable)
+        guard expression.identifier(.index) != nil else { return declaredType(variableType) }
+        let indexType = operandType(.index, of: expression, issues: &issues)
+        require(indexType, as: .integer, "array index", of: expression, issues: &issues)
+        guard let variableType, isKind(variableType, kernel.arrayTypeClass) else {
+            if declaredType(variableType).isKnown {
+                record("The variable \(label(variable)) is indexed but is not an array", at: expression, in: &issues)
+            }
+            return .unknown
+        }
+        return declaredType(index.target(.element, of: variableType))
+    }
+
+    /// The type of a unary expression, recording an operand of the wrong type.
+    private func typeOfUnary(_ expression: DynamicEObject, issues: inout [KernelTypeIssue]) -> KernelValueType {
+        let type = operandType(.operand, of: expression, issues: &issues)
+        switch KernelUnaryOperation(rawValue: expression.string(.operation) ?? "") {
+        case .negation:
+            require(type, as: .boolean, "operand of the negation", of: expression, issues: &issues)
+            return .boolean
+        case .minus:
+            require(type, as: .integer, "operand of the minus", of: expression, issues: &issues)
+            return .integer(nil)
+        case nil:
+            return .unknown
+        }
+    }
+
+    /// The type of a binary expression, recording operands of the wrong type.
+    private func typeOfBinary(_ expression: DynamicEObject, issues: inout [KernelTypeIssue]) -> KernelValueType {
+        let left = operandType(.left, of: expression, issues: &issues)
+        let right = operandType(.right, of: expression, issues: &issues)
+        guard let operation = KernelBinaryOperation(rawValue: expression.string(.operation) ?? "") else {
+            return .unknown
+        }
+        let name = operation.rawValue
+        if operation.isLogical {
+            require(left, as: .boolean, "left operand of the \(name)", of: expression, issues: &issues)
+            require(right, as: .boolean, "right operand of the \(name)", of: expression, issues: &issues)
+            return .boolean
+        }
+        if operation.isEquality {
+            if left.isIncompatible(with: right) {
+                record("The \(name) compares \(describe(left)) with \(describe(right))", at: expression, in: &issues)
+            }
+            return .boolean
+        }
+        require(left, as: .integer, "left operand of the \(name)", of: expression, issues: &issues)
+        require(right, as: .integer, "right operand of the \(name)", of: expression, issues: &issues)
+        return operation.isComparison ? .boolean : .integer(nil)
+    }
+
+    /// The type of a conditional expression, recording a condition or branches of the wrong type.
+    private func typeOfConditional(
+        _ expression: DynamicEObject,
+        issues: inout [KernelTypeIssue]
+    ) -> KernelValueType {
+        let condition = operandType(.condition, of: expression, issues: &issues)
+        require(condition, as: .boolean, "condition", of: expression, issues: &issues)
+        let whenTrue = operandType(.whenTrue, of: expression, issues: &issues)
+        let whenFalse = operandType(.whenFalse, of: expression, issues: &issues)
+        if whenTrue.isIncompatible(with: whenFalse) {
+            record("The branches are \(describe(whenTrue)) and \(describe(whenFalse))", at: expression, in: &issues)
+        }
+        return whenTrue.isKnown ? whenTrue : whenFalse
+    }
+
+    /// The type of a state test, recording a state that its machine lacks.
+    private func typeOfInState(_ expression: DynamicEObject, issues: inout [KernelTypeIssue]) -> KernelValueType {
+        if let instance = index.target(.instance, of: expression),
+           let state = index.target(.state, of: expression),
+           let machine = index.target(.machine, of: instance),
+           !machine.identifiers(.states).contains(state.id) {
+            record(
+                "The state \(label(state)) is not a state of machine \(label(machine)) "
+                    + "of instance \(label(instance))",
+                at: expression,
+                in: &issues
+            )
+        }
+        return .boolean
     }
 
     /// The result type of a call, recording argument and receiver errors.
@@ -240,7 +354,7 @@ extension KernelValidation {
         for (position, (argument, parameter)) in zip(arguments, parameters).enumerated() {
             let argumentType = typeOf(argument, issues: &issues)
             let parameterType = declaredType(index.target(.type, of: parameter))
-            if argumentType.isCompatible(with: parameterType) == false {
+            if argumentType.isIncompatible(with: parameterType) {
                 issues.append(KernelTypeIssue(
                     object: argument,
                     message: "Argument \(position + 1) of \(label(function)) is \(describe(argumentType)), "
@@ -251,7 +365,7 @@ extension KernelValidation {
             let receiverType = typeOf(receiver, issues: &issues)
             if let declared = index.target(.receiverType, of: function) {
                 let expected = declaredType(declared)
-                if receiverType.isCompatible(with: expected) == false {
+                if receiverType.isIncompatible(with: expected) {
                     issues.append(KernelTypeIssue(
                         object: receiver,
                         message: "The receiver of \(label(function)) is \(describe(receiverType)), "
@@ -288,12 +402,18 @@ extension KernelValidation {
     /// A phrase that names a type in messages.
     func describe(_ type: KernelValueType) -> String {
         switch type {
-        case .boolean: return "a Boolean"
-        case .integer: return "an integer"
-        case .enumeration(let identifier): return "a value of enumeration \(label(index.object(identifier)))"
-        case .array(let identifier): return "an array of type \(label(index.object(identifier)))"
-        case .void: return "no value"
-        case .unknown: return "of unknown type"
+        case .boolean:
+            return "a Boolean"
+        case .integer:
+            return "an integer"
+        case .enumeration(let identifier):
+            return "a value of enumeration \(label(index.object(identifier)))"
+        case .array(let identifier):
+            return "an array of type \(label(index.object(identifier)))"
+        case .void:
+            return "no value"
+        case .unknown:
+            return "of unknown type"
         }
     }
 
@@ -314,8 +434,13 @@ extension KernelValidation {
         for binding in objects(of: kernel.bindingClass) {
             guard let variable = index.target(.variable, of: binding),
                   let value = index.target(.value, of: binding) else { continue }
-            checkRange(of: value, against: index.target(.type, of: variable), variable: variable,
-                       role: "bound", at: binding)
+            checkRange(
+                of: value,
+                against: index.target(.type, of: variable),
+                variable: variable,
+                role: "bound",
+                at: binding
+            )
         }
         let divisions: Set<KernelBinaryOperation> = [.division, .modulo]
         for expression in objects(of: kernel.binaryExpressionClass) {
@@ -324,9 +449,12 @@ extension KernelValidation {
                   let divisor = index.target(.right, of: expression) else { continue }
             var ignored: [KernelTypeIssue] = []
             guard typeOf(divisor, issues: &ignored).isKnown, !isProvablyNonNegative(divisor) else { continue }
-            report(.unprovenDivisor, expression,
-                   "The right operand of the \(operation.rawValue) is not provably non-negative",
-                   severity: .warning)
+            report(
+                .unprovenDivisor,
+                expression,
+                "The right operand of the \(operation.rawValue) is not provably non-negative",
+                severity: .warning
+            )
         }
     }
 
@@ -341,9 +469,12 @@ extension KernelValidation {
         guard let constant = constantValue(of: value),
               case .integer(let range?) = declaredType(type),
               !range.contains(constant) else { return }
-        report(.range, object,
-               "The value \(constant) \(role) to \(label(variable)) lies outside "
-               + "\(range.lowerBound)...\(range.upperBound)")
+        report(
+            .range,
+            object,
+            "The value \(constant) \(role) to \(label(variable)) lies outside "
+                + "\(range.lowerBound)...\(range.upperBound)"
+        )
     }
 
     /// The value of an integer literal, possibly negated by a minus.

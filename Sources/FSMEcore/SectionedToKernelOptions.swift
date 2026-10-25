@@ -88,12 +88,18 @@ public struct SectionedToKernelOptions: Codable, Sendable, Hashable {
         /// The values the option accepts, the default first.
         public var values: [String] {
             switch self {
-            case .selfLoop: return SelfLoop.allCases.map(\.rawValue)
-            case .elideEmptySections: return [SectionedToKernelOptions.trueText, SectionedToKernelOptions.falseText]
-            case .suspension: return Suspension.allCases.map(\.rawValue)
-            case .resumeFallback: return ResumeFallback.allCases.map(\.rawValue)
-            case .time: return Time.allCases.map(\.rawValue)
-            case .inState: return InState.allCases.map(\.rawValue)
+            case .selfLoop:
+                return SelfLoop.allCases.map(\.rawValue)
+            case .elideEmptySections:
+                return [SectionedToKernelOptions.trueText, SectionedToKernelOptions.falseText]
+            case .suspension:
+                return Suspension.allCases.map(\.rawValue)
+            case .resumeFallback:
+                return ResumeFallback.allCases.map(\.rawValue)
+            case .time:
+                return Time.allCases.map(\.rawValue)
+            case .inState:
+                return InState.allCases.map(\.rawValue)
             }
         }
     }
@@ -192,12 +198,18 @@ public struct SectionedToKernelOptions: Codable, Sendable, Hashable {
     /// - Returns: The value as it appears in a `key=value` pair.
     public func value(of key: Key) -> String {
         switch key {
-        case .selfLoop: return selfLoop.rawValue
-        case .elideEmptySections: return elideEmptySections ? Self.trueText : Self.falseText
-        case .suspension: return suspension.rawValue
-        case .resumeFallback: return resumeFallback.rawValue
-        case .time: return time.rawValue
-        case .inState: return inState.rawValue
+        case .selfLoop:
+            return selfLoop.rawValue
+        case .elideEmptySections:
+            return elideEmptySections ? Self.trueText : Self.falseText
+        case .suspension:
+            return suspension.rawValue
+        case .resumeFallback:
+            return resumeFallback.rawValue
+        case .time:
+            return time.rawValue
+        case .inState:
+            return inState.rawValue
         }
     }
 
@@ -216,9 +228,12 @@ public struct SectionedToKernelOptions: Codable, Sendable, Hashable {
             selfLoop = parsed
         case .elideEmptySections:
             switch value {
-            case Self.trueText: elideEmptySections = true
-            case Self.falseText: elideEmptySections = false
-            default: throw invalid
+            case Self.trueText:
+                elideEmptySections = true
+            case Self.falseText:
+                elideEmptySections = false
+            default:
+                throw invalid
             }
         case .suspension:
             guard let parsed = Suspension(rawValue: value) else { throw invalid }
@@ -271,8 +286,10 @@ public struct SectionedToKernelOptions: Codable, Sendable, Hashable {
         var parameters: [String: any EcoreValue] = [:]
         for key in Key.allCases {
             switch key {
-            case .elideEmptySections: parameters[key.rawValue] = elideEmptySections
-            default: parameters[key.rawValue] = value(of: key)
+            case .elideEmptySections:
+                parameters[key.rawValue] = elideEmptySections
+            default:
+                parameters[key.rawValue] = value(of: key)
             }
         }
         return parameters

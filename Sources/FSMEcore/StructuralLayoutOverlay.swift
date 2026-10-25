@@ -8,6 +8,7 @@
 import ECore
 import EMFBase
 
+/// The layout overlay that carries the diagram layouts over to a rebuilt structural model.
 extension LLFSMTransformations {
     /// Copy the layouts of an original structural model into a model rebuilt from it.
     ///
@@ -60,8 +61,34 @@ struct StructuralLayoutOverlay {
 
     /// The names of the structural features that the overlay reads and writes.
     enum Feature: String {
-        case name, instances, machine, llfsm, states, transitions, source, target
-        case stateLayouts, transitionLayouts, windowLayout, state, transition, layout
+        /// The `name` structural feature.
+        case name
+        /// The `instances` structural feature.
+        case instances
+        /// The `machine` structural feature.
+        case machine
+        /// The `llfsm` structural feature.
+        case llfsm
+        /// The `states` structural feature.
+        case states
+        /// The `transitions` structural feature.
+        case transitions
+        /// The `source` structural feature.
+        case source
+        /// The `target` structural feature.
+        case target
+        /// The `stateLayouts` structural feature.
+        case stateLayouts
+        /// The `transitionLayouts` structural feature.
+        case transitionLayouts
+        /// The `windowLayout` structural feature.
+        case windowLayout
+        /// The `state` structural feature.
+        case state
+        /// The `transition` structural feature.
+        case transition
+        /// The `layout` structural feature.
+        case layout
     }
 
     /// Copy the layouts of every original machine into its counterpart.
@@ -120,10 +147,16 @@ struct StructuralLayoutOverlay {
                   let copy = await copyEntry(entry, element: .transition, to: transition) else { continue }
             transitionEntries.append(copy)
         }
-        _ = await target.eSet(objectId: targetMachine, feature: Feature.stateLayouts.rawValue,
-                              value: stateEntries.isEmpty ? nil : stateEntries)
-        _ = await target.eSet(objectId: targetMachine, feature: Feature.transitionLayouts.rawValue,
-                              value: transitionEntries.isEmpty ? nil : transitionEntries)
+        _ = await target.eSet(
+            objectId: targetMachine,
+            feature: Feature.stateLayouts.rawValue,
+            value: stateEntries.isEmpty ? nil : stateEntries
+        )
+        _ = await target.eSet(
+            objectId: targetMachine,
+            feature: Feature.transitionLayouts.rawValue,
+            value: transitionEntries.isEmpty ? nil : transitionEntries
+        )
         let window = await source.eGet(objectId: sourceMachine, feature: Feature.windowLayout.rawValue)
         _ = await target.eSet(objectId: targetMachine, feature: Feature.windowLayout.rawValue, value: window)
     }

@@ -113,18 +113,18 @@ public struct FSMPipeline {
         case save(ModelFormat)
     }
 
+    /// What a model of a pipeline holds, also available as ``Model/Content``.
+    public enum ModelContent {
+        /// A native machine with its name.
+        case machine(name: String, Machine)
+        /// A native arrangement with its name.
+        case arrangement(name: String, Arrangement)
+        /// A sectioned or kernel model.
+        case resource(Resource)
+    }
+
     /// A model held by a pipeline.
     public struct Model {
-        /// What a model holds.
-        public enum Content {
-            /// A native machine with its name.
-            case machine(name: String, Machine)
-            /// A native arrangement with its name.
-            case arrangement(name: String, Arrangement)
-            /// A sectioned or kernel model.
-            case resource(Resource)
-        }
-
         /// The level of the model.
         public let level: LLFSMLevel
 
@@ -170,7 +170,7 @@ public struct FSMPipeline {
     }
 
     /// The file extension of arrangement bundles.
-    public nonisolated static let arrangementExtension = "arrangement"
+    nonisolated public static let arrangementExtension = "arrangement"
 
     /// The name under which a loaded document is kept by the model pipeline.
     nonisolated static let inputModelName = "IN"
@@ -232,7 +232,7 @@ public struct FSMPipeline {
     ///   - target: The output target, or `nil` for the native format of the model's own language.
     ///   - options: The options of the conversion.
     /// - Returns: The steps in the order in which they run.
-    public nonisolated static func steps(from source: LLFSMLevel, to target: OutputTarget?, options: Options) -> [Step] {
+    nonisolated public static func steps(from source: LLFSMLevel, to target: OutputTarget?, options: Options) -> [Step] {
         let level = target.map { $0.level ?? options.level ?? source } ?? .structural
         let transforms = LevelTransformation.chain(from: source, to: level).map(Step.transform)
         switch target?.kind {
@@ -334,7 +334,7 @@ public struct FSMPipeline {
     /// - Parameter path: The path as given.
     /// - Returns: The location of the input.
     /// - Throws: ``FSMPipelineError/missingInput(_:)`` if neither path exists.
-    public nonisolated static func resolveInput(_ path: String) throws -> URL {
+    nonisolated public static func resolveInput(_ path: String) throws -> URL {
         let fileManager = FileManager.default
         if fileManager.fileExists(atPath: path) { return URL(fileURLWithPath: path) }
         let machinePath = path + MachineDirectoryWrapper.dottedSuffix
@@ -688,8 +688,12 @@ public struct FSMPipeline {
         }
         let machine = format.isSingleFile ? original ?? storage.machine : storage.machine
         let binding = try await TemplateBinding.make(
-            for: machine, named: storage.name, format: format, isSuspensible: storage.isSuspensible,
-            settings: options.templates)
+            for: machine,
+            named: storage.name,
+            format: format,
+            isSuspensible: storage.isSuspensible,
+            settings: options.templates
+        )
         if let directory = storage as? MachineDirectoryWrapper {
             directory.language = binding
             try directory.write(to: url)
@@ -713,8 +717,12 @@ public struct FSMPipeline {
     public func write(_ wrapper: ArrangementWrapper, to url: URL) async throws {
         if let format = templateFormat(of: wrapper.language, arrangements: true) {
             wrapper.language = try await TemplateBinding.make(
-                for: wrapper.arrangement, named: Self.stem(of: url, fallback: Self.fallbackArrangementName),
-                format: format, isSuspensible: wrapper.isSuspensible, settings: options.templates)
+                for: wrapper.arrangement,
+                named: Self.stem(of: url, fallback: Self.fallbackArrangementName),
+                format: format,
+                isSuspensible: wrapper.isSuspensible,
+                settings: options.templates
+            )
         }
         try wrapper.write(to: url)
     }
@@ -733,13 +741,23 @@ public struct FSMPipeline {
         return format
     }
 
+}
+
+/// The content of a model, under its original name.
+extension FSMPipeline.Model {
+    /// What a model holds.
+    public typealias Content = FSMPipeline.ModelContent
+}
+
+/// The naming conventions for the files that a pipeline reads and writes.
+extension FSMPipeline {
     // MARK: - Names
 
     /// Whether a file is an XMI or JSON model document, judged by its extension.
     ///
     /// - Parameter url: The location of the file.
     /// - Returns: `true` for the extensions of ``ECore/ModelFormat/xmi`` and ``ECore/ModelFormat/json``.
-    public nonisolated static func isModelDocument(_ url: URL) -> Bool {
+    nonisolated public static func isModelDocument(_ url: URL) -> Bool {
         let format = ModelFormat.detect(url: url)
         return format == .xmi || format == .json
     }
@@ -748,7 +766,7 @@ public struct FSMPipeline {
     ///
     /// - Parameter fileName: The file name of the input, such as `Counter.machine` or `Light.scxml`.
     /// - Returns: The name of the instance and the file name of its machine bundle.
-    public nonisolated static func instanceNames(forFileNamed fileName: String) -> (instance: String, machine: String) {
+    nonisolated public static func instanceNames(forFileNamed fileName: String) -> (instance: String, machine: String) {
         let suffix = MachineDirectoryWrapper.dottedSuffix
         if fileName.hasSuffix(suffix) { return (String(fileName.dropLast(suffix.count)), fileName) }
         let instance = URL(fileURLWithPath: fileName).deletingPathExtension().lastPathComponent
@@ -759,7 +777,7 @@ public struct FSMPipeline {
     ///
     /// - Parameter url: The location of the file.
     /// - Returns: The name, or `Machine` if the file name has no stem.
-    public nonisolated static func fileStem(of url: URL) -> String {
+    nonisolated public static func fileStem(of url: URL) -> String {
         let suffix = MachineDirectoryWrapper.dottedSuffix
         if url.lastPathComponent.hasSuffix(suffix) { return String(url.lastPathComponent.dropLast(suffix.count)) }
         return stem(of: url, fallback: fallbackMachineName)
@@ -771,7 +789,7 @@ public struct FSMPipeline {
     ///   - url: The location.
     ///   - fallback: The name to use if the stem is empty.
     /// - Returns: The stem, or the fallback.
-    public nonisolated static func stem(of url: URL, fallback: String) -> String {
+    nonisolated public static func stem(of url: URL, fallback: String) -> String {
         let stem = url.deletingPathExtension().lastPathComponent
         return stem.isEmpty ? fallback : stem
     }

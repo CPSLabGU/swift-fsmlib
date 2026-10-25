@@ -14,6 +14,7 @@ import Testing
 /// Tests that origin records are converted, written, read and serialised.
 @Suite("Origin annotations")
 struct OriginAnnotationsTests {
+    /// Verify the fixed annotation source and detail keys.
     @Test("the annotation source and detail keys are fixed")
     func constants() {
         #expect(OriginAnnotations.source == "http://cpslabgu.github.io/llfsm/origin")
@@ -25,6 +26,9 @@ struct OriginAnnotationsTests {
         ])
     }
 
+    /// Verify that an origin record converts to annotation details and back.
+    ///
+    /// - Parameter record: The record to convert.
     @Test("records convert to annotation details and back", arguments: [
         OriginRecord(state: "Waiting", role: .exit, transition: 2),
         OriginRecord(state: "Waiting", role: .internal),
@@ -36,6 +40,7 @@ struct OriginAnnotationsTests {
         #expect(OriginAnnotations.record(fromDetails: details) == record)
     }
 
+    /// Verify that invalid annotation details describe no record.
     @Test("details without a valid role or with a malformed index describe no record")
     func invalidDetails() {
         #expect(OriginAnnotations.record(fromDetails: [:]) == nil)
@@ -43,6 +48,7 @@ struct OriginAnnotationsTests {
         #expect(OriginAnnotations.record(fromDetails: ["role": "exit", "transition": "first"]) == nil)
     }
 
+    /// Verify that an origin is written to, replaced on and removed from a state.
     @Test("an origin is written to, replaced on and removed from a state")
     func writeReadReplaceRemove() async throws {
         let builder = try await KernelModelBuilder.make()
@@ -68,6 +74,7 @@ struct OriginAnnotationsTests {
         #expect(diagnostics.isEmpty)
     }
 
+    /// Verify that origins, including a zero transition index, survive serialisation.
     @Test("origins survive serialisation, including a zero transition index")
     func originsSerialise() async throws {
         let builder = try await KernelModelBuilder.make()
@@ -90,6 +97,7 @@ struct OriginAnnotationsTests {
         #expect(records == [record])
     }
 
+    /// Verify that setting an origin on anything but a state or transition fails.
     @Test("only states and transitions carry origins")
     func notAnnotatable() async throws {
         let builder = try await KernelModelBuilder.make()
@@ -107,6 +115,7 @@ struct OriginAnnotationsTests {
         #expect(!OriginAnnotationsError.objectNotFound.description.isEmpty)
     }
 
+    /// Verify the origins recorded in the crossing fixture.
     @Test("the crossing fixture records the origins of its encoded states and transitions")
     func fixtureOrigins() async throws {
         let (_, resource) = try await KernelFixtureTests.load(.crossingController)

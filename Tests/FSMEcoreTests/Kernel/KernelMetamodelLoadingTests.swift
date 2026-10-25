@@ -14,6 +14,7 @@ import Testing
 /// Tests that the kernel and sectioned levels load from the bundled document.
 @Suite("Kernel and sectioned metamodel loading")
 struct KernelMetamodelLoadingTests {
+    /// Verify that the kernel level resolves its classes, references and enumerations.
     @Test("the kernel level resolves its subpackage, classes and enumerations")
     func kernelLoads() async throws {
         let kernel = try await KernelMetamodel()
@@ -39,6 +40,7 @@ struct KernelMetamodelLoadingTests {
         #expect(kernel.originRoleEnum.literals.map(\.name) == OriginRole.allCases.map(\.rawValue))
     }
 
+    /// Verify that states and transitions have an optional origin containment.
     @Test("states and transitions have an optional origin containment")
     func originContainment() async throws {
         let kernel = try await KernelMetamodel()
@@ -62,6 +64,7 @@ struct KernelMetamodelLoadingTests {
         }
     }
 
+    /// Verify that the sectioned level reuses the expressions and statements of the kernel.
     @Test("the sectioned level reuses the kernel's expressions and statements")
     func sectionedLoads() async throws {
         let sectioned = try await SectionedMetamodel()
@@ -80,6 +83,7 @@ struct KernelMetamodelLoadingTests {
                 == SectionedControlOperation.allCases.map(\.rawValue))
     }
 
+    /// Verify that both levels share one root package.
     @Test("both levels share one root package loaded once")
     func levelsShareRootPackage() async throws {
         let metamodels = try await LLFSMMetamodels()
@@ -90,6 +94,7 @@ struct KernelMetamodelLoadingTests {
         #expect(metamodels.sectioned.stateClass.id != kernel.stateClass.id)
     }
 
+    /// Verify that registration makes every package available by namespace URI.
     @Test("registration makes the root and both subpackages available by namespace URI")
     func registration() async throws {
         let metamodels = try await LLFSMMetamodels()
@@ -106,6 +111,7 @@ struct KernelMetamodelLoadingTests {
         }
     }
 
+    /// Verify that a root package lacking the expected subpackages or classifiers is rejected.
     @Test("a root package without the expected subpackages is rejected")
     func missingSubpackage() throws {
         let wrongRoot = EPackage(name: "other", nsURI: "http://example.org/other", nsPrefix: "other")
@@ -117,8 +123,11 @@ struct KernelMetamodelLoadingTests {
             try KernelMetamodel(rootPackage: bareRoot)
         }
         let kernelOnly = EPackage(
-            name: "llfsm", nsURI: LLFSMMetamodels.rootNamespaceURI, nsPrefix: "llfsm",
-            eSubpackages: [EPackage(name: "kernel", nsURI: LLFSMMetamodels.kernelNamespaceURI, nsPrefix: "kernel")])
+            name: "llfsm",
+            nsURI: LLFSMMetamodels.rootNamespaceURI,
+            nsPrefix: "llfsm",
+            eSubpackages: [EPackage(name: "kernel", nsURI: LLFSMMetamodels.kernelNamespaceURI, nsPrefix: "kernel")]
+        )
         #expect(throws: LLFSMMetamodelsError.missingClassifier(
             package: LLFSMMetamodels.kernelNamespaceURI, name: "Arrangement")) {
             try KernelMetamodel(rootPackage: kernelOnly)

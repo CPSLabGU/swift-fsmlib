@@ -32,21 +32,30 @@ public enum KernelTarget: String, CaseIterable, Sendable, Codable {
     /// The name of the directory below the bundled `kernel` templates that holds the template set.
     public var templateDirectory: String {
         switch self {
-        case .c: return "c"
-        case .cpp: return "cpp"
-        case .swift: return "swift"
-        case .java: return "java"
-        case .smv: return "smv"
-        case .tla: return "tla"
-        case .dot: return "dot"
+        case .c:
+            return "c"
+        case .cpp:
+            return "cpp"
+        case .swift:
+            return "swift"
+        case .java:
+            return "java"
+        case .smv:
+            return "smv"
+        case .tla:
+            return "tla"
+        case .dot:
+            return "dot"
         }
     }
 
     /// Whether the target generates a program that executes the arrangement.
     public var isExecutionTarget: Bool {
         switch self {
-        case .c, .cpp, .swift, .java: return true
-        case .smv, .tla, .dot: return false
+        case .c, .cpp, .swift, .java:
+            return true
+        case .smv, .tla, .dot:
+            return false
         }
     }
 

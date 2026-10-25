@@ -122,12 +122,19 @@ struct KernelVerificationCase: Sendable, CustomTestStringConvertible {
     /// TypeOK for TLC.
     let escapesRange: Bool
 
+    /// Create a verification case.
+    ///
+    /// - Parameters:
+    ///   - model: The model to generate.
+    ///   - parameters: The template parameters.
+    ///   - escapesRange: Whether an integer variable can leave its range.
     init(model: KernelTestModel, parameters: [String: String], escapesRange: Bool = false) {
         self.model = model
         self.parameters = parameters
         self.escapesRange = escapesRange
     }
 
+    /// The description of the case in test reports.
     var testDescription: String { "\(model)" + (parameters.isEmpty ? "" : " \(parameters.sorted { $0.key < $1.key })") }
 
     /// The havoc treatment of opaque nodes.
@@ -136,8 +143,10 @@ struct KernelVerificationCase: Sendable, CustomTestStringConvertible {
     /// The models whose generated verification models are checked.
     static let all: [KernelVerificationCase] =
         KernelTestModel.fixtures.filter(\.isStrict).map { KernelVerificationCase(model: $0, parameters: [:]) }
-        + [KernelVerificationCase(model: .fixture(.opaqueSampler), parameters: havoc),
-           KernelVerificationCase(model: .host(.c), parameters: havoc, escapesRange: true)]
+        + [
+            KernelVerificationCase(model: .fixture(.opaqueSampler), parameters: havoc),
+            KernelVerificationCase(model: .host(.c), parameters: havoc, escapesRange: true)
+        ]
 }
 
 /// Tests of the smv target with nuXmv or NuSMV.
@@ -172,6 +181,9 @@ struct KernelSMVTests {
                 KernelModelChecker.restingLines(model: text, simulation: report.log, rounds: rounds))
     }
 
+    /// Verify that the range invariants hold and that only a model that can leave a range has a state without successors.
+    ///
+    /// - Parameter verification: The model and parameters to check.
     @Test("the range invariants hold, and only a model that can leave a range has a state without successors",
           .enabled(if: KernelModelChecker.executable != nil, "Neither nuXmv nor NuSMV found on the search path; skipping"),
           arguments: KernelVerificationCase.all)
@@ -192,6 +204,9 @@ struct KernelSMVTests {
         }
     }
 
+    /// Verify that a deterministic simulation rests in the states of the expected trace.
+    ///
+    /// - Parameter model: The closed model to simulate.
     @Test("a deterministic simulation rests in the states of the expected trace",
           .enabled(if: KernelModelChecker.executable != nil, "Neither nuXmv nor NuSMV found on the search path; skipping"),
           arguments: closedModels)
@@ -200,6 +215,7 @@ struct KernelSMVTests {
         #expect(simulated == expected)
     }
 
+    /// Verify that fused entry keeps the resting states of the relay.
     @Test("with entry=fused the relay keeps its resting states, as only a print waits for the next ringlet",
           .enabled(if: KernelModelChecker.executable != nil, "Neither nuXmv nor NuSMV found on the search path; skipping"))
     func fusedEntry() async throws {
@@ -216,6 +232,7 @@ struct KernelSMVTests {
         #expect(simulated == expected)
     }
 
+    /// Verify that sanity mode lets the relay leave every state except where it saturates.
     @Test("with sanity=true the relay can leave every state except where it saturates",
           .enabled(if: KernelModelChecker.executable != nil, "Neither nuXmv nor NuSMV found on the search path; skipping"))
     func sanityOfRelay() async throws {
@@ -232,6 +249,7 @@ struct KernelSMVTests {
         #expect(verdicts.filter { $0.hasSuffix(" is false") } == expectedFalse)
     }
 
+    /// Verify that sanity mode makes every state of the scheduler pool reachable and every transition fire.
     @Test("with sanity=true every state of the scheduler pool is reachable and can be left, and every transition fires",
           .enabled(if: KernelModelChecker.executable != nil, "Neither nuXmv nor NuSMV found on the search path; skipping"))
     func sanityOfSchedulerPool() async throws {
@@ -243,6 +261,7 @@ struct KernelSMVTests {
         #expect(report.allHold, "\(report.verdicts)")
     }
 
+    /// Verify that the default opaque treatment rejects the opaque nodes of the sampler.
     @Test("opaque=reject, the default, rejects the opaque nodes of OpaqueSampler")
     func opaqueRejected() async throws {
         let generator = KernelTemplateGenerator(metamodel: try await KernelMetamodel())

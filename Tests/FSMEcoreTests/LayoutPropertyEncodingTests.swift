@@ -82,13 +82,20 @@ struct LayoutPropertyEncodingTests {
     static func kind(of value: Any?) -> String {
         guard let value else { return "other" }
         switch PropertyListValueKind(value) {
-        case .boolean: return "boolean"
-        case .real: return "real"
-        case .integer: return "integer"
-        default: return "other"
+        case .boolean:
+            return "boolean"
+        case .real:
+            return "real"
+        case .integer:
+            return "integer"
+        default:
+            return "other"
         }
     }
 
+    /// Check that typed properties survive encoding and decoding by the machine codec.
+    ///
+    /// - Throws: Any error from loading the metamodel or decoding the machine.
     @Test("Typed properties survive encoding and decoding")
     func codecRoundTrip() async throws {
         let (machine, stateID) = Self.makeMachine()
@@ -102,6 +109,9 @@ struct LayoutPropertyEncodingTests {
         Self.expectSampleProperties(decoded.machine.stateLayout[state]?.extraProperties ?? [:])
     }
 
+    /// Check that typed properties survive an XMI document without diagnostics.
+    ///
+    /// - Throws: Any error from writing or reading the document.
     @Test("Typed properties survive an XMI document")
     func xmiRoundTrip() async throws {
         let (machine, _) = Self.makeMachine()
@@ -119,6 +129,9 @@ struct LayoutPropertyEncodingTests {
         Self.expectSampleProperties(decoded.machine.stateLayout[state]?.extraProperties ?? [:])
     }
 
+    /// Check that properties stored as JSON text are still read.
+    ///
+    /// - Throws: Any error from loading the metamodel or decoding the machine.
     @Test("Properties stored as JSON text are still read")
     func legacyJSONProperties() async throws {
         let metamodel = try await LLFSMMetamodel()
@@ -142,6 +155,9 @@ struct LayoutPropertyEncodingTests {
         #expect(properties["alpha"] as? Int == 1)
     }
 
+    /// Check that the metamodel declares the property list classes.
+    ///
+    /// - Throws: Any error from loading the metamodel.
     @Test("The metamodel declares the property list classes")
     func metamodelClasses() async throws {
         let metamodel = try await LLFSMMetamodel()

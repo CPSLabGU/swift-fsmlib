@@ -13,7 +13,14 @@ import FSM
 ///
 /// The raw values are the names declared in `LLFSMStructural.ecore`.
 enum StructuralFeature: String, Sendable {
-    case name, boilerplate, stateBoilerplates, state
+    /// The `name` structural feature.
+    case name
+    /// The `boilerplate` structural feature.
+    case boilerplate
+    /// The `stateBoilerplates` structural feature.
+    case stateBoilerplates
+    /// The `state` structural feature.
+    case state
 }
 
 /// Reads the machine declarations of a structural model that the typing

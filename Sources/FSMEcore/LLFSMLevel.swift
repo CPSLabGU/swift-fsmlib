@@ -22,9 +22,12 @@ public enum LLFSMLevel: String, CaseIterable, Sendable, Codable {
     /// The namespace URI that documents of the level qualify their root elements with.
     public var namespaceURI: String {
         switch self {
-        case .structural: return LLFSMMetamodel.namespaceURI
-        case .sectioned: return LLFSMMetamodels.sectionedNamespaceURI
-        case .kernel: return LLFSMMetamodels.kernelNamespaceURI
+        case .structural:
+            return LLFSMMetamodel.namespaceURI
+        case .sectioned:
+            return LLFSMMetamodels.sectionedNamespaceURI
+        case .kernel:
+            return LLFSMMetamodels.kernelNamespaceURI
         }
     }
 
@@ -58,18 +61,24 @@ public enum LevelTransformation: String, CaseIterable, Sendable, Codable {
     /// The level of the model that the transformation reads.
     public var source: LLFSMLevel {
         switch self {
-        case .structuralToSectioned: return .structural
-        case .sectionedToKernel, .sectionedToStructural: return .sectioned
-        case .kernelToSectioned, .kernelToStructural: return .kernel
+        case .structuralToSectioned:
+            return .structural
+        case .sectionedToKernel, .sectionedToStructural:
+            return .sectioned
+        case .kernelToSectioned, .kernelToStructural:
+            return .kernel
         }
     }
 
     /// The level of the model that the transformation produces.
     public var target: LLFSMLevel {
         switch self {
-        case .sectionedToStructural, .kernelToStructural: return .structural
-        case .structuralToSectioned, .kernelToSectioned: return .sectioned
-        case .sectionedToKernel: return .kernel
+        case .sectionedToStructural, .kernelToStructural:
+            return .structural
+        case .structuralToSectioned, .kernelToSectioned:
+            return .sectioned
+        case .sectionedToKernel:
+            return .kernel
         }
     }
 

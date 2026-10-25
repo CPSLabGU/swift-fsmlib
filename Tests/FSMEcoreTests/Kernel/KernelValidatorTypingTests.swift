@@ -11,8 +11,10 @@ import Foundation
 import Testing
 @testable import FSMEcore
 
+/// Tests for the kernel validator: typing (W5).
 @Suite("Kernel validator: typing (W5)")
 struct KernelValidatorTypingTests {
+    /// A well-typed label combining every kind of operation is accepted.
     @Test("a well-typed label combining every kind of operation is accepted")
     func wellTypedLabel() async throws {
         let model = try await MiniModel()
@@ -23,12 +25,14 @@ struct KernelValidatorTypingTests {
                                   b.conditional(b.ref(model.sensor), b.int(1), b.int(2)))
         let element = b.ref(b.variable("both", model.pair, in: model.machine), index: b.int(1))
         let observed = b.inState(model.instance, model.b)
-        let label = b.binary(.disjunction, b.binary(.conjunction, isOn, arithmetic),
-                             b.binary(.conjunction, b.unary(.negation, element), observed))
+        let left = b.binary(.conjunction, isOn, arithmetic)
+        let right = b.binary(.conjunction, b.unary(.negation, element), observed)
+        let label = b.binary(.disjunction, left, right)
         model.label(label)
         #expect(await model.validate().isEmpty)
     }
 
+    /// A label must be Boolean.
     @Test("a label must be Boolean")
     func integerLabel() async throws {
         let model = try await MiniModel()
@@ -38,6 +42,7 @@ struct KernelValidatorTypingTests {
         #expect(diagnostics.first?.path == "/Mini/machines[M]/states[A]/transitions[0]/label")
     }
 
+    /// Equality requires operands of the same type.
     @Test("equality requires operands of the same type")
     func equalityOfDifferentTypes() async throws {
         let model = try await MiniModel()
@@ -46,6 +51,7 @@ struct KernelValidatorTypingTests {
         #expect(await model.codes() == ["W5"])
     }
 
+    /// Equality of literals of different enumerations is rejected.
     @Test("equality of literals of different enumerations is rejected")
     func equalityOfDifferentEnumerations() async throws {
         let model = try await MiniModel()
@@ -55,6 +61,7 @@ struct KernelValidatorTypingTests {
         #expect(await model.codes() == ["W5"])
     }
 
+    /// Arithmetic requires integer operands.
     @Test("arithmetic requires integer operands")
     func arithmeticOnBoolean() async throws {
         let model = try await MiniModel()
@@ -63,6 +70,7 @@ struct KernelValidatorTypingTests {
         #expect(await model.codes() == ["W5"])
     }
 
+    /// Logical operations require Boolean operands.
     @Test("logical operations require Boolean operands")
     func conjunctionOfIntegers() async throws {
         let model = try await MiniModel()
@@ -71,15 +79,18 @@ struct KernelValidatorTypingTests {
         #expect(await model.codes() == ["W5"])
     }
 
+    /// Negation requires a Boolean and minus an integer.
     @Test("negation requires a Boolean and minus an integer")
     func unaryOperands() async throws {
         let model = try await MiniModel()
         let b = model.builder
-        model.label(b.binary(.conjunction, b.unary(.negation, b.int(1)),
-                             b.binary(.lessThan, b.unary(.minus, b.bool(true)), b.int(1))))
+        let negated = b.unary(.negation, b.int(1))
+        let comparison = b.binary(.lessThan, b.unary(.minus, b.bool(true)), b.int(1))
+        model.label(b.binary(.conjunction, negated, comparison))
         #expect(await model.codes() == ["W5", "W5"])
     }
 
+    /// Comparison requires integer operands.
     @Test("comparison requires integer operands")
     func comparisonOfBooleans() async throws {
         let model = try await MiniModel()
@@ -88,6 +99,7 @@ struct KernelValidatorTypingTests {
         #expect(await model.codes() == ["W5", "W5"])
     }
 
+    /// Conditional branches must have the same type and the condition must be Boolean.
     @Test("conditional branches must have the same type and the condition must be Boolean")
     func conditionalBranches() async throws {
         let model = try await MiniModel()
@@ -96,6 +108,7 @@ struct KernelValidatorTypingTests {
         #expect(await model.codes() == ["W5", "W5"])
     }
 
+    /// An in-state observation must name a state of the instance's machine.
     @Test("an in-state observation must name a state of the instance's machine")
     func inStateOfForeignState() async throws {
         let model = try await MiniModel()
@@ -107,16 +120,19 @@ struct KernelValidatorTypingTests {
         #expect(await model.codes() == ["W5"])
     }
 
+    /// An array index must be an integer and only arrays may be indexed.
     @Test("an array index must be an integer and only arrays may be indexed")
     func arrayIndexing() async throws {
         let model = try await MiniModel()
         let b = model.builder
         let both = b.variable("both", model.pair, in: model.machine)
-        model.label(b.binary(.conjunction, b.ref(both, index: b.bool(true)),
-                             b.binary(.equal, b.ref(model.x, index: b.int(0)), b.int(0))))
+        let booleanIndex = b.ref(both, index: b.bool(true))
+        let scalarIndex = b.binary(.equal, b.ref(model.x, index: b.int(0)), b.int(0))
+        model.label(b.binary(.conjunction, booleanIndex, scalarIndex))
         #expect(await model.codes() == ["W5", "W5"])
     }
 
+    /// An enumeration literal must be a literal of its enumeration.
     @Test("an enumeration literal must be a literal of its enumeration")
     func unknownEnumerationLiteral() async throws {
         let model = try await MiniModel()
@@ -125,12 +141,18 @@ struct KernelValidatorTypingTests {
         #expect(await model.codes() == ["W5"])
     }
 
+    /// Call arguments must match the declared parameters in number and type.
     @Test("call arguments must match the declared parameters in number and type")
     func callArguments() async throws {
         let model = try await MiniModel()
         let b = model.builder
-        let check = b.function("check", in: model.arrangement, pure: true,
-                               parameters: [("level", model.count)], result: model.flag)
+        let check = b.function(
+            "check",
+            in: model.arrangement,
+            pure: true,
+            parameters: [("level", model.count)],
+            result: model.flag
+        )
         model.label(b.call(check, [b.ref(model.x)]))
         #expect(await model.validate().isEmpty)
         model.label(b.call(check, []))
@@ -139,12 +161,18 @@ struct KernelValidatorTypingTests {
         #expect(await model.codes() == ["W5"])
     }
 
+    /// A call with a receiver must name a method of the receiver's type.
     @Test("a call with a receiver must name a method of the receiver's type")
     func callReceivers() async throws {
         let model = try await MiniModel()
         let b = model.builder
-        let method = b.function("ready", in: model.arrangement, pure: true, result: model.flag,
-                                receiverType: model.count)
+        let method = b.function(
+            "ready",
+            in: model.arrangement,
+            pure: true,
+            result: model.flag,
+            receiverType: model.count
+        )
         let free = b.function("idle", in: model.arrangement, pure: true, result: model.flag)
         model.label(b.call(method, receiver: b.ref(model.x)))
         #expect(await model.validate().isEmpty)
@@ -154,6 +182,7 @@ struct KernelValidatorTypingTests {
         #expect(await model.codes() == ["W5"])
     }
 
+    /// A function without a result cannot be used as a value.
     @Test("a function without a result cannot be used as a value")
     func voidCallAsValue() async throws {
         let model = try await MiniModel()
@@ -166,6 +195,7 @@ struct KernelValidatorTypingTests {
         #expect(await model.validate().isEmpty)
     }
 
+    /// Initial values, bound values and assigned values must match the variable type.
     @Test("initial values, bound values and assigned values must match the variable type")
     func valueTypes() async throws {
         let model = try await MiniModel()
@@ -176,17 +206,19 @@ struct KernelValidatorTypingTests {
         #expect(await model.codes() == ["W5", "W5", "W5"])
     }
 
+    /// An opaque operand suspends the checks that involve it under the relaxed profile.
     @Test("an opaque operand suspends the checks that involve it under the relaxed profile")
     func opaqueOperandSuspendsChecks() async throws {
         let model = try await MiniModel()
         let b = model.builder
         model.label(b.binary(.equal, b.opaqueExpression("probe()"), b.ref(model.x)))
-        #expect(await model.codes(.relaxed) == [])
+        #expect(await model.codes(.relaxed).isEmpty)
         #expect(await model.codes(.strict) == ["STRICT"])
         model.label(b.binary(.conjunction, b.opaqueExpression("probe()"), b.ref(model.x)))
         #expect(await model.codes(.relaxed) == ["W5"])
     }
 
+    /// An opaque expression with a declared kernel type is checked like that type.
     @Test("an opaque expression with a declared kernel type is checked like that type")
     func typedOpaqueExpression() async throws {
         let model = try await MiniModel()
@@ -194,12 +226,14 @@ struct KernelValidatorTypingTests {
         model.label(b.opaqueExpression("level()", type: model.count))
         #expect(await model.codes(.relaxed) == ["W5"])
         model.label(b.opaqueExpression("ready()", type: model.flag))
-        #expect(await model.codes(.relaxed) == [])
+        #expect(await model.codes(.relaxed).isEmpty)
     }
 }
 
+/// Tests for the kernel validator: actions, ranges, bindings and purity.
 @Suite("Kernel validator: actions, ranges, bindings and purity")
 struct KernelValidatorRuleW6toW9Tests {
+    /// W6: a variable may be assigned once and read before its assignment.
     @Test("W6: a variable may be assigned once and read before its assignment")
     func singleAssignment() async throws {
         let model = try await MiniModel()
@@ -211,6 +245,7 @@ struct KernelValidatorRuleW6toW9Tests {
         #expect(await model.validate().isEmpty)
     }
 
+    /// W6: a variable must not be assigned twice in one action.
     @Test("W6: a variable must not be assigned twice in one action")
     func doubleAssignment() async throws {
         let model = try await MiniModel()
@@ -221,16 +256,19 @@ struct KernelValidatorRuleW6toW9Tests {
         #expect(diagnostics.first?.path == "/Mini/machines[M]/states[B]/actions[1]")
     }
 
+    /// W6: elements of one array variable count as one variable.
     @Test("W6: elements of one array variable count as one variable")
     func doubleArrayAssignment() async throws {
         let model = try await MiniModel()
         let b = model.builder
         let both = b.variable("both", model.pair, in: model.machine)
-        b.action(model.b, b.assign(b.ref(both, index: b.int(0)), b.bool(true)),
-                 b.assign(b.ref(both, index: b.int(1)), b.bool(true)))
+        let first = b.assign(b.ref(both, index: b.int(0)), b.bool(true))
+        let second = b.assign(b.ref(both, index: b.int(1)), b.bool(true))
+        b.action(model.b, first, second)
         #expect(await model.codes() == ["W6"])
     }
 
+    /// W6: a variable must not be read after its assignment in the same action.
     @Test("W6: a variable must not be read after its assignment in the same action")
     func readAfterAssignment() async throws {
         let model = try await MiniModel()
@@ -239,18 +277,21 @@ struct KernelValidatorRuleW6toW9Tests {
         #expect(await model.codes() == ["W6"])
     }
 
+    /// W6: variables of opaque types are analysed under the strict profile only.
     @Test("W6: variables of opaque types are analysed under the strict profile only")
     func opaqueVariablesUnderRelaxedProfile() async throws {
         let model = try await MiniModel()
         let b = model.builder
         let handle = b.opaqueType("Handle", text: "void *", in: model.arrangement)
         let h = b.variable("h", handle, in: model.machine)
-        b.action(model.b, b.assign(b.ref(h), b.opaqueExpression("open()")),
-                 b.assign(b.ref(h), b.opaqueExpression("reopen()")))
-        #expect(await model.codes(.relaxed) == [])
+        let open = b.assign(b.ref(h), b.opaqueExpression("open()"))
+        let reopen = b.assign(b.ref(h), b.opaqueExpression("reopen()"))
+        b.action(model.b, open, reopen)
+        #expect(await model.codes(.relaxed).isEmpty)
         #expect(await model.codes(.strict) == ["W6", "STRICT", "STRICT", "STRICT"])
     }
 
+    /// W7: assigned and bound integer literals must lie within the variable's range.
     @Test("W7: assigned and bound integer literals must lie within the variable's range")
     func literalRanges() async throws {
         let model = try await MiniModel()
@@ -263,6 +304,7 @@ struct KernelValidatorRuleW6toW9Tests {
         #expect(await model.codes() == ["W7", "W7"])
     }
 
+    /// W7: a negated literal is checked against the range.
     @Test("W7: a negated literal is checked against the range")
     func negatedLiteralRange() async throws {
         let model = try await MiniModel()
@@ -274,6 +316,7 @@ struct KernelValidatorRuleW6toW9Tests {
         #expect(await model.codes() == ["W7"])
     }
 
+    /// W7: an assignment to an array element is checked against the element range.
     @Test("W7: an assignment to an array element is checked against the element range")
     func arrayElementRange() async throws {
         let model = try await MiniModel()
@@ -284,6 +327,7 @@ struct KernelValidatorRuleW6toW9Tests {
         #expect(await model.codes() == ["W7"])
     }
 
+    /// W7?: a divisor that is not provably non-negative is a warning.
     @Test("W7?: a divisor that is not provably non-negative is a warning")
     func unprovenDivisor() async throws {
         let model = try await MiniModel()
@@ -303,14 +347,16 @@ struct KernelValidatorRuleW6toW9Tests {
         #expect(!KernelValidator.containsErrors(diagnostics))
     }
 
+    /// W7?: an opaque divisor suspends the warning under the relaxed profile.
     @Test("W7?: an opaque divisor suspends the warning under the relaxed profile")
     func opaqueDivisor() async throws {
         let model = try await MiniModel()
         let b = model.builder
         b.action(model.b, b.assign(b.ref(model.x), b.binary(.division, b.ref(model.y), b.opaqueExpression("n"))))
-        #expect(await model.codes(.relaxed) == [])
+        #expect(await model.codes(.relaxed).isEmpty)
     }
 
+    /// W8: a binding value must be a literal.
     @Test("W8: a binding value must be a literal")
     func nonLiteralBinding() async throws {
         let model = try await MiniModel()
@@ -322,6 +368,7 @@ struct KernelValidatorRuleW6toW9Tests {
         #expect(await model.codes() == ["W5", "W8"])
     }
 
+    /// W8: a binding value that reads a variable is rejected under both profiles.
     @Test("W8: a binding value that reads a variable is rejected under both profiles")
     func variableBinding() async throws {
         let model = try await MiniModel()
@@ -331,6 +378,7 @@ struct KernelValidatorRuleW6toW9Tests {
         #expect(await model.codes(.relaxed) == ["W8"])
     }
 
+    /// W9: labels, binding values and initial values may call pure functions only.
     @Test("W9: labels, binding values and initial values may call pure functions only")
     func impureCalls() async throws {
         let model = try await MiniModel()
@@ -343,6 +391,7 @@ struct KernelValidatorRuleW6toW9Tests {
         #expect(await model.codes(.relaxed) == ["W9", "W9"])
     }
 
+    /// W9: a call statement may call an impure function.
     @Test("W9: a call statement may call an impure function")
     func impureCallStatement() async throws {
         let model = try await MiniModel()
@@ -354,8 +403,10 @@ struct KernelValidatorRuleW6toW9Tests {
     }
 }
 
+/// Tests for the kernel validator: profiles.
 @Suite("Kernel validator: profiles")
 struct KernelValidatorProfileTests {
+    /// The strict profile rejects every opaque node and host declarations.
     @Test("the strict profile rejects every opaque node and host declarations")
     func strictRejectsOpaqueNodes() async throws {
         let model = try await MiniModel()
@@ -376,6 +427,7 @@ struct KernelValidatorProfileTests {
         #expect(await model.validate(.relaxed).isEmpty)
     }
 
+    /// The relaxed profile still applies the structural and naming rules.
     @Test("the relaxed profile still applies the structural and naming rules")
     func relaxedKeepsStructuralRules() async throws {
         let model = try await MiniModel()

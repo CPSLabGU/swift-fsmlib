@@ -43,12 +43,18 @@ enum PropertyListValueKind {
             return
         }
         switch value {
-        case let string as String: self = .string(string)
-        case let data as Data: self = .data(data)
-        case let date as Date: self = .date(date)
-        case let dictionary as [String: Any]: self = .dictionary(dictionary)
-        case let array as [Any]: self = .array(array)
-        default: self = .unsupported
+        case let string as String:
+            self = .string(string)
+        case let data as Data:
+            self = .data(data)
+        case let date as Date:
+            self = .date(date)
+        case let dictionary as [String: Any]:
+            self = .dictionary(dictionary)
+        case let array as [Any]:
+            self = .array(array)
+        default:
+            self = .unsupported
         }
     }
 
@@ -64,18 +70,28 @@ enum PropertyListValueKind {
         return .integer(number.int64Value)
 #else
         switch value {
-        case let boolean as Bool where type(of: value) == Bool.self: return .boolean(boolean)
-        case let real as Double where type(of: value) == Double.self: return .real(real)
-        case let real as Float where type(of: value) == Float.self: return .real(Double(real))
-        case let integer as Int where type(of: value) == Int.self: return .integer(Int64(integer))
-        case let integer as Int64 where type(of: value) == Int64.self: return .integer(integer)
-        case let integer as Int32 where type(of: value) == Int32.self: return .integer(Int64(integer))
-        case let integer as UInt where type(of: value) == UInt.self: return .integer(Int64(truncatingIfNeeded: integer))
+        case let boolean as Bool where type(of: value) == Bool.self:
+            return .boolean(boolean)
+        case let real as Double where type(of: value) == Double.self:
+            return .real(real)
+        case let real as Float where type(of: value) == Float.self:
+            return .real(Double(real))
+        case let integer as Int where type(of: value) == Int.self:
+            return .integer(Int64(integer))
+        case let integer as Int64 where type(of: value) == Int64.self:
+            return .integer(integer)
+        case let integer as Int32 where type(of: value) == Int32.self:
+            return .integer(Int64(integer))
+        case let integer as UInt where type(of: value) == UInt.self:
+            return .integer(Int64(truncatingIfNeeded: integer))
         case let number as NSNumber:
             switch String(cString: number.objCType) {
-            case "f", "d": return .real(number.doubleValue)
-            case "B": return .boolean(number.boolValue)
-            default: return .integer(number.int64Value)
+            case "f", "d":
+                return .real(number.doubleValue)
+            case "B":
+                return .boolean(number.boolValue)
+            default:
+                return .integer(number.int64Value)
             }
         default:
             return nil
@@ -248,9 +264,12 @@ struct PropertyListEcoreCodec {
     /// - Returns: The Boolean, `false` if the value is absent or not Boolean.
     static func boolean(from stored: Any?) -> Bool {
         switch stored {
-        case let boolean as Bool: return boolean
-        case let text as String: return text == "true"
-        default: return false
+        case let boolean as Bool:
+            return boolean
+        case let text as String:
+            return text == "true"
+        default:
+            return false
         }
     }
 
@@ -260,11 +279,16 @@ struct PropertyListEcoreCodec {
     /// - Returns: The number, zero if the value is absent or not numeric.
     static func real(from stored: Any?) -> Double {
         switch stored {
-        case let real as Double: return real
-        case let real as Float: return Double(real)
-        case let integer as Int: return Double(integer)
-        case let text as String: return Double(text) ?? 0
-        default: return 0
+        case let real as Double:
+            return real
+        case let real as Float:
+            return Double(real)
+        case let integer as Int:
+            return Double(integer)
+        case let text as String:
+            return Double(text) ?? 0
+        default:
+            return 0
         }
     }
 
@@ -274,12 +298,18 @@ struct PropertyListEcoreCodec {
     /// - Returns: The number, zero if the value is absent or not integral.
     static func integer(from stored: Any?) -> Int {
         switch stored {
-        case let integer as Int: return integer
-        case let integer as Int64: return Int(truncatingIfNeeded: integer)
-        case let integer as Int32: return Int(integer)
-        case let real as Double: return Int(real)
-        case let text as String: return Int(text) ?? 0
-        default: return 0
+        case let integer as Int:
+            return integer
+        case let integer as Int64:
+            return Int(truncatingIfNeeded: integer)
+        case let integer as Int32:
+            return Int(integer)
+        case let real as Double:
+            return Int(real)
+        case let text as String:
+            return Int(text) ?? 0
+        default:
+            return 0
         }
     }
 }

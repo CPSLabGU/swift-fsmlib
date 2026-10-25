@@ -40,6 +40,9 @@ struct TemplateInfrastructureResourceTests {
         ]
     }
 
+    /// Verify that each infrastructure function equals its resource file.
+    ///
+    /// - Parameter isSuspensible: Whether to check the suspensible variants.
     @Test("Each infrastructure function equals its resource file", arguments: [true, false])
     func resourcesMatchFunctions(isSuspensible: Bool) throws {
         let (_, directory) = try StructuralTemplateEngine().templateSet(for: .objCX)
@@ -64,20 +67,40 @@ struct TemplateRoundTripTests {
         [Format.c, .objCX, .scxml].flatMap { TemplateParity.cases(of: TemplateParity.machineExamples, in: $0) }
     }
 
+    /// The structure of a machine by state and transition names.
+    struct Structure: Equatable {
+        /// The state names.
+        let states: [String]
+        /// The transitions as source, label and target.
+        let transitions: [String]
+        /// The name of the suspend state, if any.
+        let suspend: String?
+    }
+
     /// Describe the structure of a machine by state and transition names.
     ///
     /// - Parameter machine: The machine.
     /// - Returns: The state names, the transitions as source, label and target, and the suspend state name.
-    nonisolated static func structure(of machine: Machine) -> (states: [String], transitions: [String], suspend: String?) {
+    nonisolated static func structure(of machine: Machine) -> Structure {
         let llfsm = machine.llfsm
         let transitions = llfsm.transitions.compactMap { id -> String? in
             guard let transition = llfsm.transition(for: id) else { return nil }
-            return [llfsm.stateName(for: transition.source) ?? "", transition.label,
-                    llfsm.stateName(for: transition.target) ?? ""].joined(separator: "|")
+            return [
+                llfsm.stateName(for: transition.source) ?? "",
+                transition.label,
+                llfsm.stateName(for: transition.target) ?? ""
+            ].joined(separator: "|")
         }
-        return (llfsm.stateNames, transitions, llfsm.suspendState.flatMap { llfsm.stateName(for: $0) })
+        return Structure(
+            states: llfsm.stateNames,
+            transitions: transitions,
+            suspend: llfsm.suspendState.flatMap { llfsm.stateName(for: $0) }
+        )
     }
 
+    /// Verify that template output reads back with the Swift readers.
+    ///
+    /// - Parameter parityCase: The example machine and format to write and read back.
     @Test("Template output reads back with the Swift readers", arguments: cases)
     func readBack(_ parityCase: ParityCase) async throws {
         let machine = try Machine(from: parityCase.example.url)

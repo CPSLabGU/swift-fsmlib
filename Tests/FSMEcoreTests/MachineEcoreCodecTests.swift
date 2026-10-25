@@ -3,7 +3,9 @@ import XCTest
 @testable import FSMEcore
 import ECore
 
+/// Tests that machines survive encoding to and decoding from an Ecore resource.
 final class MachineEcoreCodecTests: XCTestCase {
+    /// Verify that a loaded traffic light machine decodes to an equal machine.
     func testTrafficLightMachineRoundTripPreservesLoadedMachine() async throws {
         let metamodel = try await LLFSMMetamodel()
         let codec = MachineEcoreCodec(metamodel: metamodel)
@@ -17,6 +19,7 @@ final class MachineEcoreCodecTests: XCTestCase {
         FSMEcoreTestSupport.assertMachinesEqual(machine, decoded.machine)
     }
 
+    /// Verify that transitions, state layouts and state activities survive a round trip.
     func testMachineRoundTripPreservesTransitionsAndStateLayouts() async throws {
         let metamodel = try await LLFSMMetamodel()
         let codec = MachineEcoreCodec(metamodel: metamodel)

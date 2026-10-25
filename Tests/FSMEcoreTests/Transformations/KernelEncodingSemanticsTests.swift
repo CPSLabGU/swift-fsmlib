@@ -40,6 +40,10 @@ struct KernelEncodingSemanticsTests {
         SectionedToKernelOptions(inState: .exact),
     ]
 
+    /// Checks that the crossing encoding runs entry, labels, exit and internal sections in the traditional order.
+    ///
+    /// - Parameter options: The encoding options under which to interpret the crossing.
+    /// - Throws: Any error raised by the transformations.
     @Test("the crossing encoding runs entry, labels, exit and internal sections in the traditional order",
           arguments: crossingOptions)
     func crossing(_ options: SectionedToKernelOptions) async throws {
@@ -68,8 +72,10 @@ struct KernelEncodingSemanticsTests {
         ]
         let trace = try await trace(of: .sectionedCrossing, options: options, rounds: 13) { round, name in
             switch name {
-            case LLFSMTransformationNames.now: return .integer(round * LLFSMTransformationNames.secondFactor)
-            default: return .boolean(round == 1)
+            case LLFSMTransformationNames.now:
+                return .integer(round * LLFSMTransformationNames.secondFactor)
+            default:
+                return .boolean(round == 1)
             }
         }
         #expect(trace == expected)
@@ -80,6 +86,10 @@ struct KernelEncodingSemanticsTests {
         .boolean(round != 1)
     }
 
+    /// Checks that a traditional self loop runs the exit section without re-entering the state.
+    ///
+    /// - Parameter elides: Whether the encoding elides empty sections.
+    /// - Throws: Any error raised by the transformations.
     @Test("a traditional self loop runs the exit section without re-entering the state",
           arguments: [true, false])
     func traditionalSelfLoop(_ elides: Bool) async throws {
@@ -106,6 +116,10 @@ struct KernelEncodingSemanticsTests {
         #expect(trace == expected)
     }
 
+    /// Checks that a re-entering self loop runs the entry section again.
+    ///
+    /// - Parameter elides: Whether the encoding elides empty sections.
+    /// - Throws: Any error raised by the transformations.
     @Test("a re-entering self loop runs the entry section again", arguments: [true, false])
     func reenteringSelfLoop(_ elides: Bool) async throws {
         // Derived from the sectioned semantics of LoopingCounter with

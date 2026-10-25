@@ -3,7 +3,11 @@ import XCTest
 @testable import FSMEcore
 import ECore
 
+/// Tests that an arrangement survives encoding to and decoding from an Ecore resource.
 final class ArrangementEcoreCodecTests: XCTestCase {
+    /// Verify that named instances and their machines survive a round trip.
+    ///
+    /// Encodes a two-instance arrangement and checks the decoded instance names, type files and machines.
     func testArrangementRoundTripPreservesInstances() async throws {
         let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()
 

@@ -79,6 +79,7 @@ struct KernelXMITests {
         }
     }
 
+    /// Verify that each namespace of a sectioned document selects the classes of its own package.
     @Test("a document with kernel and sectioned namespaces is read with the classes of each package")
     func namespacesSelectClasses() async throws {
         let metamodels = try await LLFSMMetamodels()
@@ -93,12 +94,14 @@ struct KernelXMITests {
         ])
     }
 
+    /// Verify that a sectioned document reserialises byte for byte.
     @Test("a sectioned document with kernel statements and expressions reserialises byte for byte")
     func sectionedDocumentRoundTrips() async throws {
         let resource = try await Self.parse(Self.sectionedDocument)
         #expect(try await KernelFixtureTests.serialise(resource) == Self.sectionedDocument)
     }
 
+    /// Verify that references and attribute values are preserved when reading a document.
     @Test("references and values survive a round trip through the document")
     func valuesSurvive() async throws {
         let metamodels = try await LLFSMMetamodels()
@@ -119,6 +122,7 @@ struct KernelXMITests {
         #expect(literals.map { $0.bool(.value) } == [false, true])
     }
 
+    /// Verify that a built kernel model is written with only the kernel namespace and reads back unchanged.
     @Test("a built kernel model is written with the kernel namespace and read back with the same classes")
     func builtKernelModelRoundTrips() async throws {
         let builder = try await KernelModelBuilder.make()

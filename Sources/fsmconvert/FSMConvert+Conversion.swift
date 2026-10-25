@@ -6,6 +6,7 @@ import FSMEcore
 import ModellingCommandLine
 import ModellingGenerators
 
+/// The native conversion of the `fsmconvert` command.
 extension FSMConvert {
     // MARK: - Native Conversion
 
@@ -151,8 +152,10 @@ extension FSMConvert {
         let model: FSMPipeline.Model
         do {
             model = try await pipeline.load(
-                try inputURLs(), arrangementName: FSMPipeline.stem(of: outputURL, fallback: "Arrangement"),
-                report: &report)
+                try inputURLs(),
+                arrangementName: FSMPipeline.stem(of: outputURL, fallback: "Arrangement"),
+                report: &report
+            )
         } catch let error as FSMPipelineError {
             throw Self.commandLineError(for: error)
         }

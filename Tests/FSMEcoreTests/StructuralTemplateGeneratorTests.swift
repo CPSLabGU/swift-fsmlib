@@ -2,7 +2,9 @@ import XCTest
 @testable import FSM
 @testable import FSMEcore
 
+/// Tests that the structural templates reproduce the output of the Swift writers.
 final class StructuralTemplateGeneratorTests: XCTestCase {
+    /// Verify that the machine template writes the same bundle as the Swift writer.
     @MainActor
     func testStructuralMachineTemplateReproducesMachineBundle() async throws {
         let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()
@@ -18,6 +20,7 @@ final class StructuralTemplateGeneratorTests: XCTestCase {
         try FSMEcoreTestSupport.assertDirectoryContentsEqual(renderedBundle, expectedBundle)
     }
 
+    /// Verify that the SCXML template writes the same text as the Swift writer.
     @MainActor
     func testStructuralSCXMLTemplateReproducesSCXMLOutput() async throws {
         let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()
@@ -37,6 +40,7 @@ final class StructuralTemplateGeneratorTests: XCTestCase {
         )
     }
 
+    /// Verify that the CMake template writes the same file as the Swift writer.
     @MainActor
     func testStructuralCMakeTemplateReproducesCMakeLists() async throws {
         let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()
@@ -57,6 +61,7 @@ final class StructuralTemplateGeneratorTests: XCTestCase {
         )
     }
 
+    /// Verify that the layout templates write the same property lists as the Swift writer.
     @MainActor
     func testStructuralLayoutTemplateReproducesLayoutFiles() async throws {
         let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()

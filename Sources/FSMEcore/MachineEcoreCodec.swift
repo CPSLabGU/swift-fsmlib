@@ -56,43 +56,8 @@ public struct MachineEcoreCodec {
         into resource: Resource,
         addAsRoot: Bool = true
     ) async -> DynamicEObject {
-        // Build state objects and maintain ID mapping
-        var stateObjects = [StateID: DynamicEObject]()
-        for stateID in machine.llfsm.states {
-            guard let stateName = machine.llfsm.stateName(for: stateID) else { continue }
-            var stateObj = DynamicEObject(eClass: metamodel.stateClass)
-            stateObj.eSet("name", value: stateName)
-
-            // Encode state activities
-            let sections = machine.stateActivities(for: stateID)
-            if !sections.isEmpty {
-                var activitiesObj = DynamicEObject(eClass: metamodel.stateActivitiesClass)
-                for (section, feature) in Self.activityFeatures {
-                    if let code = sections[section] { activitiesObj.eSet(feature, value: code) }
-                }
-                await resource.register(activitiesObj)
-                stateObj.eSet("activities", value: activitiesObj.id)
-            }
-
-            await resource.register(stateObj)
-            stateObjects[stateID] = stateObj
-        }
-
-        // Build transition objects
-        var transitionObjects = [TransitionID: DynamicEObject]()
-        for transitionID in machine.llfsm.transitions {
-            guard let transition = machine.llfsm.transition(for: transitionID) else { continue }
-            var transObj = DynamicEObject(eClass: metamodel.transitionClass)
-            transObj.eSet("label", value: transition.label)
-            if let srcObj = stateObjects[transition.source] {
-                transObj.eSet("source", value: srcObj.id)
-            }
-            if let tgtObj = stateObjects[transition.target] {
-                transObj.eSet("target", value: tgtObj.id)
-            }
-            await resource.register(transObj)
-            transitionObjects[transitionID] = transObj
-        }
+        let stateObjects = await encodeStates(of: machine, into: resource)
+        let transitionObjects = await encodeTransitions(of: machine, stateObjects: stateObjects, into: resource)
 
         // Build LLFSM object
         var llfsmObj = DynamicEObject(eClass: metamodel.llfsmClass)
@@ -110,58 +75,21 @@ public struct MachineEcoreCodec {
         let bpObj = encodeBoilerplate(machine.boilerplate, language: machine.language)
         await resource.register(bpObj)
 
-        // Build state boilerplate entries
-        var stateBoilerplateEntries = [EUUID]()
-        for stateID in machine.llfsm.states {
-            guard let stateObj = stateObjects[stateID],
-                  let bp = machine.stateBoilerplate[stateID] else { continue }
-            let bpSections = machine.language.extractSections(from: bp)
-            let entryBpObj = boilerplateObject(for: bpSections)
-            await resource.register(entryBpObj)
-
-            var entryObj = DynamicEObject(eClass: metamodel.stateBoilerplateEntryClass)
-            entryObj.eSet("state", value: stateObj.id)
-            entryObj.eSet("boilerplate", value: entryBpObj.id)
-            await resource.register(entryObj)
-            stateBoilerplateEntries.append(entryObj.id)
-        }
-
-        // Build state layout entries
-        var stateLayoutEntries = [EUUID]()
-        for (stateID, layout) in machine.stateLayout {
-            guard let stateObj = stateObjects[stateID] else { continue }
-            let layoutObj = await encodeStateLayout(layout, into: resource)
-            await resource.register(layoutObj)
-
-            var entryObj = DynamicEObject(eClass: metamodel.stateLayoutEntryClass)
-            entryObj.eSet("state", value: stateObj.id)
-            entryObj.eSet("layout", value: layoutObj.id)
-            await resource.register(entryObj)
-            stateLayoutEntries.append(entryObj.id)
-        }
-
-        // Build transition layout entries
-        var transitionLayoutEntries = [EUUID]()
-        for (transitionID, layout) in machine.transitionLayout {
-            guard let transObj = transitionObjects[transitionID] else { continue }
-            var pointIDs = [EUUID]()
-            for point in layout.path.points {
-                var pointObj = DynamicEObject(eClass: metamodel.point2DClass)
-                pointObj.eSet("x", value: point.x)
-                pointObj.eSet("y", value: point.y)
-                await resource.register(pointObj)
-                pointIDs.append(pointObj.id)
-            }
-            var tlObj = DynamicEObject(eClass: metamodel.transitionLayoutClass)
-            tlObj.eSet("points", value: pointIDs)
-            await resource.register(tlObj)
-
-            var entryObj = DynamicEObject(eClass: metamodel.transitionLayoutEntryClass)
-            entryObj.eSet("transition", value: transObj.id)
-            entryObj.eSet("layout", value: tlObj.id)
-            await resource.register(entryObj)
-            transitionLayoutEntries.append(entryObj.id)
-        }
+        let stateBoilerplateEntries = await encodeStateBoilerplateEntries(
+            of: machine,
+            stateObjects: stateObjects,
+            into: resource
+        )
+        let stateLayoutEntries = await encodeStateLayoutEntries(
+            of: machine,
+            stateObjects: stateObjects,
+            into: resource
+        )
+        let transitionLayoutEntries = await encodeTransitionLayoutEntries(
+            of: machine,
+            transitionObjects: transitionObjects,
+            into: resource
+        )
 
         // Build Machine object
         var machineObj = DynamicEObject(eClass: metamodel.machineClass)
@@ -263,38 +191,13 @@ public struct MachineEcoreCodec {
             boilerplate = CBoilerplate()
         }
 
-        // Decode state boilerplate entries
-        var stateBoilerplate = [StateID: any Boilerplate]()
-        let sbpEntryIDs = ModelReferences.identifiers(
-            from: await resource.eGet(objectId: machineObj.id, feature: "stateBoilerplates")
+        let stateBoilerplate = await decodeStateBoilerplate(
+            of: machineObj,
+            states: eobjectToStateID,
+            llfsm: llfsm,
+            language: language,
+            from: resource
         )
-        for entryID in sbpEntryIDs {
-            guard let stateEID = ModelReferences.identifier(from: await resource.eGet(objectId: entryID, feature: "state")),
-                  let stateID = eobjectToStateID[stateEID],
-                  let entryBpID = ModelReferences.identifier(
-                      from: await resource.eGet(objectId: entryID, feature: "boilerplate")
-                  ) else { continue }
-
-            // Reconstruct state boilerplate from boilerplate sections + activities
-            let bpSections = await decodeBoilerplateSections(entryBpID, from: resource)
-            let stateName = llfsm.stateName(for: stateID) ?? ""
-
-            // Also get activities from the state object
-            var allSections = bpSections
-            if let activitiesID = ModelReferences.identifier(from: await resource.eGet(objectId: stateEID, feature: "activities")) {
-                let onEntry = await resource.eGet(objectId: activitiesID, feature: "onEntry") as? String ?? ""
-                let onExit = await resource.eGet(objectId: activitiesID, feature: "onExit") as? String ?? ""
-                let internalCode = await resource.eGet(objectId: activitiesID, feature: "internal") as? String ?? ""
-                let onSuspend = await resource.eGet(objectId: activitiesID, feature: "onSuspend") as? String ?? ""
-                let onResume = await resource.eGet(objectId: activitiesID, feature: "onResume") as? String ?? ""
-                allSections[.onEntry] = onEntry
-                allSections[.onExit] = onExit
-                allSections[.internal] = internalCode
-                allSections[.onSuspend] = onSuspend
-                allSections[.onResume] = onResume
-            }
-            stateBoilerplate[stateID] = language.createStateBoilerplate(from: allSections, stateName: stateName)
-        }
 
         // Decode state layouts
         var stateLayouts = StateLayouts()
@@ -570,5 +473,209 @@ public struct MachineEcoreCodec {
         default:
             return ""
         }
+    }
+}
+
+/// The steps by which a machine is encoded into and decoded from a resource.
+extension MachineEcoreCodec {
+    /// Encode the states of a machine.
+    ///
+    /// - Parameters:
+    ///   - machine: The machine whose states are encoded.
+    ///   - resource: The resource that will own the encoded objects.
+    /// - Returns: The state objects, keyed by the identifiers of their states.
+    private func encodeStates(of machine: Machine, into resource: Resource) async -> [StateID: DynamicEObject] {
+        var stateObjects = [StateID: DynamicEObject]()
+        for stateID in machine.llfsm.states {
+            guard let stateName = machine.llfsm.stateName(for: stateID) else { continue }
+            var stateObj = DynamicEObject(eClass: metamodel.stateClass)
+            stateObj.eSet("name", value: stateName)
+
+            // Encode state activities
+            let sections = machine.stateActivities(for: stateID)
+            if !sections.isEmpty {
+                var activitiesObj = DynamicEObject(eClass: metamodel.stateActivitiesClass)
+                for (section, feature) in Self.activityFeatures {
+                    if let code = sections[section] { activitiesObj.eSet(feature, value: code) }
+                }
+                await resource.register(activitiesObj)
+                stateObj.eSet("activities", value: activitiesObj.id)
+            }
+
+            await resource.register(stateObj)
+            stateObjects[stateID] = stateObj
+        }
+        return stateObjects
+    }
+
+    /// Encode the transitions of a machine.
+    ///
+    /// - Parameters:
+    ///   - machine: The machine whose transitions are encoded.
+    ///   - stateObjects: The encoded states, keyed by the identifiers of their states.
+    ///   - resource: The resource that will own the encoded objects.
+    /// - Returns: The transition objects, keyed by the identifiers of their transitions.
+    private func encodeTransitions(
+        of machine: Machine,
+        stateObjects: [StateID: DynamicEObject],
+        into resource: Resource
+    ) async -> [TransitionID: DynamicEObject] {
+        var transitionObjects = [TransitionID: DynamicEObject]()
+        for transitionID in machine.llfsm.transitions {
+            guard let transition = machine.llfsm.transition(for: transitionID) else { continue }
+            var transObj = DynamicEObject(eClass: metamodel.transitionClass)
+            transObj.eSet("label", value: transition.label)
+            if let srcObj = stateObjects[transition.source] {
+                transObj.eSet("source", value: srcObj.id)
+            }
+            if let tgtObj = stateObjects[transition.target] {
+                transObj.eSet("target", value: tgtObj.id)
+            }
+            await resource.register(transObj)
+            transitionObjects[transitionID] = transObj
+        }
+        return transitionObjects
+    }
+
+    /// Encode the per-state boilerplate of a machine.
+    ///
+    /// - Parameters:
+    ///   - machine: The machine whose state boilerplate is encoded.
+    ///   - stateObjects: The encoded states, keyed by the identifiers of their states.
+    ///   - resource: The resource that will own the encoded objects.
+    /// - Returns: The identifiers of the boilerplate entry objects.
+    private func encodeStateBoilerplateEntries(
+        of machine: Machine,
+        stateObjects: [StateID: DynamicEObject],
+        into resource: Resource
+    ) async -> [EUUID] {
+        var stateBoilerplateEntries = [EUUID]()
+        for stateID in machine.llfsm.states {
+            guard let stateObj = stateObjects[stateID],
+                  let bp = machine.stateBoilerplate[stateID] else { continue }
+            let bpSections = machine.language.extractSections(from: bp)
+            let entryBpObj = boilerplateObject(for: bpSections)
+            await resource.register(entryBpObj)
+
+            var entryObj = DynamicEObject(eClass: metamodel.stateBoilerplateEntryClass)
+            entryObj.eSet("state", value: stateObj.id)
+            entryObj.eSet("boilerplate", value: entryBpObj.id)
+            await resource.register(entryObj)
+            stateBoilerplateEntries.append(entryObj.id)
+        }
+        return stateBoilerplateEntries
+    }
+
+    /// Encode the state layouts of a machine.
+    ///
+    /// - Parameters:
+    ///   - machine: The machine whose state layouts are encoded.
+    ///   - stateObjects: The encoded states, keyed by the identifiers of their states.
+    ///   - resource: The resource that will own the encoded objects.
+    /// - Returns: The identifiers of the state layout entry objects.
+    private func encodeStateLayoutEntries(
+        of machine: Machine,
+        stateObjects: [StateID: DynamicEObject],
+        into resource: Resource
+    ) async -> [EUUID] {
+        var stateLayoutEntries = [EUUID]()
+        for (stateID, layout) in machine.stateLayout {
+            guard let stateObj = stateObjects[stateID] else { continue }
+            let layoutObj = await encodeStateLayout(layout, into: resource)
+            await resource.register(layoutObj)
+
+            var entryObj = DynamicEObject(eClass: metamodel.stateLayoutEntryClass)
+            entryObj.eSet("state", value: stateObj.id)
+            entryObj.eSet("layout", value: layoutObj.id)
+            await resource.register(entryObj)
+            stateLayoutEntries.append(entryObj.id)
+        }
+        return stateLayoutEntries
+    }
+
+    /// Encode the transition layouts of a machine.
+    ///
+    /// - Parameters:
+    ///   - machine: The machine whose transition layouts are encoded.
+    ///   - transitionObjects: The encoded transitions, keyed by the identifiers of their transitions.
+    ///   - resource: The resource that will own the encoded objects.
+    /// - Returns: The identifiers of the transition layout entry objects.
+    private func encodeTransitionLayoutEntries(
+        of machine: Machine,
+        transitionObjects: [TransitionID: DynamicEObject],
+        into resource: Resource
+    ) async -> [EUUID] {
+        var transitionLayoutEntries = [EUUID]()
+        for (transitionID, layout) in machine.transitionLayout {
+            guard let transObj = transitionObjects[transitionID] else { continue }
+            var pointIDs = [EUUID]()
+            for point in layout.path.points {
+                var pointObj = DynamicEObject(eClass: metamodel.point2DClass)
+                pointObj.eSet("x", value: point.x)
+                pointObj.eSet("y", value: point.y)
+                await resource.register(pointObj)
+                pointIDs.append(pointObj.id)
+            }
+            var tlObj = DynamicEObject(eClass: metamodel.transitionLayoutClass)
+            tlObj.eSet("points", value: pointIDs)
+            await resource.register(tlObj)
+
+            var entryObj = DynamicEObject(eClass: metamodel.transitionLayoutEntryClass)
+            entryObj.eSet("transition", value: transObj.id)
+            entryObj.eSet("layout", value: tlObj.id)
+            await resource.register(entryObj)
+            transitionLayoutEntries.append(entryObj.id)
+        }
+        return transitionLayoutEntries
+    }
+
+    /// Decode the per-state boilerplate of a machine, including the state activities.
+    ///
+    /// - Parameters:
+    ///   - machineObj: The dynamic object that represents the machine.
+    ///   - states: The decoded state identifiers, keyed by the identifiers of their objects.
+    ///   - llfsm: The decoded state graph, which names the states.
+    ///   - language: The language binding that builds the boilerplate.
+    ///   - resource: The resource that contains the object graph.
+    /// - Returns: The boilerplate of every state that has an entry.
+    private func decodeStateBoilerplate(
+        of machineObj: DynamicEObject,
+        states eobjectToStateID: [EUUID: StateID],
+        llfsm: LLFSM,
+        language: any LanguageBinding,
+        from resource: Resource
+    ) async -> [StateID: any Boilerplate] {
+        var stateBoilerplate = [StateID: any Boilerplate]()
+        let sbpEntryIDs = ModelReferences.identifiers(
+            from: await resource.eGet(objectId: machineObj.id, feature: "stateBoilerplates")
+        )
+        for entryID in sbpEntryIDs {
+            guard let stateEID = ModelReferences.identifier(from: await resource.eGet(objectId: entryID, feature: "state")),
+                  let stateID = eobjectToStateID[stateEID],
+                  let entryBpID = ModelReferences.identifier(
+                      from: await resource.eGet(objectId: entryID, feature: "boilerplate")
+                  ) else { continue }
+
+            // Reconstruct state boilerplate from boilerplate sections + activities
+            let bpSections = await decodeBoilerplateSections(entryBpID, from: resource)
+            let stateName = llfsm.stateName(for: stateID) ?? ""
+
+            // Also get activities from the state object
+            var allSections = bpSections
+            if let activitiesID = ModelReferences.identifier(from: await resource.eGet(objectId: stateEID, feature: "activities")) {
+                let onEntry = await resource.eGet(objectId: activitiesID, feature: "onEntry") as? String ?? ""
+                let onExit = await resource.eGet(objectId: activitiesID, feature: "onExit") as? String ?? ""
+                let internalCode = await resource.eGet(objectId: activitiesID, feature: "internal") as? String ?? ""
+                let onSuspend = await resource.eGet(objectId: activitiesID, feature: "onSuspend") as? String ?? ""
+                let onResume = await resource.eGet(objectId: activitiesID, feature: "onResume") as? String ?? ""
+                allSections[.onEntry] = onEntry
+                allSections[.onExit] = onExit
+                allSections[.internal] = internalCode
+                allSections[.onSuspend] = onSuspend
+                allSections[.onResume] = onResume
+            }
+            stateBoilerplate[stateID] = language.createStateBoilerplate(from: allSections, stateName: stateName)
+        }
+        return stateBoilerplate
     }
 }

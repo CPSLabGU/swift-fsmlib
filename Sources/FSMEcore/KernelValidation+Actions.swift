@@ -8,6 +8,7 @@
 import ECore
 import EMFBase
 
+/// The checks of the single assignment rule for the actions of a kernel model.
 extension KernelValidation {
     // MARK: - W6
 
@@ -21,14 +22,20 @@ extension KernelValidation {
                 var reported = Set<EUUID>()
                 for variable in variablesRead(by: statement, excluding: target)
                 where assigned.contains(variable.id) && reported.insert(variable.id).inserted {
-                    report(.singleAssignment, statement,
-                           "The variable \(label(variable)) is read after it was assigned in the same action")
+                    report(
+                        .singleAssignment,
+                        statement,
+                        "The variable \(label(variable)) is read after it was assigned in the same action"
+                    )
                 }
                 guard let target, let variable = index.target(.variable, of: target),
                       isAnalysed(variable) else { continue }
                 if !assigned.insert(variable.id).inserted {
-                    report(.singleAssignment, statement,
-                           "The variable \(label(variable)) is assigned more than once in the same action")
+                    report(
+                        .singleAssignment,
+                        statement,
+                        "The variable \(label(variable)) is assigned more than once in the same action"
+                    )
                 }
             }
         }

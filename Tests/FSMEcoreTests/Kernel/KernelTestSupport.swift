@@ -26,24 +26,30 @@ enum KernelTestModel: Sendable, Hashable, CustomStringConvertible {
     /// The name of the arrangement, which names the generated files and the expected trace.
     var name: String {
         switch self {
-        case .fixture(let fixture): return fixture.rawValue
-        case .host: return KernelHostFixture.arrangementName
+        case .fixture(let fixture):
+            return fixture.rawValue
+        case .host:
+            return KernelHostFixture.arrangementName
         }
     }
 
     /// The name of the model in test reports.
     var description: String {
         switch self {
-        case .fixture(let fixture): return fixture.rawValue
-        case .host(let host): return KernelHostFixture.arrangementName + "-" + host.rawValue
+        case .fixture(let fixture):
+            return fixture.rawValue
+        case .host(let host):
+            return KernelHostFixture.arrangementName + "-" + host.rawValue
         }
     }
 
     /// The directory below an expected-output directory that holds this model's files, if any.
     var expectedSubdirectory: String? {
         switch self {
-        case .fixture: return nil
-        case .host(let host): return host.rawValue
+        case .fixture:
+            return nil
+        case .host(let host):
+            return host.rawValue
         }
     }
 
@@ -55,37 +61,49 @@ enum KernelTestModel: Sendable, Hashable, CustomStringConvertible {
     /// Whether the model satisfies the strict profile.
     var isStrict: Bool {
         switch self {
-        case .fixture(let fixture): return fixture.isStrict
-        case .host: return false
+        case .fixture(let fixture):
+            return fixture.isStrict
+        case .host:
+            return false
         }
     }
 
     /// The code targets whose programs can run the model.
     var executionTargets: [KernelTarget] {
         switch self {
-        case .fixture(.opaqueSampler): return [.c]
-        case .fixture: return KernelTarget.allCases.filter(\.isExecutionTarget)
-        case .host(let host): return [host.target]
+        case .fixture(.opaqueSampler):
+            return [.c]
+        case .fixture:
+            return KernelTarget.allCases.filter(\.isExecutionTarget)
+        case .host(let host):
+            return [host.target]
         }
     }
 
     /// Load the model into a resource.
     func resource() async throws -> Resource {
         switch self {
-        case .fixture(let fixture): return try await KernelFixtureTests.load(fixture).resource
-        case .host(let host): return try await KernelHostFixtureTests.load(host).resource
+        case .fixture(let fixture):
+            return try await KernelFixtureTests.load(fixture).resource
+        case .host(let host):
+            return try await KernelHostFixtureTests.load(host).resource
         }
     }
 }
 
+/// The code target of a host fixture.
 extension KernelHostFixture {
     /// The code target that compiles the model.
     var target: KernelTarget {
         switch self {
-        case .c: return .c
-        case .cpp: return .cpp
-        case .swift: return .swift
-        case .java: return .java
+        case .c:
+            return .c
+        case .cpp:
+            return .cpp
+        case .swift:
+            return .swift
+        case .java:
+            return .java
         }
     }
 }
@@ -118,8 +136,11 @@ enum KernelTestSupport {
 
     /// The bundled kernel test resources.
     static var bundledResources: URL {
-        TestResources.url(forResource: kernelDirectory, withExtension: nil, subdirectory: resourcesDirectory)!
+        TestResources.url(forResource: kernelDirectory, withExtension: nil, subdirectory: resourcesDirectory) ?? missingResources
     }
+
+    /// The location used when the bundle has no kernel resources, so that reading from it fails visibly.
+    private static let missingResources = URL(fileURLWithPath: "/nonexistent/" + resourcesSubdirectory)
 
     /// The kernel test resources in the source tree, where recorded files are written.
     static func sourceResources(testFile: String = #filePath) -> URL {
@@ -285,13 +306,22 @@ enum KernelTestSupport {
     }
 
     /// Generate the files of a model for a target into a new scratch directory.
+    ///
+    /// - Parameters:
+    ///   - model: The model to generate.
+    ///   - target: The target to generate for.
+    ///   - parameters: The template parameters of the generation.
+    /// - Returns: The scratch directory that holds the generated files; the caller removes it.
     @MainActor
-    static func generate(_ model: KernelTestModel, _ target: KernelTarget,
-                         parameters: [String: String] = [:]) async throws -> URL {
+    static func generate(
+        _ model: KernelTestModel,
+        _ target: KernelTarget,
+        parameters: [String: String] = [:]
+    ) async throws -> URL {
         let directory = try makeScratch(target.rawValue)
         let generator = KernelTemplateGenerator(metamodel: try await KernelMetamodel())
-        try await generator.generate(target, resource: try await model.resource(), parameters: parameters,
-                                     to: directory)
+        let resource = try await model.resource()
+        try await generator.generate(target, resource: resource, parameters: parameters, to: directory)
         return directory
     }
 }

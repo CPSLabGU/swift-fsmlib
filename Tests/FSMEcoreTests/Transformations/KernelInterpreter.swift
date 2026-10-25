@@ -24,25 +24,36 @@ import Foundation
 struct KernelInterpreter {
     /// A run-time value.
     enum Value: Equatable, CustomStringConvertible {
+        /// A Boolean value.
         case boolean(Bool)
+        /// An integer value.
         case integer(Int)
+        /// An enumeration literal.
         case literal(String)
+        /// An array of values.
         case array([Value])
 
+        /// The text of the value, as printed by a print statement.
         var description: String {
             switch self {
-            case .boolean(let value): return String(value)
-            case .integer(let value): return String(value)
-            case .literal(let value): return value
-            case .array(let values): return "[" + values.map(\.description).joined(separator: ", ") + "]"
+            case .boolean(let value):
+                return String(value)
+            case .integer(let value):
+                return String(value)
+            case .literal(let value):
+                return value
+            case .array(let values):
+                return "[" + values.map(\.description).joined(separator: ", ") + "]"
             }
         }
 
+        /// The Boolean held by the value; any other kind of value is a programming error.
         var bool: Bool {
             guard case .boolean(let value) = self else { fatalError("not a Boolean: \(self)") }
             return value
         }
 
+        /// The integer held by the value; any other kind of value is a programming error.
         var int: Int {
             guard case .integer(let value) = self else { fatalError("not an integer: \(self)") }
             return value
@@ -81,7 +92,9 @@ struct KernelInterpreter {
 
     /// The key of a variable value.
     private struct VariableKey: Hashable {
+        /// The instance owning the variable, or nil for a shared variable.
         let instance: EUUID?
+        /// The variable.
         let variable: EUUID
     }
 
@@ -133,6 +146,11 @@ struct KernelInterpreter {
 
     // MARK: - Ringlets
 
+    /// Run one ringlet of an instance.
+    ///
+    /// - Parameters:
+    ///   - instance: The instance to run.
+    ///   - round: The number of the current round.
     private mutating func ringlet(of instance: DynamicEObject, in round: Int) {
         snapshot = [:]
         guard let arrangement = index.roots.first.flatMap(index.object) else { return }
@@ -160,6 +178,12 @@ struct KernelInterpreter {
         precondition(!state.bool(.passThrough), "a ringlet rests in pass-through state \(state.string(.name) ?? "")")
     }
 
+    /// Whether the label of a transition holds.
+    ///
+    /// - Parameters:
+    ///   - transition: The transition to check.
+    ///   - instance: The instance that owns the transition.
+    /// - Returns: True if the label evaluates to true.
     private func holds(_ transition: DynamicEObject, in instance: DynamicEObject) -> Bool {
         guard let label = index.target(.label, of: transition) else { fatalError("missing label") }
         return evaluate(label, in: instance).bool
@@ -167,6 +191,12 @@ struct KernelInterpreter {
 
     // MARK: - Statements
 
+    /// Execute a sequence of statements.
+    ///
+    /// - Parameters:
+    ///   - statements: The statements to execute in order.
+    ///   - instance: The instance executing the statements.
+    ///   - round: The number of the current round.
     private mutating func execute(_ statements: [DynamicEObject], in instance: DynamicEObject, round: Int) {
         for statement in statements {
             if isKind(statement, kernel.assignmentClass) {
@@ -194,58 +224,29 @@ struct KernelInterpreter {
 
     // MARK: - Expressions
 
+    /// Evaluate an expression.
+    ///
+    /// - Parameters:
+    ///   - expression: The expression to evaluate.
+    ///   - instance: The instance in whose context the expression is evaluated.
+    /// - Returns: The value of the expression.
     private func evaluate(_ expression: DynamicEObject, in instance: DynamicEObject) -> Value {
-        func operand(_ feature: LLFSMFeature) -> Value {
-            guard let object = index.target(feature, of: expression) else { fatalError("missing \(feature)") }
-            return evaluate(object, in: instance)
-        }
         if isKind(expression, kernel.booleanLiteralClass) { return .boolean(expression.bool(.value)) }
         if isKind(expression, kernel.integerLiteralClass) { return .integer(expression.int(.value) ?? 0) }
         if isKind(expression, kernel.enumerationLiteralClass) { return .literal(expression.string(.literal) ?? "") }
         if isKind(expression, kernel.variableReferenceClass) {
-            guard let variable = expression.identifier(.variable) else { fatalError("unbound reference") }
-            let value = snapshot[variable] ?? values[key(for: variable, in: instance)]
-            guard let value else { fatalError("unknown variable \(index.path(of: variable))") }
-            guard let element = index.target(.index, of: expression) else { return value }
-            guard case .array(let elements) = value else { fatalError("not an array") }
-            return elements[evaluate(element, in: instance).int]
+            return evaluateReference(expression, in: instance)
         }
         if isKind(expression, kernel.unaryExpressionClass) {
-            let value = operand(.operand)
-            switch KernelUnaryOperation(rawValue: expression.string(.operation) ?? "") {
-            case .negation: return .boolean(!value.bool)
-            case .minus: return .integer(-value.int)
-            case nil: fatalError("unknown unary operation")
-            }
+            return evaluateUnary(expression, in: instance)
         }
         if isKind(expression, kernel.binaryExpressionClass) {
-            guard let operation = KernelBinaryOperation(rawValue: expression.string(.operation) ?? "") else {
-                fatalError("unknown binary operation")
-            }
-            let left = operand(.left)
-            switch operation {
-            case .conjunction: return .boolean(left.bool && operand(.right).bool)
-            case .disjunction: return .boolean(left.bool || operand(.right).bool)
-            case .equal: return .boolean(left == operand(.right))
-            case .notEqual: return .boolean(left != operand(.right))
-            default: break
-            }
-            let (lhs, rhs) = (left.int, operand(.right).int)
-            switch operation {
-            case .addition: return .integer(lhs + rhs)
-            case .subtraction: return .integer(lhs - rhs)
-            case .multiplication: return .integer(lhs * rhs)
-            case .division: return .integer(lhs / rhs)
-            case .modulo: return .integer(lhs % rhs)
-            case .lessThan: return .boolean(lhs < rhs)
-            case .lessOrEqual: return .boolean(lhs <= rhs)
-            case .greaterThan: return .boolean(lhs > rhs)
-            case .greaterOrEqual: return .boolean(lhs >= rhs)
-            default: fatalError("unreachable")
-            }
+            return evaluateBinary(expression, in: instance)
         }
         if isKind(expression, kernel.conditionalExpressionClass) {
-            return operand(.condition).bool ? operand(.whenTrue) : operand(.whenFalse)
+            return operand(.condition, of: expression, in: instance).bool
+                ? operand(.whenTrue, of: expression, in: instance)
+                : operand(.whenFalse, of: expression, in: instance)
         }
         if isKind(expression, kernel.inStateExpressionClass) {
             guard let observed = expression.identifier(.instance) else { fatalError("unbound observation") }
@@ -254,11 +255,124 @@ struct KernelInterpreter {
         fatalError("expression \(expression.eClass.name) is not interpreted")
     }
 
+    /// Evaluate an operand of an expression.
+    ///
+    /// - Parameters:
+    ///   - feature: The feature that holds the operand.
+    ///   - expression: The expression that owns the operand.
+    ///   - instance: The instance in whose context the operand is evaluated.
+    /// - Returns: The value of the operand.
+    private func operand(_ feature: LLFSMFeature, of expression: DynamicEObject, in instance: DynamicEObject) -> Value {
+        guard let object = index.target(feature, of: expression) else { fatalError("missing \(feature)") }
+        return evaluate(object, in: instance)
+    }
+
+    /// Evaluate a reference to a variable, with or without an array index.
+    ///
+    /// - Parameters:
+    ///   - expression: The variable reference.
+    ///   - instance: The instance in whose context the reference is evaluated.
+    /// - Returns: The value of the variable or of the indexed element.
+    private func evaluateReference(_ expression: DynamicEObject, in instance: DynamicEObject) -> Value {
+        guard let variable = expression.identifier(.variable) else { fatalError("unbound reference") }
+        let value = snapshot[variable] ?? values[key(for: variable, in: instance)]
+        guard let value else { fatalError("unknown variable \(index.path(of: variable))") }
+        guard let element = index.target(.index, of: expression) else { return value }
+        guard case .array(let elements) = value else { fatalError("not an array") }
+        return elements[evaluate(element, in: instance).int]
+    }
+
+    /// Evaluate a unary expression.
+    ///
+    /// - Parameters:
+    ///   - expression: The unary expression.
+    ///   - instance: The instance in whose context the expression is evaluated.
+    /// - Returns: The result of the operation.
+    private func evaluateUnary(_ expression: DynamicEObject, in instance: DynamicEObject) -> Value {
+        let value = operand(.operand, of: expression, in: instance)
+        switch KernelUnaryOperation(rawValue: expression.string(.operation) ?? "") {
+        case .negation:
+            return .boolean(!value.bool)
+        case .minus:
+            return .integer(-value.int)
+        case nil:
+            fatalError("unknown unary operation")
+        }
+    }
+
+    /// Evaluate a binary expression.
+    ///
+    /// - Parameters:
+    ///   - expression: The binary expression.
+    ///   - instance: The instance in whose context the expression is evaluated.
+    /// - Returns: The result of the operation.
+    private func evaluateBinary(_ expression: DynamicEObject, in instance: DynamicEObject) -> Value {
+        guard let operation = KernelBinaryOperation(rawValue: expression.string(.operation) ?? "") else {
+            fatalError("unknown binary operation")
+        }
+        let left = operand(.left, of: expression, in: instance)
+        let right = { operand(.right, of: expression, in: instance) }
+        switch operation {
+        case .conjunction:
+            return .boolean(left.bool && right().bool)
+        case .disjunction:
+            return .boolean(left.bool || right().bool)
+        case .equal:
+            return .boolean(left == right())
+        case .notEqual:
+            return .boolean(left != right())
+        default:
+            return evaluateArithmetic(operation, left.int, right().int)
+        }
+    }
+
+    /// Apply an integer operation.
+    ///
+    /// - Parameters:
+    ///   - operation: The arithmetic or comparison operation.
+    ///   - lhs: The left operand.
+    ///   - rhs: The right operand.
+    /// - Returns: The integer or Boolean result.
+    private func evaluateArithmetic(_ operation: KernelBinaryOperation, _ lhs: Int, _ rhs: Int) -> Value {
+        switch operation {
+        case .addition:
+            return .integer(lhs + rhs)
+        case .subtraction:
+            return .integer(lhs - rhs)
+        case .multiplication:
+            return .integer(lhs * rhs)
+        case .division:
+            return .integer(lhs / rhs)
+        case .modulo:
+            return .integer(lhs % rhs)
+        case .lessThan:
+            return .boolean(lhs < rhs)
+        case .lessOrEqual:
+            return .boolean(lhs <= rhs)
+        case .greaterThan:
+            return .boolean(lhs > rhs)
+        case .greaterOrEqual:
+            return .boolean(lhs >= rhs)
+        default:
+            fatalError("unreachable")
+        }
+    }
+
+    /// The key under which a variable value is stored.
+    ///
+    /// - Parameters:
+    ///   - variable: The variable.
+    ///   - instance: The instance accessing the variable.
+    /// - Returns: The key of the instance's own variable if it has one, the key of the shared variable otherwise.
     private func key(for variable: EUUID, in instance: DynamicEObject) -> VariableKey {
         let local = VariableKey(instance: instance.id, variable: variable)
         return values[local] != nil ? local : VariableKey(instance: nil, variable: variable)
     }
 
+    /// The initial value of a variable.
+    ///
+    /// - Parameter variable: The variable.
+    /// - Returns: The value of its initialiser, or the default value of its type.
     private func initialValue(of variable: DynamicEObject) -> Value {
         if let expression = index.target(.initialValue, of: variable) {
             return evaluate(expression, in: variable)
@@ -266,6 +380,10 @@ struct KernelInterpreter {
         return defaultValue(of: index.target(.type, of: variable))
     }
 
+    /// The default value of a type.
+    ///
+    /// - Parameter type: The type of a variable.
+    /// - Returns: The value that a variable of that type holds before it is assigned.
     private func defaultValue(of type: DynamicEObject?) -> Value {
         guard let type else { fatalError("untyped variable") }
         if isKind(type, kernel.booleanTypeClass) { return .boolean(false) }
@@ -277,6 +395,12 @@ struct KernelInterpreter {
         fatalError("type \(type.eClass.name) is not interpreted")
     }
 
+    /// Whether an object is an instance of a kernel class or of one of its subclasses.
+    ///
+    /// - Parameters:
+    ///   - object: The object to check.
+    ///   - eClass: The class to check against.
+    /// - Returns: True if the object conforms to the class.
     private func isKind(_ object: DynamicEObject, _ eClass: EClass) -> Bool {
         kernel.isKind(object.eClass, of: eClass)
     }

@@ -22,8 +22,19 @@ struct KernelGoldenCase: Sendable, CustomTestStringConvertible {
     /// The template parameters.
     let parameters: [String: String]
 
-    init(_ model: KernelTestModel, _ target: KernelTarget, variant: String? = nil,
-         parameters: [String: String] = [:]) {
+    /// Create a generation run.
+    ///
+    /// - Parameters:
+    ///   - model: The model to generate.
+    ///   - target: The target to generate.
+    ///   - variant: The name of a parameter variant, if any.
+    ///   - parameters: The template parameters.
+    init(
+        _ model: KernelTestModel,
+        _ target: KernelTarget,
+        variant: String? = nil,
+        parameters: [String: String] = [:]
+    ) {
         self.model = model
         self.target = target
         self.variant = variant
@@ -36,6 +47,7 @@ struct KernelGoldenCase: Sendable, CustomTestStringConvertible {
             .compactMap { $0 }.joined(separator: "/")
     }
 
+    /// The description of the run in test reports.
     var testDescription: String { "\(model) \(target.rawValue)" + (variant.map { " " + $0 } ?? "") }
 
     /// The havoc treatment of opaque nodes.
@@ -48,19 +60,28 @@ struct KernelGoldenCase: Sendable, CustomTestStringConvertible {
             cases += KernelTarget.allCases.map { KernelGoldenCase(model, $0) }
         }
         let sampler = KernelTestModel.fixture(.opaqueSampler)
-        cases += [KernelGoldenCase(sampler, .c), KernelGoldenCase(sampler, .dot),
-                  KernelGoldenCase(sampler, .smv, variant: "havoc", parameters: havoc),
-                  KernelGoldenCase(sampler, .tla, variant: "havoc", parameters: havoc)]
+        cases += [
+            KernelGoldenCase(sampler, .c),
+            KernelGoldenCase(sampler, .dot),
+            KernelGoldenCase(sampler, .smv, variant: "havoc", parameters: havoc),
+            KernelGoldenCase(sampler, .tla, variant: "havoc", parameters: havoc)
+        ]
         for case .host(let host) in KernelTestModel.hosts {
             cases.append(KernelGoldenCase(.host(host), host.target))
         }
-        cases += [KernelGoldenCase(.host(.c), .smv, variant: "havoc", parameters: havoc),
-                  KernelGoldenCase(.host(.c), .tla, variant: "havoc", parameters: havoc)]
+        cases += [
+            KernelGoldenCase(.host(.c), .smv, variant: "havoc", parameters: havoc),
+            KernelGoldenCase(.host(.c), .tla, variant: "havoc", parameters: havoc)
+        ]
         let relay = KernelTestModel.fixture(.turnTakingRelay)
         for target in [KernelTarget.smv, .tla] {
             cases += [
-                KernelGoldenCase(relay, target, variant: "fused",
-                                 parameters: [KernelTemplateParameter.entry: KernelEntryMode.fused.rawValue]),
+                KernelGoldenCase(
+                    relay,
+                    target,
+                    variant: "fused",
+                    parameters: [KernelTemplateParameter.entry: KernelEntryMode.fused.rawValue]
+                ),
                 KernelGoldenCase(relay, target, variant: "sanity", parameters: [KernelTemplateParameter.sanity: "true"]),
                 KernelGoldenCase(relay, target, variant: "rounds", parameters: [KernelTemplateParameter.maxRounds: "40"]),
             ]
@@ -79,6 +100,9 @@ struct KernelGoldenTests {
     /// The environment variable that asks the tests to record the expected files.
     static let recordVariable = "FSMECORE_RECORD_KERNEL_GOLDEN"
 
+    /// Verify that generation is deterministic and matches the checked-in files.
+    ///
+    /// - Parameter golden: The generation run to check.
     @Test("generation is deterministic and matches the expected files", arguments: KernelGoldenCase.all)
     func golden(_ golden: KernelGoldenCase) async throws {
         let generator = KernelTemplateGenerator(metamodel: try await KernelMetamodel())

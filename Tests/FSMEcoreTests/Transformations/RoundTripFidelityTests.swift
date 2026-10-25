@@ -51,6 +51,9 @@ struct RoundTripFidelityTests {
         return try #require(objects.first { $0.string(.name) == name })
     }
 
+    /// Checks that include paths and functions are carried to the kernel and back.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("include paths and functions are carried to the kernel and back")
     func includePathsAndFunctions() async throws {
         let (transformations, sectioned) = try await counter()
@@ -85,6 +88,9 @@ struct RoundTripFidelityTests {
         #expect(!structural.diagnostics.warnings.map(\.kind).contains(.notRecovered(.includePath, owner: "Counter")))
     }
 
+    /// Checks that state boilerplate becomes host declarations of the state, which the kernel merges into the machine.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("state boilerplate becomes host declarations of the state, which the kernel merges into the machine")
     func stateHostDeclarations() async throws {
         let (transformations, sectioned) = try await counter()
@@ -108,6 +114,9 @@ struct RoundTripFidelityTests {
         #expect(structural.diagnostics.warnings.map(\.kind).contains(.notRecovered(.stateBoilerplate, owner: "Counter")))
     }
 
+    /// Checks that recognised declarations keep their comment, text and line through the kernel.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("recognised declarations keep their comment, text and line through the kernel")
     func declarationTexts() async throws {
         let (transformations, sectioned) = try await counter()
@@ -143,6 +152,9 @@ struct RoundTripFidelityTests {
         return await builder.resource()
     }
 
+    /// Checks that declaration texts are put back at their line and other variables follow in canonical form.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("declaration texts are put back at their line, other variables follow in canonical form")
     func mergedDeclarations() async throws {
         let transformations = try await TransformationTestSupport.transformations()
@@ -154,6 +166,9 @@ struct RoundTripFidelityTests {
         #expect(result.diagnostics.warnings.map(\.kind).contains(.notRecovered(.declarationFormatting, owner: "Declared")))
     }
 
+    /// Checks that declaration texts held by host declarations of another language are written in canonical form.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("declaration texts held by host declarations of another language are written in canonical form")
     func otherLanguageDeclarations() async throws {
         let transformations = try await TransformationTestSupport.transformations()
@@ -186,6 +201,9 @@ struct RoundTripFidelityTests {
         return await builder.resource()
     }
 
+    /// Checks that sections and labels of only white space stay opaque with their exact text.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("sections and labels of only white space stay opaque with their exact text")
     func whiteSpace() async throws {
         let transformations = try await TransformationTestSupport.transformations()
@@ -214,6 +232,9 @@ struct RoundTripFidelityTests {
         #expect(label.string(.text) == " ")
     }
 
+    /// Checks that a label of only white space is a valid opaque label of the relaxed profile.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("a label of only white space is a valid opaque label of the relaxed profile")
     func whiteSpaceLabel() async throws {
         let transformations = try await TransformationTestSupport.transformations()
@@ -225,6 +246,10 @@ struct RoundTripFidelityTests {
         #expect(labels.map { $0.string(.text) } == [" "])
     }
 
+    /// Checks that the encoding leaves out opaque statements of only white space.
+    ///
+    /// - Parameter elides: Whether the encoding elides empty sections.
+    /// - Throws: Any error raised by the transformations.
     @Test("the encoding leaves out opaque statements of only white space", arguments: [true, false])
     func blankStatementsElided(_ elides: Bool) async throws {
         let transformations = try await TransformationTestSupport.transformations()
@@ -238,6 +263,7 @@ struct RoundTripFidelityTests {
     }
 }
 
+/// Convenience access to the arrangement of a structural round-trip model.
 private extension StructuralRoundTrip.Model {
     /// The arrangement of an arrangement model, or `nil` for a single machine.
     var arrangementValue: Arrangement? {

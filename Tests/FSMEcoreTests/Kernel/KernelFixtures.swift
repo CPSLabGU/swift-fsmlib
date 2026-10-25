@@ -71,18 +71,28 @@ enum KernelFixture: String, CaseIterable, Sendable {
     /// Build the fixture.
     func build(with builder: KernelModelBuilder) {
         switch self {
-        case .turnTakingRelay: Self.buildTurnTakingRelay(builder)
-        case .crossingController: Self.buildCrossingController(builder)
-        case .doorInterlock: Self.buildDoorInterlock(builder)
-        case .schedulerPool: Self.buildSchedulerPool(builder)
-        case .opaqueSampler: Self.buildOpaqueSampler(builder)
-        case .suspendResumeSampler: Self.buildSuspendResumeSampler(builder)
-        case .sectionedCrossing: Self.buildSectionedCrossing(builder)
+        case .turnTakingRelay:
+            Self.buildTurnTakingRelay(builder)
+        case .crossingController:
+            Self.buildCrossingController(builder)
+        case .doorInterlock:
+            Self.buildDoorInterlock(builder)
+        case .schedulerPool:
+            Self.buildSchedulerPool(builder)
+        case .opaqueSampler:
+            Self.buildOpaqueSampler(builder)
+        case .suspendResumeSampler:
+            Self.buildSuspendResumeSampler(builder)
+        case .sectionedCrossing:
+            Self.buildSectionedCrossing(builder)
         }
     }
 
     // MARK: - Kernel Fixtures
 
+    /// Build the TurnTakingRelay fixture.
+    ///
+    /// - Parameter b: The builder that receives the model.
     private static func buildTurnTakingRelay(_ b: KernelModelBuilder) {
         let system = b.arrangement("TurnTakingRelay")
         let side = b.enumerationType("Side", ["left", "right"], in: system)
@@ -113,6 +123,9 @@ enum KernelFixture: String, CaseIterable, Sendable {
         b.binding(me, to: b.literal("right", of: side), for: rightHand)
     }
 
+    /// Build the CrossingController fixture.
+    ///
+    /// - Parameter b: The builder that receives the model.
     private static func buildCrossingController(_ b: KernelModelBuilder) {
         let system = b.arrangement("CrossingController")
         let flag = b.booleanType(in: system)
@@ -144,6 +157,9 @@ enum KernelFixture: String, CaseIterable, Sendable {
         b.origin(OriginRecord(state: "Stop", role: .entry), on: stop)
     }
 
+    /// Build the DoorInterlock fixture.
+    ///
+    /// - Parameter b: The builder that receives the model.
     private static func buildDoorInterlock(_ b: KernelModelBuilder) {
         let system = b.arrangement("DoorInterlock")
         let flag = b.booleanType(in: system)
@@ -174,6 +190,9 @@ enum KernelFixture: String, CaseIterable, Sendable {
         b.instance("watch", of: monitor, in: system)
     }
 
+    /// Build the SchedulerPool fixture.
+    ///
+    /// - Parameter b: The builder that receives the model.
     private static func buildSchedulerPool(_ b: KernelModelBuilder) {
         let system = b.arrangement("SchedulerPool")
         let flag = b.booleanType(in: system)
@@ -198,8 +217,8 @@ enum KernelFixture: String, CaseIterable, Sendable {
         let myTurn = b.binary(.conjunction, b.inState(gate, dispatch), b.binary(.equal, b.ref(current), b.ref(id)))
         b.transition(from: ready, to: working, when: myTurn)
         b.action(working, b.assign(b.ref(done, index: b.ref(id)), b.bool(true)), b.printLine("work", [b.ref(id)]))
-        b.transition(from: working, to: ready,
-                     when: b.binary(.notEqual, b.ref(current), b.ref(id)))
+        let leaves = b.binary(.notEqual, b.ref(current), b.ref(id))
+        b.transition(from: working, to: ready, when: leaves)
         b.action(ready, b.assign(b.ref(done, index: b.ref(id)), b.bool(false)))
         for (name, value) in [("first", 0), ("second", 1), ("third", 2)] {
             let member = b.instance(name, of: worker, in: system)
@@ -207,13 +226,20 @@ enum KernelFixture: String, CaseIterable, Sendable {
         }
     }
 
+    /// Build the OpaqueSampler fixture.
+    ///
+    /// - Parameter b: The builder that receives the model.
     private static func buildOpaqueSampler(_ b: KernelModelBuilder) {
         let system = b.arrangement("OpaqueSampler")
         b.set(system, .language, "c")
         let flag = b.booleanType(in: system)
         let reading = b.opaqueType("Reading", text: "struct reading", in: system)
-        b.hostDeclarations(in: system, language: "c", includes: "#include <stdio.h>",
-                           declarations: opaqueSamplerDeclarations)
+        b.hostDeclarations(
+            in: system,
+            language: "c",
+            includes: "#include <stdio.h>",
+            declarations: opaqueSamplerDeclarations
+        )
         let latest = b.variable("latest", reading, in: system)
         let sampler = b.machine("Sampler", in: system)
         let wait = b.state("Wait", in: sampler)
@@ -256,6 +282,9 @@ enum KernelFixture: String, CaseIterable, Sendable {
 
     // MARK: - Sectioned Fixtures
 
+    /// Build the SuspendResumeSampler fixture.
+    ///
+    /// - Parameter b: The builder that receives the model.
     private static func buildSuspendResumeSampler(_ b: KernelModelBuilder) {
         let system = b.sectionedArrangement("SuspendResumeSampler")
         let flag = b.booleanType(in: system)
@@ -269,15 +298,15 @@ enum KernelFixture: String, CaseIterable, Sendable {
         b.set(sampler, .initial, idle)
         b.set(sampler, .suspendState, suspended)
         b.section(.onEntry, of: idle, b.printLine("idle"))
-        b.sectionedTransition(from: idle, to: sampling,
-                              when: b.binary(.greaterThan, b.stateTime(.milliseconds), b.int(100)))
+        let sampleDue = b.binary(.greaterThan, b.stateTime(.milliseconds), b.int(100))
+        b.sectionedTransition(from: idle, to: sampling, when: sampleDue)
         b.section(.onEntry, of: sampling, b.assign(b.ref(samples), b.binary(.addition, b.ref(samples), b.int(1))))
         b.section(.internal, of: sampling, b.printLine("sampling", [b.ref(samples)]))
         b.section(.onExit, of: sampling, b.printLine("done"))
         b.section(.onSuspend, of: sampling, b.printLine("suspending"))
         b.section(.onResume, of: sampling, b.printLine("resuming"))
-        b.sectionedTransition(from: sampling, to: idle,
-                              when: b.binary(.greaterOrEqual, b.ref(samples), b.int(100)))
+        let sampleLimit = b.binary(.greaterOrEqual, b.ref(samples), b.int(100))
+        b.sectionedTransition(from: sampling, to: idle, when: sampleLimit)
         b.section(.onEntry, of: suspended, b.printLine("suspended"))
         b.section(.onResume, of: suspended, b.printLine("leaving suspension"))
         let worker = b.sectionedInstance("worker", of: sampler, in: system)
@@ -288,12 +317,15 @@ enum KernelFixture: String, CaseIterable, Sendable {
         b.sectionedTransition(from: watching, to: holding, when: b.ref(paused))
         b.section(.onEntry, of: holding, b.control(.suspend, worker))
         b.section(.onExit, of: holding, b.control(.resume, worker))
-        let resumeWhen = b.binary(.conjunction, b.unary(.negation, b.ref(paused)),
-                                  b.sectionedInState(worker, suspended))
+        let released = b.unary(.negation, b.ref(paused))
+        let resumeWhen = b.binary(.conjunction, released, b.sectionedInState(worker, suspended))
         b.sectionedTransition(from: holding, to: watching, when: resumeWhen)
         b.sectionedInstance("supervisor", of: supervisor, in: system)
     }
 
+    /// Build the SectionedCrossing fixture.
+    ///
+    /// - Parameter b: The builder that receives the model.
     private static func buildSectionedCrossing(_ b: KernelModelBuilder) {
         let system = b.sectionedArrangement("SectionedCrossing")
         let flag = b.booleanType(in: system)
@@ -308,16 +340,17 @@ enum KernelFixture: String, CaseIterable, Sendable {
         b.section(.onExit, of: go, b.printLine("clearing"))
         b.sectionedTransition(from: go, to: amber, when: b.ref(request))
         b.section(.onEntry, of: amber, b.printLine("amber"))
-        b.sectionedTransition(from: amber, to: stop,
-                              when: b.binary(.greaterOrEqual, b.stateTime(.seconds), b.int(3)))
+        let amberDone = b.binary(.greaterOrEqual, b.stateTime(.seconds), b.int(3))
+        b.sectionedTransition(from: amber, to: stop, when: amberDone)
         b.section(.onEntry, of: stop, b.assign(b.ref(lit), b.bool(true)), b.printLine("stop"))
         b.section(.internal, of: stop, b.printLine("walking", [b.ref(lit)]))
-        b.sectionedTransition(from: stop, to: go,
-                              when: b.binary(.greaterOrEqual, b.stateTime(.seconds), b.int(5)))
+        let stopDone = b.binary(.greaterOrEqual, b.stateTime(.seconds), b.int(5))
+        b.sectionedTransition(from: stop, to: go, when: stopDone)
         b.sectionedInstance("main", of: crossing, in: system)
     }
 }
 
+/// Origin recording for kernel fixtures.
 extension KernelModelBuilder {
     /// Record an origin on a kernel state or transition.
     func origin(_ record: OriginRecord, on owner: EUUID) {

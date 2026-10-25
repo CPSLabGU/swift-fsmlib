@@ -186,9 +186,12 @@ public struct OutputTarget: RawRepresentable, Hashable, Sendable, CaseIterable, 
     /// from the kernel; `xmi` and `json` have no level of their own (`nil`).
     public var level: LLFSMLevel? {
         switch kind {
-        case .native: return .structural
-        case .model(_, let level): return level
-        case .kernel: return .kernel
+        case .native:
+            return .structural
+        case .model(_, let level):
+            return level
+        case .kernel:
+            return .kernel
         }
     }
 

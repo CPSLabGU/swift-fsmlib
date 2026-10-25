@@ -113,29 +113,51 @@ struct KernelValidation {
             guard let object = index.object(identifier) else { continue }
             checkFeatures(of: object)
         }
+        checkTransitionTargets()
+        checkBindingVariables()
+    }
+
+    /// Check that the source and the target of every transition belong to one machine.
+    private mutating func checkTransitionTargets() {
         for transition in objects(of: kernel.transitionClass) {
             guard let target = index.target(.target, of: transition) else { continue }
             let source = machine(containing: transition)
             let destination = machine(containing: target)
             if source?.id != destination?.id {
-                report(.structure, transition,
-                       "The target state \(label(target)) belongs to machine \(label(destination)), "
-                       + "not to machine \(label(source))")
+                report(
+                    .structure,
+                    transition,
+                    "The target state \(label(target)) belongs to machine \(label(destination)), "
+                        + "not to machine \(label(source))"
+                )
             }
         }
+    }
+
+    /// Check that every binding binds a local variable of the machine of its instance.
+    private mutating func checkBindingVariables() {
         for binding in objects(of: kernel.bindingClass) {
             guard let variable = index.target(.variable, of: binding) else { continue }
             let instance = index.container(of: binding.id)
             let machine = instance.flatMap { index.target(.machine, of: $0) }
             if let machine, !machine.identifiers(.variables).contains(variable.id) {
-                report(.structure, binding,
-                       "The bound variable \(label(variable)) is not a local variable of machine \(label(machine))")
+                report(
+                    .structure,
+                    binding,
+                    "The bound variable \(label(variable)) is not a local variable of machine \(label(machine))"
+                )
             }
         }
     }
 
     /// Check the multiplicities, literals and references of one object.
     private mutating func checkFeatures(of object: DynamicEObject) {
+        checkAttributes(of: object)
+        checkReferences(of: object)
+    }
+
+    /// Check the multiplicities and literals of the attributes of one object.
+    private mutating func checkAttributes(of object: DynamicEObject) {
         for attribute in object.eClass.eAllAttributes {
             if attribute.lowerBound > 0 {
                 let missing = attribute.isMany
@@ -145,10 +167,17 @@ struct KernelValidation {
             }
             if let eEnum = attribute.eType as? EEnum,
                let literal = object.eGet(attribute.name) as? String, eEnum.getLiteral(name: literal) == nil {
-                report(.structure, object,
-                       "The value \(literal) of \(attribute.name) is not a literal of \(eEnum.name)")
+                report(
+                    .structure,
+                    object,
+                    "The value \(literal) of \(attribute.name) is not a literal of \(eEnum.name)"
+                )
             }
         }
+    }
+
+    /// Check the multiplicities and targets of the references of one object.
+    private mutating func checkReferences(of object: DynamicEObject) {
         for reference in object.eClass.eAllReferences {
             let identifiers = object.identifiers(named: reference.name)
             if reference.lowerBound > 0 && identifiers.count < reference.lowerBound {
@@ -163,9 +192,12 @@ struct KernelValidation {
                     continue
                 }
                 if !kernel.isKind(target.eClass, of: expected) {
-                    report(.structure, object,
-                           "The reference \(reference.name) refers to a \(target.eClass.name), "
-                           + "not to a \(expected.name)")
+                    report(
+                        .structure,
+                        object,
+                        "The reference \(reference.name) refers to a \(target.eClass.name), "
+                            + "not to a \(expected.name)"
+                    )
                 }
             }
         }
@@ -182,12 +214,18 @@ struct KernelValidation {
     /// The number of values of a many-valued attribute.
     private func manyAttributeCount(_ value: (any EcoreValue)?) -> Int {
         switch value {
-        case nil: return 0
-        case let strings as [String]: return strings.count
-        case let ints as [Int]: return ints.count
-        case let bools as [Bool]: return bools.count
-        case let doubles as [Double]: return doubles.count
-        default: return 1
+        case nil:
+            return 0
+        case let strings as [String]:
+            return strings.count
+        case let ints as [Int]:
+            return ints.count
+        case let bools as [Bool]:
+            return bools.count
+        case let doubles as [Double]:
+            return doubles.count
+        default:
+            return 1
         }
     }
 
@@ -239,8 +277,11 @@ struct KernelValidation {
         for machine in objects(of: kernel.machineClass) {
             guard let initial = index.target(.initial, of: machine) else { continue }
             if !machine.identifiers(.states).contains(initial.id) {
-                report(.initialState, machine,
-                       "The initial state \(label(initial)) is not a state of machine \(label(machine))")
+                report(
+                    .initialState,
+                    machine,
+                    "The initial state \(label(initial)) is not a state of machine \(label(machine))"
+                )
             } else if initial.bool(.passThrough) {
                 report(.initialState, machine, "The initial state \(label(initial)) is pass-through")
             }
@@ -294,8 +335,11 @@ struct KernelValidation {
             let container = index.container(of: variable.id)
             if !isKind(container, kernel.arrangementClass)
                 || index.feature(of: variable.id) != LLFSMFeature.variables.rawValue {
-                report(.externalVariables, variable,
-                       "The external variable \(label(variable)) is not a shared variable of the arrangement")
+                report(
+                    .externalVariables,
+                    variable,
+                    "The external variable \(label(variable)) is not a shared variable of the arrangement"
+                )
             }
         }
         for assignment in objects(of: kernel.assignmentClass) {
@@ -321,12 +365,24 @@ struct KernelValidation {
 
     // MARK: - W9
 
+    /// A kind of object with an expression that may call only pure functions.
+    private struct PurityRoot {
+        /// The class of the objects that own the expression.
+        let owner: EClass
+
+        /// The feature that holds the expression.
+        let feature: LLFSMFeature
+
+        /// The description of the expression in reports.
+        let role: String
+    }
+
     /// Check that labels, binding values and initial values call only pure functions.
     mutating func checkPurity() {
-        let roots: [(owner: EClass, feature: LLFSMFeature, role: String)] = [
-            (kernel.transitionClass, .label, "label"),
-            (kernel.bindingClass, .value, "bound value"),
-            (kernel.variableClass, .initialValue, "initial value"),
+        let roots = [
+            PurityRoot(owner: kernel.transitionClass, feature: .label, role: "label"),
+            PurityRoot(owner: kernel.bindingClass, feature: .value, role: "bound value"),
+            PurityRoot(owner: kernel.variableClass, feature: .initialValue, role: "initial value"),
         ]
         for root in roots {
             for owner in objects(of: root.owner) {

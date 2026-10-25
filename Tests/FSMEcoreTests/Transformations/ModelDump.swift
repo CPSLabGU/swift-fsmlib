@@ -42,12 +42,19 @@ enum ModelDump {
     }
 
     /// The text of an attribute value.
+    ///
+    /// - Parameter value: The value, or nil if the attribute has none.
+    /// - Returns: A quoted form for strings, a bracketed list for string arrays and a plain description otherwise.
     private static func describe(_ value: (any EcoreValue)?) -> String {
         switch value {
-        case nil: return "-"
-        case let string as String: return "'\(string)'"
-        case let strings as [String]: return "[" + strings.map { "'\($0)'" }.joined(separator: ",") + "]"
-        case let value?: return String(describing: value)
+        case nil:
+            return "-"
+        case let string as String:
+            return "'\(string)'"
+        case let strings as [String]:
+            return "[" + strings.map { "'\($0)'" }.joined(separator: ",") + "]"
+        case let value?:
+            return String(describing: value)
         }
     }
 }

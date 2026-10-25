@@ -45,9 +45,17 @@ struct CLIPipelineTests {
 
     // MARK: - Native Generators
 
-    @Test("native formats from the templates match the Swift bindings byte for byte",
-          arguments: [["-f", "c"], ["-f", "objcpp"], ["-f", "scxml"], [], ["-n", "-f", "c"],
-                      ["--metamodel", "structural", "-n", "-f", "c"]])
+    /// Checks that native formats from the templates match the Swift bindings byte for byte.
+    ///
+    /// - Parameter options: The extra command-line options.
+    @Test("native formats from the templates match the Swift bindings byte for byte", arguments: [
+        ["-f", "c"],
+        ["-f", "objcpp"],
+        ["-f", "scxml"],
+        [],
+        ["-n", "-f", "c"],
+        ["--metamodel", "structural", "-n", "-f", "c"],
+    ])
     func templatesMatchSwift(_ options: [String]) throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "native")
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -62,6 +70,7 @@ struct CLIPipelineTests {
         expectIdentical(templates, swift)
     }
 
+    /// Checks that arrangements from the templates match the Swift bindings byte for byte.
     @Test("arrangements from the templates match the Swift bindings byte for byte")
     func arrangementTemplatesMatchSwift() throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "arrangement")
@@ -72,13 +81,16 @@ struct CLIPipelineTests {
         for generator in ["mtl", "swift"] {
             try FileManager.default.createDirectory(
                 at: directory.appendingPathComponent(generator), withIntermediateDirectories: true)
-            try succeed(inputs + ["-f", "c", "--generator", generator,
-                                  "-o", directory.appendingPathComponent("\(generator)/Pair.arrangement").path])
+            let output = directory.appendingPathComponent("\(generator)/Pair.arrangement")
+            try succeed(inputs + ["-f", "c", "--generator", generator, "-o", output.path])
         }
         expectIdentical(directory.appendingPathComponent("mtl/Pair.arrangement"),
                         directory.appendingPathComponent("swift/Pair.arrangement"))
     }
 
+    /// Checks that machines written by either generator read back as the original machine.
+    ///
+    /// - Parameter generator: The generator to write the machine with.
     @Test("machines written by either generator read back as the original machine", arguments: ["mtl", "swift"])
     func generatorRoundTrip(_ generator: String) throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "roundtrip")
@@ -101,24 +113,37 @@ struct CLIPipelineTests {
 
     // MARK: - Kernel Targets
 
-    @Test("kernel targets are generated from a native machine",
-          arguments: [["-f", "dot"], ["-f", "kernel-c"], ["-f", "smv", "--opaque", "havoc"],
-                      ["-f", "tla", "--opaque", "havoc"], ["--metamodel", "kernel", "-f", "c"]])
+    /// Checks that kernel targets are generated from a native machine.
+    ///
+    /// - Parameter options: The extra command-line options.
+    @Test("kernel targets are generated from a native machine", arguments: [
+        ["-f", "dot"],
+        ["-f", "kernel-c"],
+        ["-f", "smv", "--opaque", "havoc"],
+        ["-f", "tla", "--opaque", "havoc"],
+        ["--metamodel", "kernel", "-f", "c"],
+    ])
     func kernelTargetsFromMachine(_ options: [String]) throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "kernel-native")
         defer { try? FileManager.default.removeItem(at: directory) }
         let input = FSMConvertRunner.examples.appendingPathComponent("CounterC.machine")
         try succeed([input.path] + options + ["-o", directory.path])
         let extensions = Set(FSMConvertRunner.files(at: directory).keys.map { URL(fileURLWithPath: $0).pathExtension })
-        let expected: Set<String> = switch options[options.firstIndex(of: "-f")! + 1] {
-        case "dot": ["dot"]
-        case "smv": ["smv"]
-        case "tla": ["tla", "cfg"]
-        default: ["c"]
+        let formatIndex = try #require(options.firstIndex(of: "-f"))
+        let expected: Set<String> = switch options[formatIndex + 1] {
+        case "dot":
+            ["dot"]
+        case "smv":
+            ["smv"]
+        case "tla":
+            ["tla", "cfg"]
+        default:
+            ["c"]
         }
         #expect(extensions == expected)
     }
 
+    /// Checks that verification targets reject the host code of a native machine without `--opaque havoc`.
     @Test("verification targets reject the host code of a native machine without --opaque havoc")
     func verificationRejectsHostCode() throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "strict")
@@ -129,9 +154,18 @@ struct CLIPipelineTests {
         #expect(FSMConvertRunner.files(at: directory).isEmpty)
     }
 
-    @Test("kernel targets of the kernel fixtures match the expected files",
-          arguments: [("smv", "smv"), ("tla", "tla"), ("dot", "dot"), ("kernel-c", "kernel-c"),
-                      ("c", "kernel-c")])
+    /// Checks that kernel targets of the kernel fixtures match the expected files.
+    ///
+    /// - Parameters:
+    ///   - format: The output format to request.
+    ///   - expected: The name of the folder that holds the expected files.
+    @Test("kernel targets of the kernel fixtures match the expected files", arguments: [
+        ("smv", "smv"),
+        ("tla", "tla"),
+        ("dot", "dot"),
+        ("kernel-c", "kernel-c"),
+        ("c", "kernel-c"),
+    ])
     func kernelTargetsFromFixture(_ format: String, _ expected: String) throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "kernel-fixture")
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -144,6 +178,7 @@ struct CLIPipelineTests {
         #expect(written == reference, "\(written.keys.sorted()) differs from \(reference.keys.sorted())")
     }
 
+    /// Checks that template parameters reach the kernel targets.
     @Test("template parameters reach the kernel targets")
     func kernelParameters() throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "parameters")
@@ -161,6 +196,7 @@ struct CLIPipelineTests {
 
     // MARK: - Levels
 
+    /// Checks that a native machine is written as a kernel model.
     @Test("a native machine is written as a kernel model")
     func kernelXMIFromMachine() throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "kernel-xmi")
@@ -172,6 +208,9 @@ struct CLIPipelineTests {
         try succeed([output.path, "--validate", "--profile", "relaxed"])
     }
 
+    /// Checks that a sectioned model is written as a kernel model.
+    ///
+    /// - Parameter options: The extra command-line options.
     @Test("a sectioned model is written as a kernel model", arguments: [["--metamodel", "kernel", "-f", "xmi"], ["-f", "kernel-xmi"]])
     func kernelXMIFromSectioned(_ options: [String]) throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "sectioned-kernel")
@@ -181,6 +220,9 @@ struct CLIPipelineTests {
         #expect(try String(contentsOf: output, encoding: .utf8).contains(Self.kernelRoot))
     }
 
+    /// Checks that the sectioned level can be selected, also with its deprecated name.
+    ///
+    /// - Parameter level: The name of the metamodel level to select.
     @Test("the sectioned level can be selected, also with its deprecated name", arguments: ["sectioned", "executable"])
     func sectionedXMIFromMachine(_ level: String) throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "sectioned")
@@ -191,6 +233,7 @@ struct CLIPipelineTests {
         #expect(result.standardError.contains("deprecated") == (level == "executable"))
     }
 
+    /// Checks that a kernel model is written as JSON and read back.
     @Test("a kernel model is written as JSON and read back")
     func kernelJSON() throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "json")
@@ -203,13 +246,14 @@ struct CLIPipelineTests {
             .filter { $0.key.hasPrefix("DoorInterlock.") })
     }
 
+    /// Checks that native bundles are written from the kernel level with a flat-mapping warning.
     @Test("native bundles are written from the kernel level with a flat-mapping warning")
     func nativeFromKernel() throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "kernel-native")
         defer { try? FileManager.default.removeItem(at: directory) }
         let output = directory.appendingPathComponent("DoorInterlock.arrangement")
-        let result = try succeed([FSMConvertRunner.kernelModel("DoorInterlock").path,
-                                  "--metamodel", "structural", "-f", "c", "-o", output.path])
+        let input = FSMConvertRunner.kernelModel("DoorInterlock").path
+        let result = try succeed([input, "--metamodel", "structural", "-f", "c", "-o", output.path])
         #expect(result.standardError.contains("mapped flatly"), "\(result.standardError)")
         #expect(FileManager.default.fileExists(atPath: output.appendingPathComponent("Machines").path))
         let arrangement = try Arrangement(from: output)
@@ -217,18 +261,20 @@ struct CLIPipelineTests {
         #expect(arrangement.namedInstances.allSatisfy { !$0.machine.llfsm.states.isEmpty })
     }
 
+    /// Checks that the plain reference style writes fragments without a leading `#`.
     @Test("the plain reference style writes fragments without a leading #")
     func referenceStyle() throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "references")
         defer { try? FileManager.default.removeItem(at: directory) }
         let output = directory.appendingPathComponent("DoorInterlock.xmi")
-        try succeed([FSMConvertRunner.kernelModel("DoorInterlock").path, "-f", "xmi", "--reference-style", "plain",
-                     "-o", output.path])
+        let input = FSMConvertRunner.kernelModel("DoorInterlock").path
+        try succeed([input, "-f", "xmi", "--reference-style", "plain", "-o", output.path])
         let text = try String(contentsOf: output, encoding: .utf8)
         #expect(text.contains("\"//@"))
         #expect(!text.contains("#//@"))
     }
 
+    /// Checks that `--unset-features` reaches the kernel templates.
     @Test("--unset-features reaches the kernel templates")
     func unsetFeatures() throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "unset")
@@ -243,6 +289,7 @@ struct CLIPipelineTests {
         #expect(FSMConvertRunner.files(at: defaults) != FSMConvertRunner.files(at: undefined))
     }
 
+    /// Checks that structural templates render the first machine of an arrangement.
     @Test("structural templates render the first machine of an arrangement")
     func structuralTemplateOfArrangement() throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "transform")
@@ -255,6 +302,7 @@ struct CLIPipelineTests {
 
     // MARK: - Semantics
 
+    /// Checks that `--semantics selfLoop=reentry` changes the kernel encoding of a self transition.
     @Test("--semantics selfLoop=reentry changes the kernel encoding of a self transition")
     func selfLoopSemantics() throws {
         let directory = try FSMConvertRunner.makeTemporaryDirectory(prefix: "semantics")
@@ -292,14 +340,20 @@ struct CLIPipelineTests {
 
     // MARK: - Validation
 
+    /// Checks that validation under the strict profile reports the opaque nodes of a relaxed model.
     @Test("validation under the strict profile reports the opaque nodes of a relaxed model")
     func strictValidationFails() throws {
-        let result = try FSMConvertRunner.run([FSMConvertRunner.kernelModel("OpaqueSampler").path, "--validate",
-                                              "--profile", "strict"])
+        let input = FSMConvertRunner.kernelModel("OpaqueSampler").path
+        let result = try FSMConvertRunner.run([input, "--validate", "--profile", "strict"])
         #expect(result.status == FSMConvertRunner.failureStatus)
         #expect(result.standardError.contains("error: STRICT "), "\(result.standardError)")
     }
 
+    /// Checks that validation succeeds on models that satisfy the profile.
+    ///
+    /// - Parameters:
+    ///   - fixture: The name of the kernel fixture to validate.
+    ///   - profile: The validation profile to apply.
     @Test("validation succeeds on models that satisfy the profile",
           arguments: [("DoorInterlock", "strict"), ("OpaqueSampler", "relaxed")])
     func validationSucceeds(_ fixture: String, _ profile: String) throws {
@@ -307,6 +361,7 @@ struct CLIPipelineTests {
         #expect(!result.standardError.contains("error:"))
     }
 
+    /// Checks that validation of a native machine transforms it to the kernel first.
     @Test("validation of a native machine transforms it to the kernel first")
     func nativeValidation() throws {
         let relaxed = try succeed([FSMConvertRunner.trafficLight.path, "--validate", "--profile", "relaxed", "-q"])
@@ -318,34 +373,59 @@ struct CLIPipelineTests {
 
     // MARK: - Invalid Options
 
+    /// The invalid command-line options, each with the text its usage error must contain.
+    static let invalidValueCases: [([String], String)] = [
+          (["--semantics", "selfLoop=sometimes"], "traditional, reentry"),
+          (["--semantics", "loops=reentry"], "selfLoop"),
+          (["--semantics", "selfLoop"], "option=value"),
+          (["--profile", "lax"], "strict"),
+          (["--generator", "java"], "mtl"),
+          (["--metamodel", "executive"], "kernel"),
+          (["-f", "bogus"], "kernel-c"),
+          (["-f", "java"], "--metamodel kernel"),
+          (["--max-rounds=-1"], "must not be negative"),
+          (["--entry", "late"], "ringlet"),
+          (["--opaque", "ignore"], "havoc"),
+          (["--param", "1x=2"], "1x"),
+          (["--template-path", "/nonexistent/templates"], "not a directory"),
+    ]
+
+    /// Checks that invalid option values are usage errors with a helpful message.
+    ///
+    /// - Parameters:
+    ///   - options: The invalid command-line options.
+    ///   - hint: Text that the error message must contain.
     @Test("invalid option values are usage errors with a helpful message",
-          arguments: [
-            (["--semantics", "selfLoop=sometimes"], "traditional, reentry"),
-            (["--semantics", "loops=reentry"], "selfLoop"),
-            (["--semantics", "selfLoop"], "option=value"),
-            (["--profile", "lax"], "strict"),
-            (["--generator", "java"], "mtl"),
-            (["--metamodel", "executive"], "kernel"),
-            (["-f", "bogus"], "kernel-c"),
-            (["-f", "java"], "--metamodel kernel"),
-            (["--max-rounds=-1"], "must not be negative"),
-            (["--entry", "late"], "ringlet"),
-            (["--opaque", "ignore"], "havoc"),
-            (["--param", "1x=2"], "1x"),
-            (["--template-path", "/nonexistent/templates"], "not a directory"),
-          ])
+          arguments: invalidValueCases)
     func invalidValues(_ options: [String], _ hint: String) throws {
         let result = try FSMConvertRunner.run([FSMConvertRunner.trafficLight.path] + options + ["-o", "/nonexistent/out"])
         #expect(result.status == FSMConvertRunner.usageStatus, "\(options): \(result.standardError)")
         #expect(result.standardError.contains(hint), "\(options): \(result.standardError)")
     }
 
+    /// Checks that the help describes the levels and the new options.
     @Test("the help describes the levels and the new options")
     func help() throws {
         let result = try succeed(["--help"])
-        for text in ["--generator", "--metamodel", "--profile", "--semantics", "--entry", "--max-rounds", "--sanity",
-                     "--opaque", "--param", "--template-path", "--reference-style", "--unset-features", "--validate",
-                     "--quiet", "kernel-xmi", "smv"] {
+        let expectedTexts = [
+            "--generator",
+            "--metamodel",
+            "--profile",
+            "--semantics",
+            "--entry",
+            "--max-rounds",
+            "--sanity",
+            "--opaque",
+            "--param",
+            "--template-path",
+            "--reference-style",
+            "--unset-features",
+            "--validate",
+            "--quiet",
+            "kernel-xmi",
+            "smv",
+        ]
+        for text in expectedTexts {
             #expect(result.standardOutput.contains(text), "\(text) is missing from the help")
         }
     }

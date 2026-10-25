@@ -3,7 +3,15 @@ import XCTest
 @testable import FSMEcore
 import ECore
 
+/// Helpers shared by the FSMEcore tests.
 enum FSMEcoreTestSupport {
+    /// The location of the bundled traffic light machine.
+    ///
+    /// - Parameters:
+    ///   - file: The file to report a missing resource at.
+    ///   - line: The line to report a missing resource at.
+    /// - Returns: The location of the machine bundle.
+    /// - Throws: An error if the resource is missing.
     static func trafficLightMachineURL(file: StaticString = #filePath, line: UInt = #line) throws -> URL {
         guard let url = TestResources.url(
             forResource: "TrafficLight",
@@ -16,10 +24,19 @@ enum FSMEcoreTestSupport {
         return url
     }
 
+    /// Load the bundled traffic light machine.
+    ///
+    /// - Returns: The machine.
+    /// - Throws: Any error from locating or reading the machine.
     static func loadTrafficLightMachine() throws -> Machine {
         try Machine(from: try trafficLightMachineURL())
     }
 
+    /// Create a fresh temporary directory.
+    ///
+    /// - Parameter prefix: A prefix for the directory name.
+    /// - Returns: The new directory, with symbolic links resolved.
+    /// - Throws: Any error from creating the directory.
     static func makeTemporaryDirectory(prefix: String) throws -> URL {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
             "\(prefix)-\(UUID().uuidString)",
@@ -29,6 +46,12 @@ enum FSMEcoreTestSupport {
         return directory.standardizedFileURL.resolvingSymlinksInPath()
     }
 
+    /// Find an object of a class in a resource, preferring root objects.
+    ///
+    /// - Parameters:
+    ///   - className: The name of the class to look for.
+    ///   - resource: The resource to search.
+    /// - Returns: The first matching object, or `nil` if there is none.
     static func findObject(
         named className: String,
         in resource: Resource
@@ -41,6 +64,15 @@ enum FSMEcoreTestSupport {
         return objects.first(where: { $0.eClass.name == className })
     }
 
+    /// Assert that two directories hold the same files with the same contents.
+    ///
+    /// - Parameters:
+    ///   - lhs: The first directory.
+    ///   - rhs: The second directory.
+    ///   - allowedRelativePaths: If given, the only relative paths to compare.
+    ///   - file: The file to report failures at.
+    ///   - line: The line to report failures at.
+    /// - Throws: Any error from reading the directories.
     static func assertDirectoryContentsEqual(
         _ lhs: URL,
         _ rhs: URL,
@@ -53,6 +85,14 @@ enum FSMEcoreTestSupport {
         XCTAssertEqual(lhsContents, rhsContents, file: file, line: line)
     }
 
+    /// Assert that two property list files have equal contents.
+    ///
+    /// - Parameters:
+    ///   - lhs: The first property list.
+    ///   - rhs: The second property list.
+    ///   - file: The file to report failures at.
+    ///   - line: The line to report failures at.
+    /// - Throws: Any error from reading or parsing the files.
     static func assertPropertyListsEqual(
         _ lhs: URL,
         _ rhs: URL,
@@ -72,6 +112,13 @@ enum FSMEcoreTestSupport {
         )
     }
 
+    /// Assert that two machines agree in language, structure, boilerplate, activities, and layout.
+    ///
+    /// - Parameters:
+    ///   - lhs: The first machine.
+    ///   - rhs: The second machine.
+    ///   - file: The file to report failures at.
+    ///   - line: The line to report failures at.
     static func assertMachinesEqual(
         _ lhs: Machine,
         _ rhs: Machine,
@@ -131,6 +178,13 @@ enum FSMEcoreTestSupport {
         }
     }
 
+    /// Assert that two state layouts agree, allowing for small differences in coordinates.
+    ///
+    /// - Parameters:
+    ///   - lhs: The first layout, if any.
+    ///   - rhs: The second layout, if any.
+    ///   - file: The file to report failures at.
+    ///   - line: The line to report failures at.
     private static func assertStateLayoutsEqual(
         _ lhs: StateLayout?,
         _ rhs: StateLayout?,
@@ -159,6 +213,13 @@ enum FSMEcoreTestSupport {
         XCTAssertEqual(lhs?.extraProperties.count ?? 0, rhs?.extraProperties.count ?? 0, file: file, line: line)
     }
 
+    /// Assert that two transition layouts have equal paths, allowing for small differences in coordinates.
+    ///
+    /// - Parameters:
+    ///   - lhs: The first layout, if any.
+    ///   - rhs: The second layout, if any.
+    ///   - file: The file to report failures at.
+    ///   - line: The line to report failures at.
     private static func assertTransitionLayoutsEqual(
         _ lhs: TransitionLayout?,
         _ rhs: TransitionLayout?,
@@ -172,6 +233,13 @@ enum FSMEcoreTestSupport {
         }
     }
 
+    /// Assert that two state machines have the same states, suspend state, and transitions.
+    ///
+    /// - Parameters:
+    ///   - lhs: The first state machine.
+    ///   - rhs: The second state machine.
+    ///   - file: The file to report failures at.
+    ///   - line: The line to report failures at.
     private static func assertLLFSMStructureEqual(
         _ lhs: LLFSM,
         _ rhs: LLFSM,
@@ -200,6 +268,10 @@ enum FSMEcoreTestSupport {
         XCTAssertEqual(lhsTransitions, rhsTransitions, file: file, line: line)
     }
 
+    /// Fill in empty text for every standard boilerplate section that is missing.
+    ///
+    /// - Parameter sections: The sections found.
+    /// - Returns: The sections, with every standard section present.
     private static func normalisedSections(
         _ sections: [StandardBoilerplateSection: String]
     ) -> [StandardBoilerplateSection: String] {
@@ -208,6 +280,13 @@ enum FSMEcoreTestSupport {
         })
     }
 
+    /// Read the text of every file below a directory.
+    ///
+    /// - Parameters:
+    ///   - url: The directory to read.
+    ///   - allowedRelativePaths: If given, the only relative paths to include.
+    /// - Returns: The file contents keyed by normalised relative path.
+    /// - Throws: Any error from enumerating or reading the files.
     private static func directoryContents(
         at url: URL,
         restrictedTo allowedRelativePaths: Set<String>?
@@ -235,6 +314,10 @@ enum FSMEcoreTestSupport {
         return contents
     }
 
+    /// Remove a leading private prefix and slash from a generated path.
+    ///
+    /// - Parameter rawPath: The path as found.
+    /// - Returns: The normalised path.
     private static func normalisedGeneratedPath(_ rawPath: String) -> String {
         if rawPath.hasPrefix("/private") {
             return String(rawPath.dropFirst("/private".count))

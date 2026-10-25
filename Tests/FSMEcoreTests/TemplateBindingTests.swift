@@ -18,6 +18,9 @@ struct TemplateBindingTests {
     /// The formats that have a Swift output language.
     nonisolated static let writableFormats = Format.allCases.filter { outputLanguage(for: $0) != nil }
 
+    /// Check that every format with a Swift output language has a template set declaring the same language.
+    ///
+    /// - Throws: Any error from loading the template sets.
     @Test("Every format with a Swift output language has a template set declaring the same language")
     func templateSetsCoverFormats() throws {
         let engine = try StructuralTemplateEngine()
@@ -31,6 +34,9 @@ struct TemplateBindingTests {
         }
     }
 
+    /// Check that formats without a template set are rejected.
+    ///
+    /// - Throws: Any error from loading the test machine.
     @Test("Formats without a template set are rejected")
     func unsupportedFormat() async throws {
         let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()
@@ -45,6 +51,9 @@ struct TemplateBindingTests {
         }
     }
 
+    /// Check that a template set directory without a readable manifest is reported.
+    ///
+    /// - Throws: Any error from preparing the temporary directory.
     @Test("A template set directory without a readable manifest is reported")
     func invalidManifest() throws {
         let root = try FSMEcoreTestSupport.makeTemporaryDirectory(prefix: "template-sets")
@@ -57,6 +66,9 @@ struct TemplateBindingTests {
         }
     }
 
+    /// Check that a binding declares the language of its set and delegates reading.
+    ///
+    /// - Throws: Any error from creating the binding.
     @Test("The binding declares the language of its set and delegates reading")
     func bindingIdentity() async throws {
         let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()
@@ -67,10 +79,13 @@ struct TemplateBindingTests {
         #expect(!binding.isSingleFile)
         #expect(binding.machineDirectories.isEmpty)
         #expect(binding.singleFileContents == nil)
-        #expect(binding.files["States"].map { String(decoding: $0, as: UTF8.self) } == machine.llfsm.stateNames.joined(separator: "\n"))
+        #expect(binding.files["States"].flatMap { String(bytes: $0, encoding: .utf8) } == machine.llfsm.stateNames.joined(separator: "\n"))
         #expect(binding.reader.name == ObjCPPBinding().name)
     }
 
+    /// Check that writing to a bundle with another name is rejected.
+    ///
+    /// - Throws: Any error from creating the binding or the temporary directory.
     @Test("Writing to a bundle with another name is rejected")
     func nameMismatch() async throws {
         let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()
@@ -82,6 +97,9 @@ struct TemplateBindingTests {
         }
     }
 
+    /// Check that rendered files are placed into nested directories and that invalid paths are rejected.
+    ///
+    /// - Throws: Any error from placing the files.
     @Test("Rendered files are placed into nested directories")
     func placement() throws {
         let files = ["a.txt": Data("a".utf8), "sub/b.txt": Data("b".utf8), "sub/deeper/c.txt": Data("c".utf8)]
@@ -99,6 +117,7 @@ struct TemplateBindingTests {
         }
     }
 
+    /// Check that arrangement bindings separate the files of the arrangement and of each machine.
     @Test("Arrangement bindings separate the files of the arrangement and of each machine")
     func arrangementFiles() {
         let files = [
@@ -113,6 +132,7 @@ struct TemplateBindingTests {
         #expect(binding.machineFiles(in: "Other.machine").isEmpty)
     }
 
+    /// Check that machine bundles unknown to the binding are rejected.
     @Test("Machine bundles of an arrangement that the binding does not know are rejected")
     func unknownBundle() {
         let binding = TemplateBinding(
@@ -124,6 +144,9 @@ struct TemplateBindingTests {
         }
     }
 
+    /// Check that single-file bindings write their file and reject arrangements.
+    ///
+    /// - Throws: Any error from creating the binding or writing the file.
     @Test("Single-file bindings write their file and reject arrangements")
     func singleFile() async throws {
         let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()
@@ -145,6 +168,7 @@ struct TemplateBindingTests {
         #expect(throws: TemplateBindingError.missingFile) { try plain.write(to: url) }
     }
 
+    /// Check that errors describe the problem.
     @Test("Errors describe the problem")
     func messages() {
         let errors: [TemplateBindingError] = [
@@ -157,6 +181,9 @@ struct TemplateBindingTests {
         #expect(TemplateBindingError.unknownBundle("A.machine").errorDescription?.contains("A.machine") == true)
     }
 
+    /// Check that templates can tell set features from unset ones.
+    ///
+    /// - Throws: Any error from parsing or running the template.
     @Test("Templates can tell set features from unset ones")
     func featureSetness() async throws {
         let metamodel = try await LLFSMMetamodel()

@@ -202,8 +202,12 @@ struct StructuralTemplateEngine {
         let resource = Resource(uri: "memory:/\(name).xmi")
         let object = await MachineEcoreCodec(metamodel: metamodel).encode(machine, name: name, into: resource)
         let files = try await render(
-            template: set.machineTemplate, of: set, in: directory,
-            arguments: [object, name, isSuspensible], resource: resource)
+            template: set.machineTemplate,
+            of: set,
+            in: directory,
+            arguments: [object, name, isSuspensible],
+            resource: resource
+        )
         return (set, files)
     }
 
@@ -231,8 +235,12 @@ struct StructuralTemplateEngine {
         let resource = Resource(uri: "memory:/\(name).xmi")
         let object = await ArrangementEcoreCodec(metamodel: metamodel).encode(arrangement, into: resource)
         let files = try await render(
-            template: template, of: set, in: directory,
-            arguments: [object, name, isSuspensible], resource: resource)
+            template: template,
+            of: set,
+            in: directory,
+            arguments: [object, name, isSuspensible],
+            resource: resource
+        )
         return (set, files)
     }
 

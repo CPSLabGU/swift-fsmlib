@@ -32,6 +32,7 @@ struct KernelTemplateGeneratorTests {
         KernelTemplateGenerator(metamodel: try await KernelMetamodel())
     }
 
+    /// Checks that the kernel targets have the documented identifiers.
     @Test("the kernel targets have the documented identifiers")
     func targetIdentifiers() {
         #expect(KernelTarget.allCases.map(\.rawValue)
@@ -40,6 +41,7 @@ struct KernelTemplateGeneratorTests {
         #expect(KernelTarget(rawValue: "c") == nil)
     }
 
+    /// Checks that execution, verification and diagram targets are told apart.
     @Test("execution, verification and diagram targets are told apart")
     func targetKinds() {
         #expect(KernelTarget.allCases.filter(\.isExecutionTarget) == [.c, .cpp, .swift, .java])
@@ -47,11 +49,16 @@ struct KernelTemplateGeneratorTests {
         #expect(!KernelTarget.dot.isExecutionTarget && !KernelTarget.dot.isVerificationTarget)
     }
 
+    /// Checks that every kernel target has a bundled template set.
     @Test("every kernel target is bundled")
     func bundledTargets() {
         #expect(KernelTemplateGenerator.availableTargets() == KernelTarget.allCases)
     }
 
+    /// Checks that each template set names its target, its main module and the shared expression modules.
+    ///
+    /// - Parameter target: The target whose template set is checked.
+    /// - Throws: An error if the template set cannot be found.
     @Test("each template set names its target, its main module and the shared expression modules",
           arguments: KernelTarget.allCases)
     func templateSets(_ target: KernelTarget) throws {
@@ -63,6 +70,7 @@ struct KernelTemplateGeneratorTests {
         #expect(set.imports == ["../../expressions"])
     }
 
+    /// Checks that verification targets validate strictly unless opaque nodes are havocked.
     @Test("verification targets validate strictly unless opaque nodes are havocked")
     func validationProfiles() {
         for target in KernelTarget.allCases {
@@ -76,6 +84,10 @@ struct KernelTemplateGeneratorTests {
         #expect(KernelTarget.c.validationProfile(parameters: havoc) == .relaxed)
     }
 
+    /// Checks that each target renders the files of its template set.
+    ///
+    /// - Parameter target: The target to render.
+    /// - Throws: An error if the model cannot be built or rendered.
     @Test("each target renders the files of its template set", arguments: KernelTarget.allCases)
     func renderedFiles(_ target: KernelTarget) async throws {
         let builder = try await KernelModelBuilder.make()
@@ -89,6 +101,10 @@ struct KernelTemplateGeneratorTests {
         #expect(files.allSatisfy { !$0.content.isEmpty })
     }
 
+    /// Checks that code targets write the functions of host declarations after their declarations.
+    ///
+    /// - Parameter target: The code target to render.
+    /// - Throws: An error if the model cannot be built or rendered.
     @Test("code targets write the functions of host declarations after their declarations",
           arguments: KernelTarget.allCases.filter(\.isExecutionTarget))
     func hostFunctions(_ target: KernelTarget) async throws {
@@ -109,6 +125,9 @@ struct KernelTemplateGeneratorTests {
         #expect(!content.contains("// include paths are not written"))
     }
 
+    /// Checks that generating to a directory writes the rendered files and returns their locations.
+    ///
+    /// - Throws: An error if the generation or the reading of the files fails.
     @Test("generating to a directory writes the rendered files and returns their locations")
     func generateToDirectory() async throws {
         let generator = try await Self.generator()
@@ -124,6 +143,9 @@ struct KernelTemplateGeneratorTests {
         }
     }
 
+    /// Checks that a model that the strict profile of a target rejects is not generated.
+    ///
+    /// - Throws: An error if the fixture cannot be loaded.
     @Test("a model that the target's profile rejects is not generated")
     func strictValidationAborts() async throws {
         let resource = try await Self.resource(.opaqueSampler)
@@ -137,6 +159,9 @@ struct KernelTemplateGeneratorTests {
         }
     }
 
+    /// Checks that a verification target rejects opaque nodes by default and names the offending elements.
+    ///
+    /// - Throws: An error if the fixture cannot be loaded.
     @Test("a verification target rejects opaque nodes by default and names the offending element")
     func opaqueRejected() async throws {
         let resource = try await Self.resource(.opaqueSampler)
@@ -155,6 +180,9 @@ struct KernelTemplateGeneratorTests {
         }
     }
 
+    /// Checks that havocked opaque nodes are generated with a warning in the file header.
+    ///
+    /// - Throws: An error if the fixture cannot be loaded or rendered.
     @Test("havocked opaque nodes are generated with a warning in the file header")
     func opaqueHavocked() async throws {
         let resource = try await Self.resource(.opaqueSampler)
@@ -166,6 +194,9 @@ struct KernelTemplateGeneratorTests {
         }
     }
 
+    /// Checks that a code target rejects opaque text written for another language.
+    ///
+    /// - Throws: An error if the fixture cannot be loaded.
     @Test("a code target rejects opaque text written for another language")
     func foreignOpaqueTextRejected() async throws {
         let resource = try await Self.resource(.opaqueSampler)
@@ -181,11 +212,19 @@ struct KernelTemplateGeneratorTests {
         }
     }
 
+    /// Checks that an unknown value of a template parameter is a generation error.
+    ///
+    /// - Throws: An error if the fixture cannot be loaded.
     @Test("an unknown value of a template parameter is a generation error")
     func unknownParameterValue() async throws {
         let resource = try await Self.resource(.turnTakingRelay)
-        for (target, name) in [(KernelTarget.smv, KernelTemplateParameter.entry), (.tla, KernelTemplateParameter.entry),
-                               (.smv, KernelTemplateParameter.opaque), (.tla, KernelTemplateParameter.opaque)] {
+        let cases = [
+            (KernelTarget.smv, KernelTemplateParameter.entry),
+            (.tla, KernelTemplateParameter.entry),
+            (.smv, KernelTemplateParameter.opaque),
+            (.tla, KernelTemplateParameter.opaque)
+        ]
+        for (target, name) in cases {
             do {
                 _ = try await Self.generator().render(target, resource: resource, parameters: [name: "sideways"])
                 Issue.record("expected \(target) to reject \(name)=sideways")
@@ -195,6 +234,9 @@ struct KernelTemplateGeneratorTests {
         }
     }
 
+    /// Checks that printing a value whose type is unknown is a generation error.
+    ///
+    /// - Throws: An error if the model cannot be built.
     @Test("printing a value whose type is unknown is a generation error")
     func untypedPrintRejected() async throws {
         let builder = try await KernelModelBuilder.make()
@@ -215,6 +257,7 @@ struct KernelTemplateGeneratorTests {
         }
     }
 
+    /// Checks that generation errors describe the target and every message.
     @Test("generation errors describe the target and every message")
     func errorDescriptions() {
         let error = KernelTemplateGeneratorError.templateErrors(.smv, ["/A/types[T]: first", "/A: second"])

@@ -39,11 +39,16 @@ enum KernelToolchain {
     /// Whether the tools for a target are available.
     static func isAvailable(_ target: KernelTarget) -> Bool {
         switch target {
-        case .c: return cc != nil
-        case .cpp: return cxx != nil
-        case .swift: return swiftc != nil
-        case .java: return javac != nil && java != nil
-        case .smv, .tla, .dot: return false
+        case .c:
+            return cc != nil
+        case .cpp:
+            return cxx != nil
+        case .swift:
+            return swiftc != nil
+        case .java:
+            return javac != nil && java != nil
+        case .smv, .tla, .dot:
+            return false
         }
     }
 
@@ -55,8 +60,12 @@ enum KernelToolchain {
     ///   - hostSources: Additional source files that implement declared functions.
     ///   - directory: The directory that holds the generated file and receives the program.
     /// - Returns: The command that runs the program, as an executable and leading arguments.
-    static func build(_ target: KernelTarget, _ name: String, hostSources: [URL],
-                      in directory: URL) throws -> (executable: URL, arguments: [String]) {
+    static func build(
+        _ target: KernelTarget,
+        _ name: String,
+        hostSources: [URL],
+        in directory: URL
+    ) throws -> (executable: URL, arguments: [String]) {
         let generated = directory.appendingPathComponent(name)
         let program = directory.appendingPathComponent(programName)
         let hosts = hostSources.map(\.path)
@@ -94,6 +103,7 @@ struct KernelExecutionCase: Sendable, CustomTestStringConvertible {
     /// The execution target.
     let target: KernelTarget
 
+    /// The model and the execution target, for test reports.
     var testDescription: String { "\(model) \(target.rawValue)" }
 
     /// The models that a target runs.
@@ -132,21 +142,37 @@ struct KernelExecutionTests {
         #expect(outcome.output == expected, "\(execution.testDescription) printed:\n\(outcome.output)")
     }
 
+    /// Checks that the generated C programs reproduce the expected traces.
+    ///
+    /// - Parameter execution: The model and target to compile and run.
+    /// - Throws: An error if generation, compilation or execution fails.
     @Test("C programs reproduce the expected traces",
           .enabled(if: KernelToolchain.isAvailable(.c), "No cc found on the search path; skipping the C programs"),
           arguments: KernelExecutionCase.cases(for: .c))
     func cPrograms(_ execution: KernelExecutionCase) async throws { try await check(execution) }
 
+    /// Checks that the generated C++ programs reproduce the expected traces.
+    ///
+    /// - Parameter execution: The model and target to compile and run.
+    /// - Throws: An error if generation, compilation or execution fails.
     @Test("C++ programs reproduce the expected traces",
           .enabled(if: KernelToolchain.isAvailable(.cpp), "No c++ found on the search path; skipping the C++ programs"),
           arguments: KernelExecutionCase.cases(for: .cpp))
     func cppPrograms(_ execution: KernelExecutionCase) async throws { try await check(execution) }
 
+    /// Checks that the generated Swift programs reproduce the expected traces.
+    ///
+    /// - Parameter execution: The model and target to compile and run.
+    /// - Throws: An error if generation, compilation or execution fails.
     @Test("Swift programs reproduce the expected traces",
           .enabled(if: KernelToolchain.isAvailable(.swift), "No swiftc found on the search path; skipping the Swift programs"),
           arguments: KernelExecutionCase.cases(for: .swift))
     func swiftPrograms(_ execution: KernelExecutionCase) async throws { try await check(execution) }
 
+    /// Checks that the generated Java programs reproduce the expected traces.
+    ///
+    /// - Parameter execution: The model and target to compile and run.
+    /// - Throws: An error if generation, compilation or execution fails.
     @Test("Java programs reproduce the expected traces",
           .enabled(if: KernelToolchain.isAvailable(.java), "No javac and java found on the search path; skipping the Java programs"),
           arguments: KernelExecutionCase.cases(for: .java))
@@ -180,18 +206,30 @@ struct KernelExecutionTests {
         #expect(outcome.output == "arrangement Overflow\nx 0\nR1 counter Counting\nx 1\nR2 counter Counting\nx 2\n")
     }
 
+    /// Checks that a generated C program stops with a range violation.
+    ///
+    /// - Throws: An error if generation, compilation or execution fails.
     @Test("a C program stops with a range violation",
           .enabled(if: KernelToolchain.isAvailable(.c), "No cc found on the search path; skipping the C range check"))
     func cRangeViolation() async throws { try await checkOverflow(.c) }
 
+    /// Checks that a generated C++ program stops with a range violation.
+    ///
+    /// - Throws: An error if generation, compilation or execution fails.
     @Test("a C++ program stops with a range violation",
           .enabled(if: KernelToolchain.isAvailable(.cpp), "No c++ found on the search path; skipping the C++ range check"))
     func cppRangeViolation() async throws { try await checkOverflow(.cpp) }
 
+    /// Checks that a generated Swift program stops with a range violation.
+    ///
+    /// - Throws: An error if generation, compilation or execution fails.
     @Test("a Swift program stops with a range violation",
           .enabled(if: KernelToolchain.isAvailable(.swift), "No swiftc found on the search path; skipping the Swift range check"))
     func swiftRangeViolation() async throws { try await checkOverflow(.swift) }
 
+    /// Checks that a generated Java program stops with a range violation.
+    ///
+    /// - Throws: An error if generation, compilation or execution fails.
     @Test("a Java program stops with a range violation",
           .enabled(if: KernelToolchain.isAvailable(.java), "No javac and java found on the search path; skipping the Java range check"))
     func javaRangeViolation() async throws { try await checkOverflow(.java) }

@@ -121,8 +121,11 @@ public struct VariableDeclarationScanner: Sendable {
             }
         }
         return Result(
-            declarations: declarations, placements: placements,
-            remainder: remaining.joined(separator: "\n"), remainderLineCount: remaining.count)
+            declarations: declarations,
+            placements: placements,
+            remainder: remaining.joined(separator: "\n"),
+            remainderLineCount: remaining.count
+        )
     }
 
     /// Put recognised declarations back into the text that remained after a scan.

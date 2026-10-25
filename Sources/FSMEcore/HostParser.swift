@@ -194,15 +194,8 @@ struct HostParser {
             return .integer(value)
         case .identifier(let name):
             if let value = syntax.booleanLiterals[name] { return .boolean(value) }
-            if consume(.symbol("(")) {
-                guard let arguments = arguments() else { return nil }
-                primary = .call(name, receiver: nil, arguments: arguments)
-            } else if consume(.symbol("[")) {
-                guard let index = expression(), consume(.symbol("]")) else { return nil }
-                primary = .name(name, index: index)
-            } else {
-                primary = .name(name, index: nil)
-            }
+            guard let named = namedPrimary(name) else { return nil }
+            primary = named
         case .symbol("("):
             guard let inner = expression(), consume(.symbol(")")) else { return nil }
             return inner
@@ -215,6 +208,22 @@ struct HostParser {
         guard consume(.symbol("(")), let arguments = arguments() else { return nil }
         if case .symbol(syntax.memberAccess)? = peek() { return nil }
         return .call(method, receiver: primary, arguments: arguments)
+    }
+
+    /// Parse a name, a function call, or an indexed name, after the name itself.
+    ///
+    /// - Parameter name: The identifier that was just read.
+    /// - Returns: The expression, or `nil` if the call or index is malformed.
+    private mutating func namedPrimary(_ name: String) -> HostExpression? {
+        if consume(.symbol("(")) {
+            guard let arguments = arguments() else { return nil }
+            return .call(name, receiver: nil, arguments: arguments)
+        }
+        if consume(.symbol("[")) {
+            guard let index = expression(), consume(.symbol("]")) else { return nil }
+            return .name(name, index: index)
+        }
+        return .name(name, index: nil)
     }
 
     /// Parse the arguments of a call after its opening parenthesis.

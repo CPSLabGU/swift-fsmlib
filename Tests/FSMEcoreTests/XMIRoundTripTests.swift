@@ -3,7 +3,9 @@ import ECore
 @testable import FSM
 @testable import FSMEcore
 
+/// Tests of the XMI round trip of machines and arrangements.
 final class XMIRoundTripTests: XCTestCase {
+    /// Check that a machine survives an XMI round trip.
     func testMachineXmiRoundTripPreservesTrafficLightMachine() async throws {
         let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()
         let metamodel = try await LLFSMMetamodel()
@@ -20,6 +22,7 @@ final class XMIRoundTripTests: XCTestCase {
         FSMEcoreTestSupport.assertMachinesEqual(machine, decoded.machine)
     }
 
+    /// Check that an arrangement keeps its instances through an XMI round trip.
     func testArrangementXmiRoundTripPreservesInstances() async throws {
         let metamodel = try await LLFSMMetamodel()
         let roundTrip = XMIRoundTrip(metamodel: metamodel)
@@ -45,6 +48,7 @@ final class XMIRoundTripTests: XCTestCase {
         }
     }
 
+    /// Check that writing and reading a structural machine document reports no diagnostics.
     func testMachineReadAndWriteReportNoDiagnosticsForStructuralDocument() async throws {
         let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()
         let roundTrip = XMIRoundTrip(metamodel: try await LLFSMMetamodel())
@@ -62,6 +66,7 @@ final class XMIRoundTripTests: XCTestCase {
         FSMEcoreTestSupport.assertMachinesEqual(machine, decoded.machine)
     }
 
+    /// Check that writing and reading a structural arrangement document reports no diagnostics.
     func testArrangementReadAndWriteReportNoDiagnosticsForStructuralDocument() async throws {
         let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()
         let arrangement = Arrangement(namedInstances: [
@@ -82,6 +87,7 @@ final class XMIRoundTripTests: XCTestCase {
         FSMEcoreTestSupport.assertMachinesEqual(machine, decoded.namedInstances[0].machine)
     }
 
+    /// Check that loading a resource uses the classes of the structural metamodel.
     func testLoadResourceUsesStructuralMetamodelClasses() async throws {
         let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()
         let metamodel = try await LLFSMMetamodel()
@@ -99,6 +105,7 @@ final class XMIRoundTripTests: XCTestCase {
         XCTAssertEqual(root?.eClass.getEAttribute(name: "language")?.lowerBound, 1)
     }
 
+    /// Check that classes outside the structural metamodel are reported as untyped.
     func testLoadResourceReportsClassesOutsideStructuralMetamodel() async throws {
         let roundTrip = XMIRoundTrip(metamodel: try await LLFSMMetamodel())
         let directory = try FSMEcoreTestSupport.makeTemporaryDirectory(prefix: "xmi-foreign")
@@ -116,6 +123,7 @@ final class XMIRoundTripTests: XCTestCase {
         XCTAssertEqual(diagnostics.warnings.map(\.kind), [.untypedClass(name: "Gadget")])
     }
 
+    /// Check that reading a machine from a document without one fails and reports diagnostics.
     func testReadMachineFailsForDocumentWithoutMachine() async throws {
         let roundTrip = XMIRoundTrip(metamodel: try await LLFSMMetamodel())
         let directory = try FSMEcoreTestSupport.makeTemporaryDirectory(prefix: "xmi-foreign")
@@ -136,6 +144,7 @@ final class XMIRoundTripTests: XCTestCase {
         }
     }
 
+    /// Check that a written machine declares the structural namespace.
     func testWrittenMachineDeclaresStructuralNamespace() async throws {
         let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()
         let metamodel = try await LLFSMMetamodel()
@@ -151,6 +160,7 @@ final class XMIRoundTripTests: XCTestCase {
         XCTAssertTrue(text.contains("<\(prefix):\(metamodel.machineClass.name) "), text)
     }
 
+    /// Check that a machine document without the structural namespace is still read, with a warning.
     func testReadsMachineDocumentWithoutStructuralNamespace() async throws {
         let machine = try FSMEcoreTestSupport.loadTrafficLightMachine()
         let metamodel = try await LLFSMMetamodel()

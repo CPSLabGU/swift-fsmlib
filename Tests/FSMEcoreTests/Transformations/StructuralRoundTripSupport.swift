@@ -39,10 +39,15 @@ enum StructuralRoundTrip {
     }
 
     /// The language of the machines of a model.
+    ///
+    /// - Parameter model: The model.
+    /// - Returns: The language of the machine, or of the first instance of the arrangement (C if it has none).
     static func language(of model: Model) -> any LanguageBinding {
         switch model {
-        case .machine(_, let machine): return machine.language
-        case .arrangement(let arrangement): return arrangement.namedInstances.first?.machine.language ?? CBinding()
+        case .machine(_, let machine):
+            return machine.language
+        case .arrangement(let arrangement):
+            return arrangement.namedInstances.first?.machine.language ?? CBinding()
         }
     }
 
@@ -57,8 +62,10 @@ enum StructuralRoundTrip {
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("model.xmi")
         switch model {
-        case .machine(let name, let machine): try await roundTrip.write(machine: machine, name: name, to: url)
-        case .arrangement(let arrangement): try await roundTrip.write(arrangement: arrangement, to: url)
+        case .machine(let name, let machine):
+            try await roundTrip.write(machine: machine, name: name, to: url)
+        case .arrangement(let arrangement):
+            try await roundTrip.write(arrangement: arrangement, to: url)
         }
         var diagnostics = ConversionDiagnostics()
         return try await roundTrip.loadResource(from: url, diagnostics: &diagnostics)
@@ -118,6 +125,9 @@ enum StructuralRoundTrip {
     }
 
     /// A copy of a machine without its layouts.
+    ///
+    /// - Parameter machine: The original machine.
+    /// - Returns: A copy of the machine without state, transition or window layouts.
     private static func withoutLayouts(_ machine: Machine) -> Machine {
         let result = Machine(copying: machine)
         result.stateLayout = [:]

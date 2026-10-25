@@ -2,7 +2,9 @@ import XCTest
 import ECore
 @testable import FSMEcore
 
+/// Tests that the structural LLFSM metamodel loads with the expected classes and features.
 final class LLFSMMetamodelTests: XCTestCase {
+    /// Verify the package identity and the bounds and containment of the principal features.
     func testMetamodelLoadsExpectedClassesAndFeatures() async throws {
         let metamodel = try await LLFSMMetamodel()
 
@@ -32,6 +34,7 @@ final class LLFSMMetamodelTests: XCTestCase {
         XCTAssertEqual(metamodel.point2DClass.getEAttribute(name: "y")?.name, "y")
     }
 
+    /// Verify that registering the metamodel makes it resolvable by namespace URI.
     func testRegisterMakesMetamodelAvailableToResourceSet() async throws {
         let metamodel = try await LLFSMMetamodel()
         let resourceSet = ResourceSet()

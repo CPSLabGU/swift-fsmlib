@@ -65,6 +65,7 @@ public enum FSMPipelineError: Error, Sendable, Equatable, CustomStringConvertibl
     }
 }
 
+/// Localised descriptions of the pipeline errors.
 extension FSMPipelineError: LocalizedError {
     /// The ``description`` of the error.
     public var errorDescription: String? { description }

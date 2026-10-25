@@ -12,20 +12,41 @@ import Testing
 @testable import FSM
 @testable import FSMEcore
 
+/// Tests the transformation of structural models into sectioned models.
+///
+/// The tests compare the sectioned result against the structural machines
+/// of each example bundle and check that the result encodes into valid
+/// kernel models.
 @Suite("Structural to sectioned transformation")
 @MainActor
 struct StructuralToSectionedTests {
     /// Every example machine and arrangement, with the test resource machine.
     nonisolated static let examples = TemplateParity.machineExamples + TemplateParity.arrangementExamples
 
+    /// A machine of an example bundle, with the instance that runs it.
+    private struct ExampleMachine {
+        /// The name of the instance.
+        let instance: String
+
+        /// The name of the machine type.
+        let name: String
+
+        /// The structural machine.
+        let machine: Machine
+    }
+
     /// The machines of an example bundle, by instance name and machine name.
-    private func machines(of example: ParityExample) throws -> [(instance: String, name: String, machine: Machine)] {
+    ///
+    /// - Parameter example: The example whose machines to load.
+    /// - Returns: The machines of the example, in instance order.
+    /// - Throws: Any error raised while loading the example.
+    private func machines(of example: ParityExample) throws -> [ExampleMachine] {
         if example.url.pathExtension == TemplateParity.arrangementExtension {
             return try ArrangementWrapper(url: example.url).arrangement.namedInstances.map {
-                ($0.name, String($0.typeName), $0.machine)
+                ExampleMachine(instance: $0.name, name: String($0.typeName), machine: $0.machine)
             }
         }
-        return [(example.name, example.name, try Machine(from: example.url))]
+        return [ExampleMachine(instance: example.name, name: example.name, machine: try Machine(from: example.url))]
     }
 
     /// The section features of sectioned states and the structural sections they hold.
@@ -33,6 +54,10 @@ struct StructuralToSectionedTests {
         (.onEntry, .onEntry), (.onExit, .onExit), (.internal, .internal), (.onSuspend, .onSuspend), (.onResume, .onResume),
     ]
 
+    /// Checks that a transformed example keeps all of its information.
+    ///
+    /// - Parameter example: The example to transform and compare.
+    /// - Throws: Any error raised by the transformation or the comparison.
     @Test("every machine keeps its states, sections, labels, declarations and instances", arguments: examples)
     func preservesInformation(_ example: ParityExample) async throws {
         let transformations = try await TransformationTestSupport.transformations()
@@ -103,6 +128,13 @@ struct StructuralToSectionedTests {
     }
 
     /// Check that the machine and state boilerplate is kept as host declarations and declared variables.
+    ///
+    /// - Parameters:
+    ///   - machine: The structural machine that was transformed.
+    ///   - machineObject: The sectioned machine that the transformation produced.
+    ///   - index: The index of the sectioned model.
+    ///   - kernel: The kernel metamodel that the sectioned model extends.
+    /// - Throws: Any error raised while inspecting the model.
     private func expectDeclarations(
         of machine: Machine,
         in machineObject: DynamicEObject,
@@ -122,8 +154,12 @@ struct StructuralToSectionedTests {
             #expect(variable.string(.documentation) == placement.documentation)
         }
         func present(_ text: String?) -> String? { (text ?? "").isEmpty ? nil : text }
-        func expectHosts(_ hosts: [DynamicEObject], of sections: [StandardBoilerplateSection: String]?,
-                         declarations: String?, place: String) {
+        func expectHosts(
+            _ hosts: [DynamicEObject],
+            of sections: [StandardBoilerplateSection: String]?,
+            declarations: String?,
+            place: String
+        ) {
             let texts: [StandardBoilerplateSection] = [.includePath, .includes, .variables, .functions]
             guard let sections, texts.contains(where: { present(sections[$0]) != nil }) else {
                 #expect(hosts.isEmpty, "\(place)")
@@ -140,15 +176,24 @@ struct StructuralToSectionedTests {
         let remainder = scan.declarations.isEmpty ? present(variables)
             : (scan.remainderLineCount == 0 ? nil : scan.remainder)
         let name = machineObject.string(.name) ?? ""
-        expectHosts(index.objects(.hostDeclarations, of: machineObject), of: boilerplate,
-                    declarations: remainder, place: name)
+        expectHosts(
+            index.objects(.hostDeclarations, of: machineObject),
+            of: boilerplate,
+            declarations: remainder,
+            place: name)
         for (stateID, state) in zip(machine.llfsm.states, index.objects(.states, of: machineObject)) {
             let sections = machine.stateBoilerplate[stateID].map { language.extractSections(from: $0) }
-            expectHosts(index.objects(.hostDeclarations, of: state), of: sections,
-                        declarations: present(sections?[.variables]), place: "\(name).\(state.string(.name) ?? "")")
+            expectHosts(
+                index.objects(.hostDeclarations, of: state),
+                of: sections,
+                declarations: present(sections?[.variables]),
+                place: "\(name).\(state.string(.name) ?? "")")
         }
     }
 
+    /// Checks that timed labels become state-time comparisons.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("the timed labels of the traffic light type as state-time comparisons")
     func trafficLightTimes() async throws {
         let url = try FSMEcoreTestSupport.trafficLightMachineURL()
@@ -167,6 +212,9 @@ struct StructuralToSectionedTests {
         #expect(result.diagnostics.isEmpty)
     }
 
+    /// Checks the variables, types, print statements, instances and machines of the counter example.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("the counters declare their integer variable, type their plain print and share machines")
     func counterTyping() async throws {
         let url = TemplateParity.examplesDirectory.appendingPathComponent("Counter2.arrangement")
@@ -186,6 +234,10 @@ struct StructuralToSectionedTests {
         #expect(machines.compactMap { $0.string(.name) } == ["SuspendCounter", "Counter"])
     }
 
+    /// Checks that each example encodes into a valid kernel model.
+    ///
+    /// - Parameter example: The example to transform and encode.
+    /// - Throws: Any error raised by the transformations.
     @Test("the sectioned examples encode into valid kernel models", arguments: examples)
     func encodes(_ example: ParityExample) async throws {
         let transformations = try await TransformationTestSupport.transformations()
@@ -199,6 +251,9 @@ struct StructuralToSectionedTests {
         #expect(diagnostics.isEmpty, "\(diagnostics)")
     }
 
+    /// Checks that a model without a structural root is rejected.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("a model without a structural root is rejected")
     func rejectsOtherModels() async throws {
         let transformations = try await TransformationTestSupport.transformations()

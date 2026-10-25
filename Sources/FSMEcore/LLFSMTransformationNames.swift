@@ -46,13 +46,52 @@ enum LLFSMTransformationNames {
 
     /// The names of the module parameters that carry the shared names.
     enum Parameter: String, CaseIterable, Sendable {
-        case nowName, enteredAtName, resumeToName, suspendPrefix
-        case timeTypeName, booleanTypeName, resumeTypeSuffix
-        case clockMachineName, clockInstanceName, clockStateName
-        case internalSuffix, waitSuffix, exitSuffix, suspendSuffix, resumeSuffix, dispatchSuffix
-        case timeUpper, millisecondFactor, secondFactor, tickFactor
+        /// The module parameter `nowName`.
+        case nowName
+        /// The module parameter `enteredAtName`.
+        case enteredAtName
+        /// The module parameter `resumeToName`.
+        case resumeToName
+        /// The module parameter `suspendPrefix`.
+        case suspendPrefix
+        /// The module parameter `timeTypeName`.
+        case timeTypeName
+        /// The module parameter `booleanTypeName`.
+        case booleanTypeName
+        /// The module parameter `resumeTypeSuffix`.
+        case resumeTypeSuffix
+        /// The module parameter `clockMachineName`.
+        case clockMachineName
+        /// The module parameter `clockInstanceName`.
+        case clockInstanceName
+        /// The module parameter `clockStateName`.
+        case clockStateName
+        /// The module parameter `internalSuffix`.
+        case internalSuffix
+        /// The module parameter `waitSuffix`.
+        case waitSuffix
+        /// The module parameter `exitSuffix`.
+        case exitSuffix
+        /// The module parameter `suspendSuffix`.
+        case suspendSuffix
+        /// The module parameter `resumeSuffix`.
+        case resumeSuffix
+        /// The module parameter `dispatchSuffix`.
+        case dispatchSuffix
+        /// The module parameter `timeUpper`.
+        case timeUpper
+        /// The module parameter `millisecondFactor`.
+        case millisecondFactor
+        /// The module parameter `secondFactor`.
+        case secondFactor
+        /// The module parameter `tickFactor`.
+        case tickFactor
+        /// The module parameter `arrangementName`.
         case arrangementName
-        case defaultLanguage, machineFileSuffix
+        /// The module parameter `defaultLanguage`.
+        case defaultLanguage
+        /// The module parameter `machineFileSuffix`.
+        case machineFileSuffix
     }
 
     /// The shared variable that holds the current time.
@@ -146,29 +185,52 @@ enum LLFSMTransformationNames {
         var values: [String: any EcoreValue] = [:]
         for parameter in Parameter.allCases {
             switch parameter {
-            case .nowName: values[parameter.rawValue] = now
-            case .enteredAtName: values[parameter.rawValue] = enteredAt
-            case .resumeToName: values[parameter.rawValue] = resumeTo
-            case .suspendPrefix: values[parameter.rawValue] = suspendPrefix
-            case .timeTypeName: values[parameter.rawValue] = timeType
-            case .booleanTypeName: values[parameter.rawValue] = booleanType
-            case .resumeTypeSuffix: values[parameter.rawValue] = resumeTypeSuffix
-            case .clockMachineName: values[parameter.rawValue] = clockMachine
-            case .clockInstanceName: values[parameter.rawValue] = clockInstance
-            case .clockStateName: values[parameter.rawValue] = clockState
-            case .internalSuffix: values[parameter.rawValue] = internalSuffix
-            case .waitSuffix: values[parameter.rawValue] = waitSuffix
-            case .exitSuffix: values[parameter.rawValue] = exitSuffix
-            case .suspendSuffix: values[parameter.rawValue] = suspendSuffix
-            case .resumeSuffix: values[parameter.rawValue] = resumeSuffix
-            case .dispatchSuffix: values[parameter.rawValue] = dispatchSuffix
-            case .timeUpper: values[parameter.rawValue] = timeUpper
-            case .millisecondFactor: values[parameter.rawValue] = millisecondFactor
-            case .secondFactor: values[parameter.rawValue] = secondFactor
-            case .tickFactor: values[parameter.rawValue] = tickFactor
-            case .arrangementName: values[parameter.rawValue] = arrangementName
-            case .defaultLanguage: values[parameter.rawValue] = defaultLanguage
-            case .machineFileSuffix: values[parameter.rawValue] = machineFileSuffix
+            case .nowName:
+                values[parameter.rawValue] = now
+            case .enteredAtName:
+                values[parameter.rawValue] = enteredAt
+            case .resumeToName:
+                values[parameter.rawValue] = resumeTo
+            case .suspendPrefix:
+                values[parameter.rawValue] = suspendPrefix
+            case .timeTypeName:
+                values[parameter.rawValue] = timeType
+            case .booleanTypeName:
+                values[parameter.rawValue] = booleanType
+            case .resumeTypeSuffix:
+                values[parameter.rawValue] = resumeTypeSuffix
+            case .clockMachineName:
+                values[parameter.rawValue] = clockMachine
+            case .clockInstanceName:
+                values[parameter.rawValue] = clockInstance
+            case .clockStateName:
+                values[parameter.rawValue] = clockState
+            case .internalSuffix:
+                values[parameter.rawValue] = internalSuffix
+            case .waitSuffix:
+                values[parameter.rawValue] = waitSuffix
+            case .exitSuffix:
+                values[parameter.rawValue] = exitSuffix
+            case .suspendSuffix:
+                values[parameter.rawValue] = suspendSuffix
+            case .resumeSuffix:
+                values[parameter.rawValue] = resumeSuffix
+            case .dispatchSuffix:
+                values[parameter.rawValue] = dispatchSuffix
+            case .timeUpper:
+                values[parameter.rawValue] = timeUpper
+            case .millisecondFactor:
+                values[parameter.rawValue] = millisecondFactor
+            case .secondFactor:
+                values[parameter.rawValue] = secondFactor
+            case .tickFactor:
+                values[parameter.rawValue] = tickFactor
+            case .arrangementName:
+                values[parameter.rawValue] = arrangementName
+            case .defaultLanguage:
+                values[parameter.rawValue] = defaultLanguage
+            case .machineFileSuffix:
+                values[parameter.rawValue] = machineFileSuffix
             }
         }
         return values

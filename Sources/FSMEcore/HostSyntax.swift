@@ -205,8 +205,17 @@ struct HostSyntax: Sendable {
         levels: [
             Level(operators: ["||": .disjunction], associativity: .left),
             Level(operators: ["&&": .conjunction], associativity: .left),
-            Level(operators: ["==": .equal, "!=": .notEqual, "<": .lessThan, "<=": .lessOrEqual,
-                              ">": .greaterThan, ">=": .greaterOrEqual], associativity: .none),
+            Level(
+                operators: [
+                    "==": .equal,
+                    "!=": .notEqual,
+                    "<": .lessThan,
+                    "<=": .lessOrEqual,
+                    ">": .greaterThan,
+                    ">=": .greaterOrEqual
+                ],
+                associativity: .none
+            ),
             Level(operators: ["+": .addition, "-": .subtraction], associativity: .left),
             Level(operators: ["*": .multiplication, "/": .division, "%": .modulo], associativity: .left),
         ],
@@ -269,8 +278,10 @@ public enum ScannedType: Sendable, Hashable {
     /// An array type is named after its element type and its size, such as `intArray4`.
     public var name: String {
         switch self {
-        case .boolean(let name), .integer(let name, _): return name
-        case .array(let element, let size): return element.name + ScannedType.arrayInfix + String(size)
+        case .boolean(let name), .integer(let name, _):
+            return name
+        case .array(let element, let size):
+            return element.name + ScannedType.arrayInfix + String(size)
         }
     }
 

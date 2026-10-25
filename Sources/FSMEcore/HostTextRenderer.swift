@@ -104,23 +104,42 @@ struct HostTextRenderer {
         func helper(_ name: String, _ query: String, _ verbatim: String, many: Bool) -> ATLNativeHelper {
             ATLNativeHelper(name: name, parameterTypes: ["OclAny", "String"], returnType: "String") { _, arguments in
                 try await renderer.render(
-                    arguments.first ?? nil, language: arguments.last as? String ?? "",
-                    query: query, verbatim: verbatim, many: many)
+                    arguments.first.flatMap { $0 },
+                    language: arguments.last as? String ?? "",
+                    query: query,
+                    verbatim: verbatim,
+                    many: many
+                )
             }
         }
         return [
-            helper(LLFSMTransformationNames.NativeHelper.renderExpression, Query.expression, Query.verbatimExpression,
-                   many: false),
-            helper(LLFSMTransformationNames.NativeHelper.renderStatements, Query.statements, Query.verbatimStatements,
-                   many: true),
-            helper(LLFSMTransformationNames.NativeHelper.renderDeclarations, Query.declarations,
-                   Query.verbatimDeclarations, many: true),
+            helper(
+                LLFSMTransformationNames.NativeHelper.renderExpression,
+                Query.expression,
+                Query.verbatimExpression,
+                many: false
+            ),
+            helper(
+                LLFSMTransformationNames.NativeHelper.renderStatements,
+                Query.statements,
+                Query.verbatimStatements,
+                many: true
+            ),
+            helper(
+                LLFSMTransformationNames.NativeHelper.renderDeclarations,
+                Query.declarations,
+                Query.verbatimDeclarations,
+                many: true
+            ),
             ATLNativeHelper(
                 name: LLFSMTransformationNames.NativeHelper.mergeDeclarations,
-                parameterTypes: ["String", "OclAny"], returnType: "String"
+                parameterTypes: ["String", "OclAny"],
+                returnType: "String"
             ) { _, arguments in
                 await renderer.merge(
-                    arguments.first.flatMap { $0 as? String }, variables: arguments.count > 1 ? arguments[1] : nil)
+                    arguments.first.flatMap { $0 as? String },
+                    variables: arguments.count > 1 ? arguments[1] : nil
+                )
             },
         ]
     }
@@ -191,11 +210,16 @@ struct HostTextRenderer {
     /// The elements of a collection value, or the value itself.
     private static func elements(of value: (any EcoreValue)?) -> [any EcoreValue] {
         switch value {
-        case nil: return []
-        case let array as EcoreValueArray: return array.values
-        case let collection as ATLCollectionValue: return collection.values
-        case let values as [any EcoreValue]: return values
-        case let value?: return [value]
+        case nil:
+            return []
+        case let array as EcoreValueArray:
+            return array.values
+        case let collection as ATLCollectionValue:
+            return collection.values
+        case let values as [any EcoreValue]:
+            return values
+        case let value?:
+            return [value]
         }
     }
 }

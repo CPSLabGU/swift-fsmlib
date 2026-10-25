@@ -13,16 +13,22 @@ import Testing
 
 /// A sectioned model to encode, from a checked-in fixture or built in the test.
 enum SectionedSample: String, CaseIterable, Sendable {
+    /// The checked-in fixture of two machines that cross.
     case sectionedCrossing = "SectionedCrossing"
+    /// The checked-in fixture that suspends and resumes a machine.
     case suspendResumeSampler = "SuspendResumeSampler"
+    /// A built model whose state loops back to itself.
     case loopingCounter = "LoopingCounter"
+    /// A built model in which several instances share one suspension.
     case sharedSuspension = "SharedSuspension"
 
     /// The resource that holds the model.
     func resource() async throws -> Resource {
         switch self {
-        case .sectionedCrossing: return try await KernelFixtureTests.load(.sectionedCrossing).resource
-        case .suspendResumeSampler: return try await KernelFixtureTests.load(.suspendResumeSampler).resource
+        case .sectionedCrossing:
+            return try await KernelFixtureTests.load(.sectionedCrossing).resource
+        case .suspendResumeSampler:
+            return try await KernelFixtureTests.load(.suspendResumeSampler).resource
         case .loopingCounter, .sharedSuspension:
             let builder = try await KernelModelBuilder.make()
             if self == .loopingCounter { builder.buildLoopingCounter() } else { builder.buildSharedSuspension() }
@@ -34,6 +40,10 @@ enum SectionedSample: String, CaseIterable, Sendable {
     var dropsControls: Bool { self == .sharedSuspension }
 }
 
+/// Tests that sectioned models encode into kernel models and rebuild.
+///
+/// Each sample is encoded under a range of option combinations, validated
+/// against the strict kernel profile, and rebuilt by the inverse transformation.
 @Suite("Sectioned and kernel round trips")
 @MainActor
 struct SectionedKernelRoundTripTests {
@@ -44,6 +54,12 @@ struct SectionedKernelRoundTripTests {
         ["elideEmptySections=false", "selfLoop=reentry", "time=clock", "inState=exact", "resumeFallback=previous"],
     ]
 
+    /// Encodes a sample, validates the encoding, and checks that it rebuilds.
+    ///
+    /// - Parameters:
+    ///   - sample: The sectioned model to encode.
+    ///   - pairs: The key-value option pairs to encode with.
+    /// - Throws: Any error raised by the transformations.
     @Test("sectioned models encode into valid kernel models and rebuild exactly",
           arguments: SectionedSample.allCases, optionSets)
     func roundTrip(_ sample: SectionedSample, _ pairs: [String]) async throws {
@@ -67,7 +83,16 @@ struct SectionedKernelRoundTripTests {
     /// The encoding keeps everything except what its options and
     /// diagnostics drop: the suspension of a machine when it is omitted,
     /// and control statements that cannot be encoded.
-    private func expectedRebuild(of sample: SectionedSample, options: SectionedToKernelOptions) async throws -> Resource {
+    ///
+    /// - Parameters:
+    ///   - sample: The sectioned model that was encoded.
+    ///   - options: The options that the encoding used.
+    /// - Returns: The resource that holds the expected rebuilt model.
+    /// - Throws: Any error raised while loading or building the sample.
+    private func expectedRebuild(
+        of sample: SectionedSample,
+        options: SectionedToKernelOptions
+    ) async throws -> Resource {
         let resource = try await sample.resource()
         let metamodels = try await LLFSMMetamodels()
         let index = await KernelModelIndex(resource: resource)
@@ -95,14 +120,17 @@ struct SectionedKernelRoundTripTests {
                 }
                 guard kept.count != statements.count else { continue }
                 dropped += statements.filter { !kept.map(\.id).contains($0.id) }.map(\.id)
-                _ = await resource.eSet(objectId: state.id, feature: feature.rawValue,
-                                        value: kept.isEmpty ? nil : kept.map(\.id))
+                let remaining: [EUUID]? = kept.isEmpty ? nil : kept.map(\.id)
+                _ = await resource.eSet(objectId: state.id, feature: feature.rawValue, value: remaining)
             }
         }
         for identifier in dropped { _ = await resource.remove(id: identifier) }
         return resource
     }
 
+    /// Checks the number of encoded states with and without elided empty sections.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("an encoding with only entry sections keeps the number of states")
     func entryOnlyStateCount() async throws {
         let builder = try await KernelModelBuilder.make()
@@ -124,6 +152,10 @@ struct SectionedKernelRoundTripTests {
         #expect(await TransformationTestSupport.objects(named: "State", in: unelided.resource).count == 2 * 4)
     }
 
+    /// Checks that encoded states and transitions record where they came from.
+    ///
+    /// - Parameter sample: The sectioned model to encode.
+    /// - Throws: Any error raised by the transformations.
     @Test("every kernel state and transition of an encoding records its origin",
           arguments: SectionedSample.allCases)
     func origins(_ sample: SectionedSample) async throws {
@@ -138,6 +170,9 @@ struct SectionedKernelRoundTripTests {
         }
     }
 
+    /// Checks which state a self-loop leads to under each self-loop option.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("the self-loop option decides whether the entry state is re-entered")
     func selfLoopTargets() async throws {
         let transformations = try await TransformationTestSupport.transformations()
@@ -151,6 +186,9 @@ struct SectionedKernelRoundTripTests {
         }
     }
 
+    /// Checks how the time option shapes the time variable and the clock instance.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("the time option decides whether a clock machine advances the time")
     func clockMachine() async throws {
         let transformations = try await TransformationTestSupport.transformations()
@@ -167,6 +205,9 @@ struct SectionedKernelRoundTripTests {
         #expect(instances.compactMap { $0.string(.name) } == [LLFSMTransformationNames.clockInstance, "main"])
     }
 
+    /// Checks how in-state observations expand with and without the exact option.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("in-state observations expand to every encoding state unless exact")
     func inStateExpansion() async throws {
         let transformations = try await TransformationTestSupport.transformations()
@@ -184,6 +225,9 @@ struct SectionedKernelRoundTripTests {
         #expect(exactObservations.count == 2)
     }
 
+    /// Checks the warnings that an encoding reports for what it drops.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("the encoding reports what it drops")
     func encodingDiagnostics() async throws {
         let transformations = try await TransformationTestSupport.transformations()
@@ -205,6 +249,9 @@ struct SectionedKernelRoundTripTests {
         #expect(plain.diagnostics.isEmpty)
     }
 
+    /// Checks that an encoding serialises to a document that parses back identically.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("the encoding serialises to a kernel document that reads back")
     func serialisation() async throws {
         let transformations = try await TransformationTestSupport.transformations()

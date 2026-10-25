@@ -44,8 +44,10 @@ enum KernelTLC {
         let states = directory.appendingPathComponent("states-" + configuration)
         return try KernelTestSupport.run(
             try #require(KernelToolchain.java),
-            ["-XX:+UseParallelGC", "-cp", try #require(jar).path, "tlc2.TLC", "-workers", "1", "-nowarning",
-             "-metadir", states.path, "-config", configuration, specification.lastPathComponent],
+            [
+                "-XX:+UseParallelGC", "-cp", try #require(jar).path, "tlc2.TLC", "-workers", "1", "-nowarning",
+                "-metadir", states.path, "-config", configuration, specification.lastPathComponent
+            ],
             in: directory)
     }
 }
@@ -71,6 +73,11 @@ struct KernelTLATests {
         return directory.appendingPathComponent(model.name).appendingPathExtension("tla")
     }
 
+    /// Verify that TLC finds no violation of the invariants of a generated specification.
+    ///
+    /// A model whose havocked labels can leave a variable range is expected to violate `TypeOK` instead.
+    ///
+    /// - Parameter verification: The model and parameters to check.
     @Test("TypeOK and the range invariants hold, unless a havocked label lets a variable leave its range",
           .enabled(if: KernelTLC.isAvailable, "No tla2tools.jar in TLA2TOOLS_JAR or on the search path, or no java; skipping"),
           arguments: checked)
@@ -90,6 +97,7 @@ struct KernelTLATests {
         }
     }
 
+    /// Verify that sanity mode gives every state and transition of the relay a witness.
     @Test("with sanity=true every state of the relay is reachable and every transition fires",
           .enabled(if: KernelTLC.isAvailable, "No tla2tools.jar in TLA2TOOLS_JAR or on the search path, or no java; skipping"))
     func sanityOfRelay() async throws {

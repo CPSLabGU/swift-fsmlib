@@ -159,8 +159,11 @@ enum TemplateParity {
     ) async throws -> URL {
         let url = destination(of: parityCase, in: directory, pathExtension: parityCase.format.fileExtension)
         let binding = try await TemplateBinding.make(
-            for: machine, named: parityCase.example.name, format: parityCase.format,
-            isSuspensible: parityCase.isSuspensible)
+            for: machine,
+            named: parityCase.example.name,
+            format: parityCase.format,
+            isSuspensible: parityCase.isSuspensible
+        )
         try machine.write(to: url, language: binding, isSuspensible: parityCase.isSuspensible)
         return url
     }
@@ -213,11 +216,13 @@ enum TemplateParity {
             "File sets differ for \(parityCase.testDescription): only templates \(Set(template.keys).subtracting(swift.keys).sorted()), only Swift \(Set(swift.keys).subtracting(template.keys).sorted())",
             sourceLocation: sourceLocation)
         let differing = Set(template.keys.filter { swift[$0] != nil && template[$0] != swift[$0] })
-        guard let first = differing.sorted().first else { return }
+        guard let first = differing.min() else { return }
         let diff = unifiedDiff(
-            String(decoding: swift[first] ?? Data(), as: UTF8.self),
-            String(decoding: template[first] ?? Data(), as: UTF8.self),
-            from: "swift/\(first)", to: "template/\(first)")
+            swift[first].flatMap { String(bytes: $0, encoding: .utf8) } ?? "",
+            template[first].flatMap { String(bytes: $0, encoding: .utf8) } ?? "",
+            from: "swift/\(first)",
+            to: "template/\(first)"
+        )
         Issue.record(
             "\(differing.count) file(s) differ for \(parityCase.testDescription): \(differing.sorted()); first:\n\(diff)",
             sourceLocation: sourceLocation)
@@ -235,57 +240,120 @@ enum TemplateParity {
         let a = old.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         let b = new.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         guard a != b else { return old == new ? "" : "(texts differ only in line endings or encoding)" }
+        let entries = diffEntries(a, b)
+        var output = "--- \(oldName)\n+++ \(newName)\n"
+        var index = 0
+        while index < entries.count {
+            if case .same = entries[index].line {
+                index += 1
+                continue
+            }
+            let start = max(0, index - diffContext)
+            let end = hunkEnd(in: entries, startingAt: index)
+            output += hunkText(entries[start..<end])
+            index = end
+        }
+        return output
+    }
+
+    /// The number of unchanged lines shown around each change of a diff.
+    private static let diffContext = 3
+
+    /// A line of a diff.
+    private enum DiffLine {
+        /// A line present in both texts.
+        case same(String)
+
+        /// A line present only in the old text.
+        case removed(String)
+
+        /// A line present only in the new text.
+        case added(String)
+    }
+
+    /// A line of a diff together with its position in both texts.
+    private struct DiffEntry {
+        /// The line and how it differs.
+        let line: DiffLine
+
+        /// The number of lines of the old text that precede this entry.
+        let oldIndex: Int
+
+        /// The number of lines of the new text that precede this entry.
+        let newIndex: Int
+    }
+
+    /// Compute the line-by-line differences between two texts.
+    ///
+    /// - Parameters:
+    ///   - a: The lines of the old text.
+    ///   - b: The lines of the new text.
+    /// - Returns: The lines of both texts in order, each marked as unchanged, removed, or added.
+    private static func diffEntries(_ a: [String], _ b: [String]) -> [DiffEntry] {
         var lengths = Array(repeating: Array(repeating: 0, count: b.count + 1), count: a.count + 1)
         for i in stride(from: a.count - 1, through: 0, by: -1) {
             for j in stride(from: b.count - 1, through: 0, by: -1) {
                 lengths[i][j] = a[i] == b[j] ? lengths[i + 1][j + 1] + 1 : max(lengths[i + 1][j], lengths[i][j + 1])
             }
         }
-        enum Line { case same(String), removed(String), added(String) }
-        var lines: [(line: Line, oldIndex: Int, newIndex: Int)] = []
-        var i = 0, j = 0
+        var entries: [DiffEntry] = []
+        var i = 0
+        var j = 0
         while i < a.count || j < b.count {
             if i < a.count, j < b.count, a[i] == b[j] {
-                lines.append((.same(a[i]), i, j)); i += 1; j += 1
+                entries.append(DiffEntry(line: .same(a[i]), oldIndex: i, newIndex: j))
+                i += 1
+                j += 1
             } else if j < b.count, i == a.count || lengths[i][j + 1] >= lengths[i + 1][j] {
-                lines.append((.added(b[j]), i, j)); j += 1
+                entries.append(DiffEntry(line: .added(b[j]), oldIndex: i, newIndex: j))
+                j += 1
             } else {
-                lines.append((.removed(a[i]), i, j)); i += 1
+                entries.append(DiffEntry(line: .removed(a[i]), oldIndex: i, newIndex: j))
+                i += 1
             }
         }
-        let context = 3
-        var output = "--- \(oldName)\n+++ \(newName)\n"
-        var index = 0
-        while index < lines.count {
-            guard case .same = lines[index].line else {
-                let start = max(0, index - context)
-                var end = index
-                var lastChange = index
-                while end < lines.count {
-                    if case .same = lines[end].line {
-                        if end - lastChange > context * 2 { break }
-                    } else {
-                        lastChange = end
-                    }
-                    end += 1
-                }
-                end = min(lines.count, lastChange + context + 1)
-                let hunk = lines[start..<end]
-                let oldCount = hunk.filter { if case .added = $0.line { return false }; return true }.count
-                let newCount = hunk.filter { if case .removed = $0.line { return false }; return true }.count
-                output += "@@ -\(hunk.first!.oldIndex + 1),\(oldCount) +\(hunk.first!.newIndex + 1),\(newCount) @@\n"
-                for entry in hunk {
-                    switch entry.line {
-                    case .same(let text): output += " \(text)\n"
-                    case .removed(let text): output += "-\(text)\n"
-                    case .added(let text): output += "+\(text)\n"
-                    }
-                }
-                index = end
-                continue
+        return entries
+    }
+
+    /// Find the end of the hunk that starts at a changed line.
+    ///
+    /// - Parameters:
+    ///   - entries: The lines of the diff.
+    ///   - index: The index of the first changed line of the hunk.
+    /// - Returns: The index after the last line of the hunk, including its trailing context.
+    private static func hunkEnd(in entries: [DiffEntry], startingAt index: Int) -> Int {
+        var end = index
+        var lastChange = index
+        while end < entries.count {
+            if case .same = entries[end].line {
+                if end - lastChange > diffContext * 2 { break }
+            } else {
+                lastChange = end
             }
-            index += 1
+            end += 1
         }
-        return output
+        return min(entries.count, lastChange + diffContext + 1)
+    }
+
+    /// Format one hunk of a diff.
+    ///
+    /// - Parameter hunk: The lines of the hunk, including their context.
+    /// - Returns: The hunk header followed by its lines, or an empty string for an empty hunk.
+    private static func hunkText(_ hunk: ArraySlice<DiffEntry>) -> String {
+        guard let first = hunk.first else { return "" }
+        let oldCount = hunk.filter { if case .added = $0.line { return false } else { return true } }.count
+        let newCount = hunk.filter { if case .removed = $0.line { return false } else { return true } }.count
+        var text = "@@ -\(first.oldIndex + 1),\(oldCount) +\(first.newIndex + 1),\(newCount) @@\n"
+        for entry in hunk {
+            switch entry.line {
+            case .same(let line):
+                text += " \(line)\n"
+            case .removed(let line):
+                text += "-\(line)\n"
+            case .added(let line):
+                text += "+\(line)\n"
+            }
+        }
+        return text
     }
 }

@@ -27,6 +27,11 @@ struct KernelHostFixtureTests {
         return (text, resource)
     }
 
+    /// Checks that each checked-in host fixture is the serialisation of its builder.
+    ///
+    /// When the regeneration variable is set, the fixture is first rewritten in the source tree.
+    ///
+    /// - Parameter fixture: The host fixture to check.
     @Test("each checked-in host fixture is the serialisation of its builder", arguments: KernelHostFixture.allCases)
     func fixtureMatchesBuilder(_ fixture: KernelHostFixture) async throws {
         let builder = try await KernelModelBuilder.make()
@@ -42,12 +47,18 @@ struct KernelHostFixtureTests {
         #expect(try String(contentsOf: url, encoding: .utf8) == text)
     }
 
+    /// Checks that each host fixture reads and reserialises byte for byte.
+    ///
+    /// - Parameter fixture: The host fixture to check.
     @Test("each host fixture reads and reserialises byte for byte", arguments: KernelHostFixture.allCases)
     func fixtureRoundTrips(_ fixture: KernelHostFixture) async throws {
         let (text, resource) = try await Self.load(fixture)
         #expect(try await KernelFixtureTests.serialise(resource) == text)
     }
 
+    /// Checks that each host fixture is valid under the relaxed profile and is rejected under the strict profile only for its opaque nodes.
+    ///
+    /// - Parameter fixture: The host fixture to check.
     @Test("each host fixture is relaxed: valid when relaxed, rejected only for opaque nodes when strict",
           arguments: KernelHostFixture.allCases)
     func fixturesValidate(_ fixture: KernelHostFixture) async throws {

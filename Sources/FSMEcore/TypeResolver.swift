@@ -22,11 +22,16 @@ enum TypedValue: Equatable, Sendable {
     /// The value type of a declared scalar type, or `nil` for an array.
     init?(_ type: ExpressionTyper.ValueType) {
         switch type {
-        case .boolean: self = .boolean
-        case .integer: self = .integer
-        case .enumeration(let identifier): self = .enumeration(identifier)
-        case .opaque(let identifier): self = .opaque(identifier)
-        case .array: return nil
+        case .boolean:
+            self = .boolean
+        case .integer:
+            self = .integer
+        case .enumeration(let identifier):
+            self = .enumeration(identifier)
+        case .opaque(let identifier):
+            self = .opaque(identifier)
+        case .array:
+            return nil
         }
     }
 
@@ -98,8 +103,10 @@ struct TypeResolver {
         case .unary(let operation, let operand):
             guard let (node, type) = resolve(operand, inLabel: inLabel) else { return nil }
             switch operation {
-            case .negation: return type == .boolean ? (.unary(operation, node), .boolean) : nil
-            case .minus: return type == .integer ? (.unary(operation, node), .integer) : nil
+            case .negation:
+                return type == .boolean ? (.unary(operation, node), .boolean) : nil
+            case .minus:
+                return type == .integer ? (.unary(operation, node), .integer) : nil
             }
         case .binary(let operation, let left, let right):
             guard let (leftNode, leftType) = resolve(left, inLabel: inLabel),
@@ -195,7 +202,7 @@ struct TypeResolver {
         switch (receiver, function.receiverType) {
         case (nil, nil):
             break
-        case (.name(let receiverName, nil)?, let expected?):
+        case (.name(let receiverName, nil), let expected?):
             guard let variable = scope.variable(named: receiverName), variable.type == expected else { return nil }
             receiverNode = .variable(variable.identifier, index: nil)
         default:

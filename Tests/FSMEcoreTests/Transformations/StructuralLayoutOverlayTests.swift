@@ -12,6 +12,10 @@ import Testing
 @testable import FSM
 @testable import FSMEcore
 
+/// Tests the restoration of the layouts of an original structural model.
+///
+/// The tests check that layouts are laid over a rebuilt machine by name and
+/// position, and that renamed or retargeted elements keep no layout.
 @Suite("Structural layout overlay")
 @MainActor
 struct StructuralLayoutOverlayTests {
@@ -68,6 +72,9 @@ struct StructuralLayoutOverlayTests {
         }
     }
 
+    /// Checks that the layouts of the original are laid over the rebuilt machine.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("the layouts of the original are laid over the rebuilt machine")
     func restores() async throws {
         let (model, source) = try await trafficLight()
@@ -86,6 +93,9 @@ struct StructuralLayoutOverlayTests {
         #expect(restored.windowLayout == original.windowLayout)
     }
 
+    /// Checks that restoring the layouts again replaces them.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("restoring the layouts again replaces them")
     func replaces() async throws {
         let (_, source) = try await trafficLight()
@@ -98,6 +108,9 @@ struct StructuralLayoutOverlayTests {
         #expect(await rebuilt.resource.count() == count)
     }
 
+    /// Checks that renamed states and the transitions to and from them keep no layout.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("renamed states and the transitions to and from them keep no layout")
     func unmatched() async throws {
         let (model, source) = try await trafficLight()
@@ -118,6 +131,9 @@ struct StructuralLayoutOverlayTests {
             == expected.transitions.keys.filter { $0.source != "Yellow" && $0.target != "Yellow" }.count)
     }
 
+    /// Checks that a retargeted transition keeps no layout.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("a retargeted transition keeps no layout")
     func retargeted() async throws {
         let (model, source) = try await trafficLight()
@@ -140,6 +156,9 @@ struct StructuralLayoutOverlayTests {
         #expect(actual.states == expected.states)
     }
 
+    /// Checks that the machines of instances are matched by instance name.
+    ///
+    /// - Throws: Any error raised by the transformations.
     @Test("the machines of instances are matched by instance name")
     func arrangement() async throws {
         let example = ParityExample(url: TemplateParity.examplesDirectory.appendingPathComponent("Counter2.arrangement"))

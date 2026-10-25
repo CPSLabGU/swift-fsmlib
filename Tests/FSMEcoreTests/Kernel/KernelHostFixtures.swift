@@ -38,8 +38,11 @@ enum KernelHostFixture: String, CaseIterable, Sendable {
 
     /// The bundled URL of the fixture document, if it has been checked in.
     var bundledURL: URL? {
-        TestResources.url(forResource: Self.arrangementName, withExtension: KernelFixture.fileExtension,
-                          subdirectory: subdirectory)
+        TestResources.url(
+            forResource: Self.arrangementName,
+            withExtension: KernelFixture.fileExtension,
+            subdirectory: subdirectory
+        )
     }
 
     /// The location of the fixture document in the source tree.
@@ -215,10 +218,14 @@ enum KernelHostFixture: String, CaseIterable, Sendable {
         let flag = b.booleanType("Flag", in: system)
         let count = b.integerType("Count", 0...9, in: system)
         let tallyType = b.opaqueType("Tally", text: text.tallyType, in: system)
-        b.hostDeclarations(in: system, language: language, includes: text.includes,
-                           declarations: text.declarations)
-        let tally = b.variable("tally", tallyType, in: system,
-                               initialValue: b.opaqueExpression(text.tallyInitialValue, type: tallyType))
+        b.hostDeclarations(
+            in: system,
+            language: language,
+            includes: text.includes,
+            declarations: text.declarations
+        )
+        let tallyStart = b.opaqueExpression(text.tallyInitialValue, type: tallyType)
+        let tally = b.variable("tally", tallyType, in: system, initialValue: tallyStart)
         let isEven = b.function("isEven", in: system, pure: true, parameters: [("n", count)], result: flag)
         let note = b.function("note", in: system, parameters: [("n", count)])
         let bump = b.function("bump", in: system, parameters: [("by", count)], receiverType: tallyType)

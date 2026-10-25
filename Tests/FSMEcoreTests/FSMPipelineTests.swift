@@ -6,7 +6,6 @@
 //  Copyright © 2026 Rene Hexel. All rights reserved.
 //
 import ECore
-import FSM
 import Foundation
 import ModellingGenerators
 import Synchronization
@@ -18,10 +17,17 @@ import Testing
 @Suite("FSM pipeline")
 @MainActor
 struct FSMPipelineTests {
+    /// A step of a conversion pipeline.
     typealias Step = FSMPipeline.Step
 
     // MARK: - Planning
 
+    /// Check the steps planned from each level to each kind of target.
+    ///
+    /// - Parameters:
+    ///   - source: The level of the input model.
+    ///   - target: The requested output target, or `nil` for the native format.
+    ///   - expected: The steps the pipeline plans.
     @Test("the steps from each level to each kind of target",
           arguments: [
             (LLFSMLevel.structural, OutputTarget?.some(.smv),
@@ -41,6 +47,7 @@ struct FSMPipelineTests {
         #expect(FSMPipeline.steps(from: source, to: target, options: FSMPipeline.Options()) == expected)
     }
 
+    /// Check that XMI and JSON documents are written at the level chosen in the options.
     @Test("xmi and json are written at the chosen level")
     func chosenLevel() {
         let options = FSMPipeline.Options(level: .kernel)
@@ -50,6 +57,7 @@ struct FSMPipelineTests {
         #expect(FSMPipeline.steps(from: .structural, to: .structuralXMI, options: options) == [.save(.xmi)])
     }
 
+    /// Check that a chosen validation profile adds a validation step before kernel targets are generated.
     @Test("a chosen profile validates the kernel model before a kernel target is generated")
     func profileStep() {
         let options = FSMPipeline.Options(profile: .strict)
@@ -59,6 +67,7 @@ struct FSMPipelineTests {
 
     // MARK: - Names
 
+    /// Check the derivation of instance, machine, and file stem names from file names.
     @Test("instance and machine names of arrangement inputs")
     func instanceNames() {
         #expect(FSMPipeline.instanceNames(forFileNamed: "Counter.machine") == ("Counter", "Counter.machine"))
@@ -72,6 +81,9 @@ struct FSMPipelineTests {
         #expect(!FSMPipeline.isModelDocument(URL(fileURLWithPath: "a.machine")))
     }
 
+    /// Check that an input is found with and without its machine suffix, and that a missing input is reported.
+    ///
+    /// - Throws: Any error from locating the test resource.
     @Test("inputs are found with and without the machine suffix")
     func resolvingInputs() throws {
         let url = try FSMEcoreTestSupport.trafficLightMachineURL()
@@ -83,6 +95,7 @@ struct FSMPipelineTests {
         }
     }
 
+    /// Check that a report keeps each warning only once, in order of first occurrence.
     @Test("reports keep each warning once")
     func reportWarnings() {
         var report = FSMPipeline.Report()
@@ -94,6 +107,12 @@ struct FSMPipelineTests {
 
     // MARK: - Running
 
+    /// Check that a document is read at the level of its root namespace.
+    ///
+    /// - Parameters:
+    ///   - fixture: The bundled kernel-level or sectioned document to load.
+    ///   - level: The level that loading is expected to detect.
+    /// - Throws: Any error from creating the pipeline or loading the document.
     @Test("documents are read at the level of their root namespace",
           arguments: [(KernelFixture.doorInterlock, LLFSMLevel.kernel), (.sectionedCrossing, .sectioned)])
     func detectsLevels(_ fixture: KernelFixture, _ level: LLFSMLevel) async throws {
@@ -105,6 +124,9 @@ struct FSMPipelineTests {
         #expect(report.warnings.isEmpty)
     }
 
+    /// Check that a structural document is read as its machine.
+    ///
+    /// - Throws: Any error from writing or loading the document.
     @Test("a structural document is read as its machine")
     func detectsStructural() async throws {
         let directory = try FSMEcoreTestSupport.makeTemporaryDirectory(prefix: "pipeline-structural")
@@ -124,6 +146,9 @@ struct FSMPipelineTests {
         #expect(decoded.llfsm.stateNames == machine.llfsm.stateNames)
     }
 
+    /// Check that structural XMI written by the pipeline matches the XMI round trip, up to the order of the layouts.
+    ///
+    /// - Throws: Any error from converting or reading the documents.
     @Test("structural XMI is written as by the XMI round trip, up to the order of the layouts")
     func structuralXMIMatchesRoundTrip() async throws {
         let directory = try FSMEcoreTestSupport.makeTemporaryDirectory(prefix: "pipeline-xmi")
@@ -144,6 +169,12 @@ struct FSMPipelineTests {
         #expect(lines.sorted() == reference.sorted())
     }
 
+    /// Check that native bundles are written from the sectioned and kernel levels.
+    ///
+    /// - Parameters:
+    ///   - fixture: The bundled document to convert.
+    ///   - level: The level of the document.
+    /// - Throws: Any error from converting or reading the written bundle.
     @Test("native bundles are written from the sectioned and kernel levels",
           arguments: [(KernelFixture.sectionedCrossing, LLFSMLevel.sectioned), (.doorInterlock, .kernel)])
     func nativeFromUpperLevels(_ fixture: KernelFixture, _ level: LLFSMLevel) async throws {
@@ -159,6 +190,12 @@ struct FSMPipelineTests {
         #expect(arrangement.namedInstances.allSatisfy { !$0.machine.llfsm.states.isEmpty })
     }
 
+    /// Check that validation reports the diagnostics of the chosen profile.
+    ///
+    /// - Parameters:
+    ///   - profile: The validation profile to apply.
+    ///   - hasErrors: Whether the profile is expected to report errors for the opaque sampler.
+    /// - Throws: Any error from creating the pipeline or validating the document.
     @Test("validation reports the diagnostics of the chosen profile",
           arguments: [(ValidationProfile.strict, true), (.relaxed, false)])
     func validation(_ profile: ValidationProfile, _ hasErrors: Bool) async throws {
@@ -168,6 +205,9 @@ struct FSMPipelineTests {
         #expect(report.diagnostics.contains { $0.rule == .strictProfile } == hasErrors)
     }
 
+    /// Check that a validation step stops the run on errors before anything is written.
+    ///
+    /// - Throws: Any error from creating the pipeline or inspecting the output directory.
     @Test("a validation step stops the run on errors")
     func validationStep() async throws {
         let directory = try FSMEcoreTestSupport.makeTemporaryDirectory(prefix: "pipeline-validate")
@@ -183,6 +223,9 @@ struct FSMPipelineTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: directory.path).isEmpty)
     }
 
+    /// Check that kernel targets are generated with a progress report for every file.
+    ///
+    /// - Throws: Any error from converting the document.
     @Test("kernel targets are generated with progress reports for every file")
     func generationProgress() async throws {
         let directory = try FSMEcoreTestSupport.makeTemporaryDirectory(prefix: "pipeline-progress")
@@ -196,6 +239,9 @@ struct FSMPipelineTests {
         #expect(finished.allSatisfy { $0.total == 2 })
     }
 
+    /// Check that template settings reach the kernel templates and that explicit parameters override them.
+    ///
+    /// - Throws: Any error from loading the document or rendering the templates.
     @Test("template settings reach the kernel templates")
     func templateSettings() async throws {
         let url = try #require(KernelFixture.doorInterlock.bundledURL)
@@ -213,6 +259,9 @@ struct FSMPipelineTests {
         #expect(overridden == (try await plain.render(.smv, resource: resource)))
     }
 
+    /// Check that havocking opaque nodes in the settings relaxes the profile of a verification target.
+    ///
+    /// - Throws: Any error from loading the document or rendering the templates.
     @Test("havocking opaque nodes in the settings relaxes the profile of a verification target")
     func havocSettings() async throws {
         let url = try #require(KernelFixture.opaqueSampler.bundledURL)
@@ -225,6 +274,7 @@ struct FSMPipelineTests {
         #expect(!files.isEmpty)
     }
 
+    /// Check that the bundled templates write the C, Objective-C++, and SCXML formats.
     @Test("the bundled templates write the C, Objective-C++ and SCXML formats")
     func templateSupport() {
         #expect(TemplateBinding.supports(.c, arrangements: true))
@@ -246,7 +296,8 @@ final class ProgressRecorder: Sendable {
     /// Record a report.
     ///
     /// - Parameter update: The report.
-    @Sendable func record(_ update: GenerationProgressUpdate) {
+    @Sendable
+    func record(_ update: GenerationProgressUpdate) {
         storage.withLock { $0.append(update) }
     }
 }

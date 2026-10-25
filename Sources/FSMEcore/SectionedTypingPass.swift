@@ -8,6 +8,7 @@
 import ECore
 import EMFBase
 
+/// The expression typing scopes that the typing pass builds from sectioned and kernel models.
 extension ExpressionTyper.Scope {
     /// The scope of a sectioned or kernel machine.
     ///
@@ -38,26 +39,48 @@ extension ExpressionTyper.Scope {
                 variables.append(ExpressionTyper.Variable(name: name, identifier: variable.id, type: type))
             }
             for function in index.objects(.functions, of: owner) {
-                guard let name = function.string(.name) else { continue }
-                var parameters: [ExpressionTyper.ValueType] = []
-                var isTyped = true
-                for parameter in index.objects(.parameters, of: function) {
-                    guard let type = Self.valueType(of: index.target(.type, of: parameter), index: index,
-                                                    metamodel: metamodel) else { isTyped = false; break }
-                    parameters.append(type)
-                }
-                guard isTyped else { continue }
-                let resultObject = index.target(.result, of: function)
-                let result = Self.valueType(of: resultObject, index: index, metamodel: metamodel)
-                guard resultObject == nil || result != nil else { continue }
-                let receiverObject = index.target(.receiverType, of: function)
-                let receiver = Self.valueType(of: receiverObject, index: index, metamodel: metamodel)
-                guard receiverObject == nil || receiver != nil else { continue }
-                functions.append(ExpressionTyper.Function(
-                    name: name, identifier: function.id, parameters: parameters, result: result,
-                    receiverType: receiver, isPure: function.bool(.pure)))
+                guard let typed = Self.typedFunction(function, index: index, metamodel: metamodel) else { continue }
+                functions.append(typed)
             }
         }
+    }
+
+    /// The typed signature of a function declaration.
+    ///
+    /// - Parameters:
+    ///   - function: The function declaration.
+    ///   - index: The index of the model that holds the declaration.
+    ///   - metamodel: The kernel metamodel that types the declaration.
+    /// - Returns: The signature, or `nil` if the function is unnamed or any of its types is unsupported.
+    private static func typedFunction(
+        _ function: DynamicEObject,
+        index: KernelModelIndex,
+        metamodel: KernelMetamodel
+    ) -> ExpressionTyper.Function? {
+        guard let name = function.string(.name) else { return nil }
+        var parameters: [ExpressionTyper.ValueType] = []
+        for parameter in index.objects(.parameters, of: function) {
+            guard let type = Self.valueType(
+                of: index.target(.type, of: parameter),
+                index: index,
+                metamodel: metamodel
+            ) else { return nil }
+            parameters.append(type)
+        }
+        let resultObject = index.target(.result, of: function)
+        let result = Self.valueType(of: resultObject, index: index, metamodel: metamodel)
+        guard resultObject == nil || result != nil else { return nil }
+        let receiverObject = index.target(.receiverType, of: function)
+        let receiver = Self.valueType(of: receiverObject, index: index, metamodel: metamodel)
+        guard receiverObject == nil || receiver != nil else { return nil }
+        return ExpressionTyper.Function(
+            name: name,
+            identifier: function.id,
+            parameters: parameters,
+            result: result,
+            receiverType: receiver,
+            isPure: function.bool(.pure)
+        )
     }
 
     /// The value type that a kernel type declaration denotes.
@@ -108,9 +131,8 @@ struct SectionedTypingPass {
         var index = await KernelModelIndex(resource: resource)
         guard let arrangement = index.roots.first.flatMap(index.object) else { return }
         for machine in index.objects(.machines, of: arrangement) {
-            let language = machine.string(.language) ?? ""
             if let text = machine.string(.name).flatMap({ variables[$0] }) {
-                await declare(text, language: language, in: machine, of: arrangement, index: index, resource: resource)
+                await declare(text, in: machine, of: arrangement, index: index, resource: resource)
             }
         }
         index = await KernelModelIndex(resource: resource)
@@ -127,12 +149,12 @@ struct SectionedTypingPass {
     /// Declare the variables recognised in the declarations of a machine.
     private func declare(
         _ text: String,
-        language: String,
         in machine: DynamicEObject,
         of arrangement: DynamicEObject,
         index: KernelModelIndex,
         resource: Resource
     ) async {
+        let language = machine.string(.language) ?? ""
         let scan = VariableDeclarationScanner(language: language).scan(text)
         guard !scan.declarations.isEmpty else { return }
         var types: [String: EUUID] = [:]
@@ -180,8 +202,10 @@ struct SectionedTypingPass {
         guard let host = index.objects(.hostDeclarations, of: machine)
             .first(where: { $0.string(.declarations) == text }) else { return }
         _ = await resource.eSet(
-            objectId: host.id, feature: LLFSMFeature.declarations.rawValue,
-            value: scan.remainderLineCount == 0 ? nil : scan.remainder)
+            objectId: host.id,
+            feature: LLFSMFeature.declarations.rawValue,
+            value: scan.remainderLineCount == 0 ? nil : scan.remainder
+        )
     }
 
     /// Replace the opaque sections and labels of a state that the typer types.
