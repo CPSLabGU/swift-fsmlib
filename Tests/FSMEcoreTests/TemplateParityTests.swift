@@ -41,7 +41,9 @@ struct TemplateParityTests {
         let arrangement = try ArrangementWrapper(url: parityCase.example.url).arrangement
         let language = try #require(outputLanguage(for: parityCase.format))
         let binding = try await TemplateBinding.make(
-            for: arrangement, named: parityCase.example.name, format: parityCase.format,
+            for: arrangement,
+            named: parityCase.example.name,
+            format: parityCase.format,
             isSuspensible: parityCase.isSuspensible)
         let templateDirectory = try TemplateParity.makeDirectory("template")
         var directories = [templateDirectory]
@@ -56,26 +58,31 @@ struct TemplateParityTests {
             try TemplateParity.files(at: templateURL), try TemplateParity.files(at: swiftURL), case: parityCase)
     }
 
+    /// Every example machine renders identically in C.
     @Test("C machines", arguments: TemplateParity.cases(of: TemplateParity.machineExamples, in: .c))
     func cMachine(_ parityCase: ParityCase) async throws {
         try await compareMachine(parityCase)
     }
 
+    /// Every example machine renders identically in Objective-C++.
     @Test("Objective-C++ machines", arguments: TemplateParity.cases(of: TemplateParity.machineExamples, in: .objCX))
     func objcppMachine(_ parityCase: ParityCase) async throws {
         try await compareMachine(parityCase)
     }
 
+    /// Every example machine renders identically as SCXML.
     @Test("SCXML machines", arguments: TemplateParity.cases(of: TemplateParity.machineExamples, in: .scxml))
     func scxmlMachine(_ parityCase: ParityCase) async throws {
         try await compareMachine(parityCase)
     }
 
+    /// Every example arrangement renders identically in C.
     @Test("C arrangements", arguments: TemplateParity.cases(of: TemplateParity.arrangementExamples, in: .c))
     func cArrangement(_ parityCase: ParityCase) async throws {
         try await compareArrangement(parityCase)
     }
 
+    /// Every example arrangement renders identically in Objective-C++.
     @Test(
         "Objective-C++ arrangements",
         arguments: TemplateParity.cases(of: TemplateParity.arrangementExamples, in: .objCX))
@@ -88,12 +95,24 @@ struct TemplateParityTests {
 @Suite("Template layout parity")
 @MainActor
 struct TemplateLayoutParityTests {
+    /// The name of the second state, with characters that need escaping in XML.
+    ///
+    /// Windows does not allow angle brackets in file names, so the state files
+    /// of that platform only carry the ampersand.
+    static var otherStateName: String {
+        #if os(Windows)
+        return "Other & More"
+        #else
+        return "Other & <More>"
+        #endif
+    }
+
     /// Create a machine whose layouts exercise every property list value type and path length.
     ///
     /// - Returns: The machine.
     static func makeMachine() -> Machine {
         let (machine, stateID) = LayoutPropertyEncodingTests.makeMachine()
-        let other = State(name: "Other & <More>")
+        let other = State(name: otherStateName)
         var transitions: [Transition] = []
         var layouts: TransitionLayouts = [:]
         for count in 0...5 {
@@ -102,16 +121,21 @@ struct TemplateLayoutParityTests {
             let points = (0..<count).map { Point2D(Double($0) * 10.5 - 3, 0.1 * Double($0 + 1)) }
             layouts[transition.id] = TransitionLayout(points)
         }
-        machine.llfsm = LLFSM(states: machine.llfsm.states.compactMap { machine.llfsm.stateMap[$0] } + [other],
-                              transitions: transitions, suspendState: nil)
+        let states = machine.llfsm.states.compactMap { machine.llfsm.stateMap[$0] } + [other]
+        machine.llfsm = LLFSM(states: states, transitions: transitions, suspendState: nil)
         machine.transitionLayout = layouts
         var otherLayout = StateLayout(index: 1)
-        otherLayout.extraProperties = ["empty": [String: Any](), "none": [Any](), "blob": Data(repeating: 7, count: 200)]
+        otherLayout.extraProperties = [
+            "empty": [String: Any](),
+            "none": [Any](),
+            "blob": Data(repeating: 7, count: 200),
+        ]
         machine.stateLayout[other.id] = otherLayout
         machine.windowLayout = Data([0x3C, 0x00, 0xFF, 0x0A, 0xE2, 0x82, 0xAC])
         return machine
     }
 
+    /// The layout files of a machine with every kind of layout property render identically.
     @Test("Layout and window layout files match for every property type", arguments: [Format.c, .objCX].map(\.rawValue))
     func layoutFiles(formatName: String) async throws {
         let format = try #require(Format(rawValue: formatName))
@@ -124,7 +148,9 @@ struct TemplateLayoutParityTests {
         for fileName in ["Layout.plist", "WindowLayout.plist"] {
             let swift = try Data(contentsOf: url.appendingPathComponent(fileName))
             let template = try #require(binding.files[fileName])
-            #expect(template == swift, "\(fileName):\n\(TemplateParity.unifiedDiff(String(decoding: swift, as: UTF8.self), String(decoding: template, as: UTF8.self), from: "swift", to: "template"))")
+            let swiftText = String(bytes: swift, encoding: .utf8) ?? ""
+            let templateText = String(bytes: template, encoding: .utf8) ?? ""
+            #expect(template == swift, "\(fileName):\n\(TemplateParity.unifiedDiff(swiftText, templateText, from: "swift", to: "template"))")
         }
     }
 }

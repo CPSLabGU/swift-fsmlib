@@ -1,4 +1,3 @@
-
 // These tests run the fsmconvert executable, and WASI cannot spawn processes.
 #if !os(WASI)
 import Foundation
@@ -32,6 +31,7 @@ final class CLIIntegrationTests: XCTestCase {
     /// The scratch build directory in which the command-line tool is built.
     static var buildPath: String { overriddenBuildPath ?? defaultBuildPath }
 
+    /// The directory that holds the files of one test.
     private let tempDirectoryURL: URL = {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("FSMCLIIntegrationTests-\(UUID().uuidString)", isDirectory: true)
@@ -39,17 +39,14 @@ final class CLIIntegrationTests: XCTestCase {
         return url
     }()
 
-    override class func setUp() {
+    override static func setUp() {
         super.setUp()
 
-        let process = Process()
-        process.currentDirectoryURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = [
-            "swift", "build",
-            "--product", "fsmconvert",
+        let process = SwiftToolchain.process(arguments: [
+            "build",
+            "--product", SwiftToolchain.productName,
             "--build-path", buildPath,
-        ]
+        ])
         if overriddenBuildPath != nil {
             // The running test command holds the lock of its own scratch path while the
             // tests execute, so a build into that path has to proceed without it.
@@ -76,6 +73,7 @@ final class CLIIntegrationTests: XCTestCase {
         super.tearDown()
     }
 
+    /// A machine written as structural XMI and read back is the same machine.
     func testMetamodelMachineRoundTripViaXMI() throws {
         let sourceMachineURL = try copyTrafficLightMachine(named: "TrafficLight.machine")
         let xmiURL = tempDirectoryURL.appendingPathComponent("TrafficLight.xmi")
@@ -98,6 +96,7 @@ final class CLIIntegrationTests: XCTestCase {
         assertMachinesEquivalent(original, roundTripped, includeSuspendState: false)
     }
 
+    /// A machine converted to SCXML through the metamodel reads back as the same machine.
     func testMetamodelCrossFormatViaSCXML() throws {
         let sourceMachineURL = try copyTrafficLightMachine(named: "TrafficLight.machine")
         let xmiURL = tempDirectoryURL.appendingPathComponent("TrafficLight.xmi")
@@ -126,6 +125,7 @@ final class CLIIntegrationTests: XCTestCase {
         assertMachinesEquivalent(original, roundTripped, includeSuspendState: false)
     }
 
+    /// An SCXML machine survives a round trip through structural XMI.
     func testStructuralSCXMLRoundTripViaXMI() throws {
         let sourceMachineURL = try copyTrafficLightMachine(named: "TrafficLight.machine")
         let sourceSCXMLURL = tempDirectoryURL.appendingPathComponent("TrafficLightSource.scxml")
@@ -154,6 +154,7 @@ final class CLIIntegrationTests: XCTestCase {
         assertMachinesEquivalent(original, roundTripped, includeSuspendState: false)
     }
 
+    /// An arrangement written as structural XMI and read back keeps its machines.
     func testMetamodelArrangementRoundTripViaXMI() async throws {
         let firstMachineURL = try copyTrafficLightMachine(named: "TrafficLightOne.machine")
         let secondMachineURL = try copyTrafficLightMachine(named: "TrafficLightTwo.machine")
@@ -178,6 +179,7 @@ final class CLIIntegrationTests: XCTestCase {
         )
     }
 
+    /// An arrangement read from XMI is written back as an arrangement directory.
     func testMetamodelArrangementRoundTripBackToDirectory() throws {
         let firstMachineURL = try copyTrafficLightMachine(named: "TrafficLightOne.machine")
         let secondMachineURL = try copyTrafficLightMachine(named: "TrafficLightTwo.machine")
@@ -206,6 +208,7 @@ final class CLIIntegrationTests: XCTestCase {
         )
     }
 
+    /// The structural templates produce SCXML through the command-line tool.
     func testStructuralTemplateGenerationViaCLIProducesSCXML() throws {
         let sourceMachineURL = try copyTrafficLightMachine(named: "TrafficLight.machine")
         let renderedURL = tempDirectoryURL.appendingPathComponent("TrafficLight.scxml")
@@ -227,6 +230,7 @@ final class CLIIntegrationTests: XCTestCase {
         assertMachinesEquivalent(renderedMachine, expectedMachine, includeSuspendState: false)
     }
 
+    /// A transformation is only available at the structural level.
     func testTransformRequiresStructuralMetamodel() throws {
         let sourceMachineURL = try copyTrafficLightMachine(named: "TrafficLight.machine")
         let renderedURL = tempDirectoryURL.appendingPathComponent("TrafficLight.scxml")
@@ -242,6 +246,10 @@ final class CLIIntegrationTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: renderedURL.path))
     }
 
+    /// Run the tool and fail the test unless it succeeds.
+    ///
+    /// - Parameter arguments: The command-line arguments.
+    /// - Throws: An error if the tool cannot be started.
     private func runCLI(arguments: [String]) throws {
         let process = Process()
         process.currentDirectoryURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
@@ -263,6 +271,11 @@ final class CLIIntegrationTests: XCTestCase {
         }
     }
 
+    /// Run the tool and fail the test unless it exits with an error.
+    ///
+    /// - Parameter arguments: The command-line arguments.
+    /// - Returns: The exit status and the standard error output of the tool.
+    /// - Throws: An error if the tool cannot be started.
     private func runCLIExpectingFailure(arguments: [String]) throws -> (status: Int32, standardError: String) {
         let process = Process()
         process.currentDirectoryURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
@@ -282,6 +295,11 @@ final class CLIIntegrationTests: XCTestCase {
         return (process.terminationStatus, String(data: errorData, encoding: .utf8) ?? "")
     }
 
+    /// Copy the traffic light fixture into the directory of the test.
+    ///
+    /// - Parameter name: The name of the copy.
+    /// - Returns: The location of the copy.
+    /// - Throws: An error if the fixture cannot be copied.
     private func copyTrafficLightMachine(named name: String) throws -> URL {
         guard let resourceURL = Bundle.module.url(
             forResource: "TrafficLight",
@@ -297,6 +315,11 @@ final class CLIIntegrationTests: XCTestCase {
         return destinationURL
     }
 
+    /// Assert that two machines have the same states and transitions.
+    ///
+    /// - Parameters:
+    ///   - lhs: The first machine.
+    ///   - rhs: The second machine.
     private func assertMachinesEquivalent(
         _ lhs: Machine,
         _ rhs: Machine,
@@ -326,9 +349,11 @@ final class CLIIntegrationTests: XCTestCase {
     }
 }
 
+/// The command-line tool built for the tests.
 private enum CLIExecutable {
+    /// The path of the built tool.
     static var binaryPath: String {
-        CLIIntegrationTests.buildPath + "/debug/fsmconvert"
+        SwiftToolchain.productPath(SwiftToolchain.productName, in: CLIIntegrationTests.buildPath)
     }
 }
 #endif

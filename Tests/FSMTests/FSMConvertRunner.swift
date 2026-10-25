@@ -39,7 +39,7 @@ enum FSMConvertRunner {
 
     /// The location of the built tool.
     static var executable: URL {
-        URL(fileURLWithPath: CLIIntegrationTests.buildPath + "/debug/fsmconvert")
+        URL(fileURLWithPath: SwiftToolchain.productPath(SwiftToolchain.productName, in: CLIIntegrationTests.buildPath))
     }
 
     /// The directory of the test sources.
@@ -94,10 +94,8 @@ enum FSMConvertRunner {
         FileManager.default.createFile(atPath: log.path, contents: nil)
         defer { try? FileManager.default.removeItem(at: log) }
         guard let handle = try? FileHandle(forWritingTo: log) else { return "Cannot create the build log" }
-        let process = Process()
-        process.currentDirectoryURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["swift", "build", "--product", "fsmconvert", "--build-path", CLIIntegrationTests.buildPath]
+        let process = SwiftToolchain.process(
+            arguments: ["build", "--product", SwiftToolchain.productName, "--build-path", CLIIntegrationTests.buildPath])
         if CLIIntegrationTests.overriddenBuildPath != nil {
             // The running test command holds the lock of its own scratch path.
             process.arguments?.append("--ignore-lock")
@@ -185,9 +183,86 @@ enum FSMConvertRunner {
         /// A sentence that describes the problem.
         var description: String {
             switch self {
-            case .buildFailed(let output): return "fsmconvert could not be built:\n\(output)"
+            case .buildFailed(let output):
+                return "\(SwiftToolchain.productName) could not be built:\n\(output)"
             }
         }
+    }
+}
+
+/// The Swift toolchain that builds the command-line tool under test.
+///
+/// The driver is located through the `PATH` of the test process, so that the
+/// tests run on every host platform, including Windows, where executables carry
+/// a suffix and `env` is not available.
+enum SwiftToolchain {
+    /// The name of the Swift driver.
+    static let driverName = "swift"
+
+    /// The product that the tests build and run.
+    static let productName = "fsmconvert"
+
+    /// The build configuration whose products the tests run.
+    static let configuration = "debug"
+
+    /// The suffix of executable files on the host platform.
+    static var executableSuffix: String {
+        #if os(Windows)
+        return ".exe"
+        #else
+        return ""
+        #endif
+    }
+
+    /// The separator between the entries of the `PATH` environment variable.
+    static var pathSeparator: Character {
+        #if os(Windows)
+        return ";"
+        #else
+        return ":"
+        #endif
+    }
+
+    /// Find the Swift driver through the `PATH` of the test process.
+    ///
+    /// - Returns: The driver, or `nil` if no directory on the path holds one.
+    static func findDriver() -> URL? {
+        let path = ProcessInfo.processInfo.environment["PATH"] ?? ""
+        let fileName = driverName + executableSuffix
+        for directory in path.split(separator: pathSeparator) where !directory.isEmpty {
+            let candidate = URL(fileURLWithPath: String(directory), isDirectory: true).appendingPathComponent(fileName)
+            if FileManager.default.fileExists(atPath: candidate.path) { return candidate }
+        }
+        return nil
+    }
+
+    /// Create a process that runs the Swift driver in the current directory.
+    ///
+    /// Where the driver is not on the path, `env` resolves it when the process starts.
+    ///
+    /// - Parameter arguments: The arguments of the driver.
+    /// - Returns: The configured process, not yet started.
+    static func process(arguments: [String]) -> Process {
+        let process = Process()
+        process.currentDirectoryURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        if let driver = findDriver() {
+            process.executableURL = driver
+            process.arguments = arguments
+        } else {
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            process.arguments = [driverName] + arguments
+        }
+        return process
+    }
+
+    /// The path of a built executable product.
+    ///
+    /// - Parameters:
+    ///   - product: The name of the product.
+    ///   - buildPath: The scratch build directory.
+    /// - Returns: The path of the executable.
+    static func productPath(_ product: String, in buildPath: String) -> String {
+        buildPath + "/" + configuration + "/" + product + executableSuffix
     }
 }
 #endif
