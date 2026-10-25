@@ -79,7 +79,7 @@ public struct StructuralTemplateGenerator {
         guard let cmake = files[Self.cmakeListsName] else {
             throw StructuralTemplateGeneratorError.missingGeneratedFile(Self.cmakeListsName)
         }
-        try cmake.write(to: url, options: .atomic)
+        try cmake.write(to: url, options: FileWritingSupport.atomicWritingOptions)
     }
 
     /// Generate layout plist files with the structural machine templates.
@@ -98,7 +98,7 @@ public struct StructuralTemplateGenerator {
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         for fileName in Self.layoutFileNames {
             guard let data = files[fileName] else { continue }
-            try data.write(to: url.appendingPathComponent(fileName), options: .atomic)
+            try data.write(to: url.appendingPathComponent(fileName), options: FileWritingSupport.atomicWritingOptions)
         }
     }
 

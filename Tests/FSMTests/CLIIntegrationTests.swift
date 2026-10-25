@@ -1,3 +1,6 @@
+
+// These tests run the fsmconvert executable, and WASI cannot spawn processes.
+#if !os(WASI)
 import Foundation
 import XCTest
 @testable import FSM
@@ -328,3 +331,4 @@ private enum CLIExecutable {
         CLIIntegrationTests.buildPath + "/debug/fsmconvert"
     }
 }
+#endif

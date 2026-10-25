@@ -120,10 +120,12 @@ public struct LLFSMMetamodel: Sendable {
     ///
     /// - Throws: Throw an error if the resource cannot be found or parsed.
     public init() async throws {
-        guard let url = Bundle.module.url(
+        guard let url = BundledResources.url(
             forResource: "LLFSMStructural",
             withExtension: "ecore",
-            subdirectory: "Resources"
+            subdirectory: LLFSMMetamodels.resourceSubdirectory,
+            in: .module,
+            bundleName: LLFSMMetamodels.bundleName
         ) else {
             throw LLFSMMetamodelError.resourceNotFound
         }

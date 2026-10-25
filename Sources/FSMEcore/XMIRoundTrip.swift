@@ -249,7 +249,7 @@ public struct XMIRoundTrip {
     ) async throws {
         let serialiser = XMISerializer(options: .legacy)
         let xmiString = try await serialiser.serialize(resource, diagnostics: &diagnostics)
-        try xmiString.write(to: url, atomically: true, encoding: .utf8)
+        try xmiString.write(to: url, atomically: FileWritingSupport.writesAtomically, encoding: .utf8)
     }
 
     /// Find the first dynamic object matching a classifier name.

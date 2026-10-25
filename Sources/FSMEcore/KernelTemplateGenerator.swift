@@ -114,8 +114,8 @@ public enum KernelTemplateGeneratorError: Error, Sendable, Equatable, CustomStri
 /// ```
 @MainActor
 public struct KernelTemplateGenerator {
-    /// The bundle directory that holds the template directories.
-    static let templatesSubdirectory = "Resources/Templates"
+    /// The bundled directory that holds the template directories.
+    static let templatesDirectoryName = "Templates"
 
     /// The directory below the templates directory that holds one template set per target.
     static let kernelDirectory = "kernel"
@@ -147,7 +147,13 @@ public struct KernelTemplateGenerator {
 
     /// The bundled directory that holds the kernel template sets and the shared modules.
     public static var templatesDirectory: URL? {
-        Bundle.module.resourceURL?.appendingPathComponent(templatesSubdirectory, isDirectory: true)
+        BundledResources.url(
+            forResource: templatesDirectoryName,
+            withExtension: nil,
+            subdirectory: LLFSMMetamodels.resourceSubdirectory,
+            in: .module,
+            bundleName: LLFSMMetamodels.bundleName
+        )
     }
 
     /// The directory of the template set of a target, if it is bundled.
@@ -286,7 +292,7 @@ public struct KernelTemplateGenerator {
             let url = directory.appendingPathComponent(file.path)
             try FileManager.default.createDirectory(
                 at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try file.content.write(to: url, atomically: true, encoding: .utf8)
+            try file.content.write(to: url, atomically: FileWritingSupport.writesAtomically, encoding: .utf8)
             urls.append(url)
         }
         return urls

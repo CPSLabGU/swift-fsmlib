@@ -5,7 +5,7 @@ import ECore
 
 enum FSMEcoreTestSupport {
     static func trafficLightMachineURL(file: StaticString = #filePath, line: UInt = #line) throws -> URL {
-        guard let url = Bundle.module.url(
+        guard let url = TestResources.url(
             forResource: "TrafficLight",
             withExtension: "machine",
             subdirectory: "Resources"

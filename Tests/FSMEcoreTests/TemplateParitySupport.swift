@@ -85,7 +85,7 @@ enum TemplateParity {
     /// The example machines, including the test resource machine.
     static var machineExamples: [ParityExample] {
         var examples = examples(withExtension: machineExtension)
-        if let trafficLight = Bundle.module.url(
+        if let trafficLight = TestResources.url(
             forResource: "TrafficLight", withExtension: machineExtension, subdirectory: "Resources") {
             examples.append(ParityExample(url: trafficLight))
         }

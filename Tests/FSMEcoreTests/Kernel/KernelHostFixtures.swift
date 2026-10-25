@@ -38,7 +38,7 @@ enum KernelHostFixture: String, CaseIterable, Sendable {
 
     /// The bundled URL of the fixture document, if it has been checked in.
     var bundledURL: URL? {
-        Bundle.module.url(forResource: Self.arrangementName, withExtension: KernelFixture.fileExtension,
+        TestResources.url(forResource: Self.arrangementName, withExtension: KernelFixture.fileExtension,
                           subdirectory: subdirectory)
     }
 

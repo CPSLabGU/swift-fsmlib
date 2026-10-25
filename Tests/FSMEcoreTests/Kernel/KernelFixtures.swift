@@ -55,7 +55,7 @@ enum KernelFixture: String, CaseIterable, Sendable {
 
     /// The bundled URL of the fixture document, if it has been checked in.
     var bundledURL: URL? {
-        Bundle.module.url(forResource: rawValue, withExtension: Self.fileExtension, subdirectory: subdirectory)
+        TestResources.url(forResource: rawValue, withExtension: Self.fileExtension, subdirectory: subdirectory)
     }
 
     /// The location of the fixture document in the source tree.

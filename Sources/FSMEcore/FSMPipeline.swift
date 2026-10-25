@@ -593,7 +593,7 @@ public struct FSMPipeline {
         for (index, file) in files.enumerated() {
             let url = directory.appendingPathComponent(file.path)
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try file.content.write(to: url, atomically: true, encoding: .utf8)
+            try file.content.write(to: url, atomically: FileWritingSupport.writesAtomically, encoding: .utf8)
             report.files.append(url)
             progress(GenerationProgressUpdate(message: file.path, completed: index + 1, total: files.count))
         }
@@ -619,7 +619,7 @@ public struct FSMPipeline {
                 model, uri: url.absoluteString, machineName: Self.stem(of: url, fallback: Self.fallbackMachineName))
             let text = try await ModelIO.serialise(
                 resource, format: format, xmiOptions: options.xmiOptions, diagnostics: &diagnostics)
-            try text.write(to: url, atomically: true, encoding: .utf8)
+            try text.write(to: url, atomically: FileWritingSupport.writesAtomically, encoding: .utf8)
         }
         report.warn(diagnostics.warnings.map(\.message))
         progress(GenerationProgressUpdate(message: url.lastPathComponent, completed: 1, total: 1))

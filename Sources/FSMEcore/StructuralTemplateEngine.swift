@@ -127,7 +127,13 @@ struct StructuralTemplateEngine {
 
     /// The bundled directory that holds the structural template sets, if it is present.
     static var bundledRoot: URL? {
-        Bundle.module.url(forResource: rootName, withExtension: nil, subdirectory: resourceDirectory)
+        BundledResources.url(
+            forResource: rootName,
+            withExtension: nil,
+            subdirectory: resourceDirectory,
+            in: .module,
+            bundleName: LLFSMMetamodels.bundleName
+        )
     }
 
     /// Read the manifests of all template sets.

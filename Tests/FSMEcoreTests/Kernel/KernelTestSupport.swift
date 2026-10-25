@@ -92,8 +92,14 @@ extension KernelHostFixture {
 
 /// Locations of the kernel test resources and helpers to run external tools.
 enum KernelTestSupport {
+    /// The bundle directory that holds the test resources.
+    static let resourcesDirectory = "Resources"
+
+    /// The directory of the kernel test resources within ``resourcesDirectory``.
+    static let kernelDirectory = "Kernel"
+
     /// The bundle subdirectory of the kernel test resources.
-    static let resourcesSubdirectory = "Resources/Kernel"
+    static let resourcesSubdirectory = resourcesDirectory + "/" + kernelDirectory
 
     /// The directory of expected outputs below the kernel resources.
     static let expectedDirectory = "expected"
@@ -112,7 +118,7 @@ enum KernelTestSupport {
 
     /// The bundled kernel test resources.
     static var bundledResources: URL {
-        Bundle.module.resourceURL!.appendingPathComponent(resourcesSubdirectory, isDirectory: true)
+        TestResources.url(forResource: kernelDirectory, withExtension: nil, subdirectory: resourcesDirectory)!
     }
 
     /// The kernel test resources in the source tree, where recorded files are written.
@@ -165,11 +171,24 @@ enum KernelTestSupport {
         }
     }
 
+    /// Whether this platform can run other programs.
+    ///
+    /// WASI cannot spawn processes, so no program or tool file is found
+    /// there, and the tests that need one are skipped by their traits.
+    static var canRunPrograms: Bool {
+        #if os(WASI)
+        false
+        #else
+        true
+        #endif
+    }
+
     /// Finds a program on the search path.
     ///
     /// - Parameter name: The name of the program, without the extension of the platform.
     /// - Returns: The location of the program, or `nil` if the search path has none.
     static func executable(_ name: String) -> URL? {
+        guard canRunPrograms else { return nil }
         let search = ProcessInfo.processInfo.environment["PATH"] ?? ""
         #if os(Windows)
             let separator: Character = ";"
@@ -187,6 +206,7 @@ enum KernelTestSupport {
 
     /// Finds a file on the search path, whether or not it is executable.
     static func fileOnPath(_ name: String) -> URL? {
+        guard canRunPrograms else { return nil }
         let search = ProcessInfo.processInfo.environment["PATH"] ?? ""
         #if os(Windows)
             let separator: Character = ";"
@@ -233,6 +253,9 @@ enum KernelTestSupport {
     ///   - directory: The directory to run in; it receives the two output files.
     /// - Returns: The exit status and the text that the program wrote.
     static func run(_ executable: URL, _ arguments: [String], in directory: URL) throws -> Outcome {
+        #if os(WASI)
+        throw CocoaError(.featureUnsupported)
+        #else
         let name = UUID().uuidString
         let outputURL = directory.appendingPathComponent(name + ".stdout")
         let errorsURL = directory.appendingPathComponent(name + ".stderr")
@@ -258,6 +281,7 @@ enum KernelTestSupport {
         return Outcome(status: process.terminationStatus,
                        output: try String(contentsOf: outputURL, encoding: .utf8),
                        errors: try String(contentsOf: errorsURL, encoding: .utf8))
+        #endif
     }
 
     /// Generate the files of a model for a target into a new scratch directory.

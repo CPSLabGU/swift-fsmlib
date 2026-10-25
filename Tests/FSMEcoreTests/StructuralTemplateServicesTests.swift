@@ -21,7 +21,10 @@ struct StructuralTemplateServicesTests {
         #expect(try StructuralTemplateServices.format(2.5, with: "[%6.2f]") == "[  2.50]")
         #expect(try StructuralTemplateServices.format(42.0, with: "%d%%") == "42%")
         #expect(try StructuralTemplateServices.format(255, with: "%04X") == "00FF")
+        #if !os(WASI)
+        // WASI is a 32-bit platform, where this value does not fit into an `Int`.
         #expect(try StructuralTemplateServices.format(9_007_199_254_740_993, with: "%d") == "9007199254740993")
+        #endif
         #expect(try StructuralTemplateServices.format(3, with: "%.1f") == "3.0")
     }
 

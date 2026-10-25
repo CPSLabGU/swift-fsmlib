@@ -622,6 +622,6 @@ public final class TemplateFileStorage: MachineStorage {
         guard let binding = language as? TemplateBinding, let data = binding.singleFileContents else {
             throw TemplateBindingError.missingFile
         }
-        try data.write(to: url, options: .atomic)
+        try data.write(to: url, options: FileWritingSupport.atomicWritingOptions)
     }
 }

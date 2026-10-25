@@ -5,6 +5,8 @@
 //  Created by Rene Hexel on 23/10/2026.
 //  Copyright © 2026 Rene Hexel. All rights reserved.
 //
+// These tests run the fsmconvert executable, and WASI cannot spawn processes.
+#if !os(WASI)
 import Foundation
 import Testing
 @testable import FSM
@@ -348,3 +350,4 @@ struct CLIPipelineTests {
         }
     }
 }
+#endif
