@@ -131,6 +131,28 @@ final class ArrangementTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(arrangement.namedInstances.count, 0)
     }
 
+    /// Test that only the machines named by the Machines file become instances.
+    ///
+    /// Arrangements written in Objective-C++ hold an `infrastructure`
+    /// directory next to their machines, which is not a machine.
+    func testInitFromURLIgnoresDirectoriesThatAreNotListedMachines() throws {
+        let arrangementURL = tempDir.appendingPathComponent("Listed.arrangement")
+        try FileManager.default.createDirectory(at: arrangementURL, withIntermediateDirectories: true)
+
+        let machine = Machine()
+        machine.llfsm = LLFSM(states: [State(name: "Waiting")], transitions: [], suspendState: nil)
+        machine.language = CBinding()
+        try machine.write(to: arrangementURL.appendingPathComponent("Waiter.machine"), isSuspensible: false)
+        let supportURL = arrangementURL.appendingPathComponent("infrastructure", isDirectory: true)
+        try FileManager.default.createDirectory(at: supportURL, withIntermediateDirectories: true)
+        try "// support\n".write(to: supportURL.appendingPathComponent("Support.h"), atomically: true, encoding: .utf8)
+        try "waiter\tWaiter\n".write(
+            to: arrangementURL.appendingPathComponent("Machines"), atomically: true, encoding: .utf8)
+
+        let arrangement = try Arrangement(from: arrangementURL)
+        XCTAssertEqual(arrangement.namedInstances.map(\.name), ["Waiter.machine"])
+    }
+
     // MARK: - Duplicate Instance Deduplication
 
     /// Test that adding duplicate instances to an arrangement resolves them correctly.

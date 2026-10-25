@@ -47,13 +47,31 @@ public struct Arrangement {
     /// This initialiser creates an arrangement of FSMs
     /// from the given file wrapper.
     ///
+    /// When the arrangement has a `Machines` file, only the machine
+    /// directories that file names become instances, so that other
+    /// directories of the arrangement, such as the `infrastructure` of an
+    /// Objective-C++ arrangement, are not read as machines.  Without a
+    /// `Machines` file, every directory that holds a machine becomes an
+    /// instance.
+    ///
     /// - Note: The `ArrangementWrapper` is expected to point to a directory containing the machines.
     /// - Parameter arrangementWrapper: The `ArrangementWrapper` to read from.
+    /// - Throws: An error if the wrapper is not a directory.
     @inlinable
     public init(from arrangementWrapper: ArrangementWrapper) throws {
-        let instances = arrangementWrapper.fileWrappers?.compactMap { element in
-            MachineDirectoryWrapper(element.value).map { Instance(name: element.key, typeFile: arrangementWrapper.name, machine: $0.machine) }
-        } ?? []
+        let children = arrangementWrapper.fileWrappers ?? [:]
+        let listedDirectories: Set<Filename>?
+        if children[Filename.machines] != nil {
+            listedDirectories = Set(try createMachineDirectoryWrappers(for: arrangementWrapper).map(\.name))
+        } else {
+            listedDirectories = nil
+        }
+        let instances = children.compactMap { element -> Instance? in
+            if let listedDirectories, !listedDirectories.contains(element.key) { return nil }
+            return MachineDirectoryWrapper(element.value).map {
+                Instance(name: element.key, typeFile: arrangementWrapper.name, machine: $0.machine)
+            }
+        }
         self.init(namedInstances: instances)
     }
 }
