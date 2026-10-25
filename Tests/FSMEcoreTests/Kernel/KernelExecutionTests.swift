@@ -31,7 +31,23 @@ enum KernelToolchain {
     /// The flags that make the Swift compiler strict.
     static let swiftFlags = ["-swift-version", "6", "-parse-as-library", "-warnings-as-errors"]
     /// The flags that make the Java compiler strict.
-    static let javaFlags = ["--release", "17", "-encoding", "UTF-8", "-Xlint:all", "-Werror"]
+    static let javaFlags = ["--release", String(javaRelease), "-encoding", "UTF-8", "-Xlint:all", "-Werror"]
+
+    /// The Java release that the generated programs target.
+    static let javaRelease = 17
+
+    /// Whether the Java compiler on the search path can target ``javaRelease``.
+    ///
+    /// The compiler reports its own release as `javac <major>.<minor>`, and
+    /// older compilers reject newer release targets.
+    static let javacSupportsRelease: Bool = {
+        guard let javac,
+              let version = try? KernelTestSupport.run(javac, ["-version"], in: FileManager.default.temporaryDirectory)
+        else { return false }
+        let words = (version.output + version.errors).split(whereSeparator: \.isWhitespace)
+        guard let major = words.dropFirst().first?.split(separator: ".").first.flatMap({ Int($0) }) else { return false }
+        return major >= javaRelease
+    }()
 
     /// The name of the program that a build produces.
     static let programName = "program"
@@ -46,7 +62,7 @@ enum KernelToolchain {
         case .swift:
             return swiftc != nil
         case .java:
-            return javac != nil && java != nil
+            return javacSupportsRelease && java != nil
         case .smv, .tla, .dot:
             return false
         }
@@ -174,7 +190,7 @@ struct KernelExecutionTests {
     /// - Parameter execution: The model and target to compile and run.
     /// - Throws: An error if generation, compilation or execution fails.
     @Test("Java programs reproduce the expected traces",
-          .enabled(if: KernelToolchain.isAvailable(.java), "No javac and java found on the search path; skipping the Java programs"),
+          .enabled(if: KernelToolchain.isAvailable(.java), "No java and javac for release 17 found on the search path; skipping the Java programs"),
           arguments: KernelExecutionCase.cases(for: .java))
     func javaPrograms(_ execution: KernelExecutionCase) async throws { try await check(execution) }
 
@@ -231,6 +247,6 @@ struct KernelExecutionTests {
     ///
     /// - Throws: An error if generation, compilation or execution fails.
     @Test("a Java program stops with a range violation",
-          .enabled(if: KernelToolchain.isAvailable(.java), "No javac and java found on the search path; skipping the Java range check"))
+          .enabled(if: KernelToolchain.isAvailable(.java), "No java and javac for release 17 found on the search path; skipping the Java range check"))
     func javaRangeViolation() async throws { try await checkOverflow(.java) }
 }
