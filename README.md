@@ -52,6 +52,45 @@ swift test
 
 Some tests compile and run generated programs or check generated models, and run only when the tools they need are installed; `TESTING.md` lists them, together with the environment variables that control the tests.
 
+### WebAssembly (WASI)
+
+`FSM`, `FSMEcore` and `fsmconvert` also build for WebAssembly (`wasm32-unknown-wasip1`) with the Swift 6.4 toolchain and its WebAssembly Swift SDK. Install the SDK as described in the [Swift WebAssembly guide](https://www.swift.org/documentation/articles/wasm-getting-started.html), then build with the native build system:
+
+```bash
+swift build -c release --build-system native \
+  --swift-sdk swift-6.4.0-RELEASE_wasm \
+  -Xlinker -z -Xlinker stack-size=8388608
+```
+
+The bundled metamodels, templates and transformations of `FSMEcore` are not linked into the module: they sit in the `FSM_FSMEcore.resources` directory beside the built `.wasm` module, where `FSMEcore` looks for them at run time, and then in the current directory. Keep that directory next to the module when you copy it, and grant the WASI runtime access to it and to the files the module reads and writes. For example, from the package directory, with the `wasmkit` runtime that the Swift 6.4 toolchain includes:
+
+```bash
+wasmkit run --stack-size 67108864 --dir . --dir /tmp \
+  .build/wasm32-unknown-wasip1/release/fsmconvert.wasm \
+  examples/Counter.machine --format scxml -o /tmp/Counter.scxml
+```
+
+`wasmtime` passes only the file name of the module to it, so run it in the directory of the module and map that directory as the root directory of the guest, whose current directory then holds the resources:
+
+```bash
+cd .build/wasm32-unknown-wasip1/release
+wasmtime run -W max-wasm-stack=67108864 --dir .::/ --dir /tmp \
+  fsmconvert.wasm /tmp/Counter.machine --format scxml -o /tmp/Counter.scxml
+```
+
+`TESTING.md` describes how to run the tests under a WASI runtime.
+
+## Platform Support
+
+| platform | support |
+|---|---|
+| macOS | libraries, `fsmconvert` and all tests |
+| Linux | libraries, `fsmconvert` and all tests |
+| Windows | libraries and `fsmconvert` |
+| WebAssembly (WASI) | libraries and `fsmconvert`; the Swift Testing tests that need no other processes |
+
+On WASI, files are written directly instead of atomically, as the platform has no temporary files for an atomic replace, and property lists are written by the package itself in the same XML format that Foundation writes on the other platforms.
+
 ## Installation
 
 Add `swift-fsmlib` as a dependency in your `Package.swift`:

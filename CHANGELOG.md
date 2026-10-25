@@ -22,6 +22,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **WebAssembly Support**: `FSM`, `FSMEcore` and `fsmconvert` build for WebAssembly (WASI) with the Swift 6.4 toolchain, and the Swift Testing tests that need no other processes run under a WASI runtime. On WASI, files are written directly instead of atomically, layout files are written by the package's own XML property list writer in the format that Foundation writes elsewhere, and `FSMEcore` finds its bundled metamodels, templates and transformations in the `FSM_FSMEcore.resources` directory beside the module. A WebAssembly CI workflow builds and runs the tests. `README.md` and `TESTING.md` describe how to build and test for WASI.
+
 - **Conversion Pipeline**: `FSMPipeline` reads native machines, arrangements and XMI or JSON models of any level, plans the shortest chain of `LevelTransformation` steps to the level of an `OutputTarget`, validates kernel models, generates kernel targets, saves model documents and writes native formats through the templates or the Swift language bindings (`NativeGenerator`), and reports warnings, diagnostics and progress. `OutputTarget` names every target with its level, `LLFSMLevel` names the levels and their namespaces, `LLFSMMetamodel.namespaceURI` is the namespace of the structural metamodel, and `FSMPipelineError` reports the problems that stop a conversion. `FSMEcore` depends on the `ModellingPipeline` and `ModellingGenerators` libraries of `swift-modelling`, and `fsmconvert` on `ModellingCommandLine`.
 
 - **Template Settings**: `TemplateSettings` holds module search paths, template parameters and how unset features read; `KernelTemplateGenerator` and `TemplateBinding.make(for:named:format:isSuspensible:settings:)` take them, and `TemplateBinding.supports(_:arrangements:)` tells which formats the templates write. `LLFSMTransformations.unsetFeatureReads` chooses how the transformations read unset features.
@@ -135,6 +137,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Platform Requirements**: The package requires Swift tools version 6.0, with the platform minimums listed above.
 
 ### Fixed
+- **File Wrapper Removal**: On Linux, Windows and WASI, removing a child from a `FileWrapper` no longer deletes the child's files from the location they were read from. The files of removed children are removed when the wrapper is next written, at the location written to, so that writing a bundle elsewhere leaves its source untouched.
 - Arrangement code, static arrangement code and CMake files now list machine
   types in the order in which their first instances appear, instead of an
   order that varied between runs. `machineTypeNames` and

@@ -45,6 +45,63 @@ trace `Resources/Kernel/expected/<model>.trace` covers, with the inputs file
 that trace byte for byte. Each expected trace is derived by hand from the
 kernel semantics; the derivation is in the `.trace.md` file next to it.
 
+## WebAssembly
+
+The tests also run on WebAssembly (WASI) with the Swift 6.4 toolchain, the
+WebAssembly Swift SDK `swift-6.4.0-RELEASE_wasm` and a WASI runtime, such
+as `wasmkit`, which the toolchain includes, or `wasmtime`. Only Swift
+Testing runs there: the XCTest cases of `FSMTests` and `FSMEcoreTests` are
+not run. Build the tests with the native build system:
+
+```bash
+swift build -c release --build-system native --build-tests --disable-xctest \
+  --swift-sdk swift-6.4.0-RELEASE_wasm -Xswiftc -enable-testing \
+  -Xlinker -z -Xlinker stack-size=8388608
+```
+
+Name the runner in a toolset file, for example `wasm-toolset.json`, and give
+it access to the temporary directory and to the package directory, which
+holds the build products, the test resources and the examples:
+
+```json
+{
+  "schemaVersion": "1.0",
+  "testRunner": {
+    "path": "/path/to/wasmkit",
+    "extraCLIOptions": ["run", "--stack-size", "67108864",
+                        "--dir", "/tmp", "--dir", "/path/to/swift-fsmlib"]
+  }
+}
+```
+
+`wasmtime` passes only the file name of the test module, so it also needs the
+directory of the build products as the root directory of the guest, where
+the resource directories of the test targets are found:
+
+```json
+"extraCLIOptions": ["run", "-W", "max-wasm-stack=67108864",
+                    "--dir", "/path/to/swift-fsmlib/.build/wasm32-unknown-wasip1/release::/",
+                    "--dir", "/tmp", "--dir", "/path/to/swift-fsmlib"]
+```
+
+Then run the tests one after the other:
+
+```bash
+swift test -c release --build-system native --skip-build --disable-xctest \
+  --no-parallel --toolset wasm-toolset.json \
+  --swift-sdk swift-6.4.0-RELEASE_wasm
+```
+
+WASI cannot start other processes, so these tests do not run there:
+
+| tests | on WASI |
+|---|---|
+| `CLIIntegrationTests` and `CLIPipelineTests`, which run `fsmconvert` | not compiled |
+| C, C++, Swift and Java programs, smv models and tla specifications | skipped, as no tool is found |
+
+The check that formats an integer beyond the precision of a `Double` is
+left out on WASI as well, where `Int` holds 32 bits.
+
 ## Recording Expected Files
 
 | variable | effect |
